@@ -29,7 +29,7 @@ export default function HomePage() {
   return (
     <>
       <Helmet>
-        <title>Web Code Academy</title>
+        <title>Ecosistema WCA</title>
         <meta
           name="description"
           content="La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa 100% Gratuita que busca combatir el analfabetismo digital creciente en el mundo, brindando educación tecnológica gratuita, accesible y de calidad para todas las personas."

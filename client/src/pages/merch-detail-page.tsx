@@ -11,7 +11,7 @@ import { ShoppingCart, Star } from "lucide-react";
 const products = [
   {
     id: 1,
-    name: "Playera Web Code Academy",
+    name: "Playera Ecosistema WCA",
     price: 250.00,
     image: "https://i.ibb.co/Q7VZgWQs/playera1-soj6qu.png",
     gallery: [
@@ -74,7 +74,7 @@ export default function MerchDetailPage() {
   }, [product.id]);
 
   const handleOrder = () => {
-    // Abrir WhatsApp con el número de Web Code Academy
+    // Abrir WhatsApp con el número de Ecosistema WCA
     let message = `Hola! Me interesa el producto: ${product.name} - $${product.price}`;
     if (selectedSize) message += `\nTalla: ${selectedSize}`;
     if (selectedColor) message += `\nColor: ${selectedColor}`;
@@ -85,7 +85,7 @@ export default function MerchDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{product.name} - Merch Oficial - Web Code Academy</title>
+        <title>{product.name} - Merch Oficial - Ecosistema WCA</title>
         <meta
           name="description"
           content={product.description}

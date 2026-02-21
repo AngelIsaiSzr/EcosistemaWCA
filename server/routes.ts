@@ -286,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         from: "webcodeacademy0@gmail.com",
         name: `${registration.firstName} ${registration.lastName}`,
         subject: `Confirmación de registro al curso: ${courseName}`,
-        text: `¡Muchas gracias por registrarte en el curso! Días antes de iniciar el curso se te enviará un mensaje confirmando tu asistencia y modalidad. Para dudas o aclaraciones: +52 784 110 0108 - Web Code Academy`,
+        text: `¡Muchas gracias por registrarte en el curso! Días antes de iniciar el curso se te enviará un mensaje confirmando tu asistencia y modalidad. Para dudas o aclaraciones: +52 784 110 0108 - Ecosistema WCA`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <a href="https://instagram.com/webcodeacademy0" style="color: #297de0; text-decoration: none; margin: 0 10px;">Instagram</a>
                 <a href="https://linkedin.com/in/webcodeacademy0" style="color: #297de0; text-decoration: none; margin: 0 10px;">Linkedin</a>
               </div>
-              <p style="color: #666; font-size: 14px;">© 2025 Web Code Academy. Todos los derechos reservados.</p>
+              <p style="color: #666; font-size: 14px;">© 2025 Ecosistema WCA. Todos los derechos reservados.</p>
             </div>
           </div>
         `
@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
 
             <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-              <p style="color: #666; font-size: 14px;">© 2025 Web Code Academy. Todos los derechos reservados.</p>
+              <p style="color: #666; font-size: 14px;">© 2025 Ecosistema WCA. Todos los derechos reservados.</p>
             </div>
           </div>
         `

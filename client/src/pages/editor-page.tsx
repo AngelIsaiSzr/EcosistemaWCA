@@ -31,7 +31,7 @@ export default function EditorPage() {
   <title>Mi Proyecto</title>
 </head>
 <body>
-  <h1>¡Hola, Web Code Academy!</h1>
+  <h1>¡Hola, Ecosistema WCA!</h1>
   <p>Este es mi primer proyecto.</p>
   
   <!-- Tu código HTML aquí -->
@@ -126,10 +126,10 @@ document.addEventListener('DOMContentLoaded', function() {
   return (
     <>
       <Helmet>
-        <title>Editor de Código - Web Code Academy</title>
+        <title>Editor de Código - Ecosistema WCA</title>
         <meta 
           name="description" 
-          content="Editor de código en línea de Web Code Academy. Practica HTML, CSS y JavaScript con nuestro editor interactivo."
+          content="Editor de código en línea de Ecosistema WCA. Practica HTML, CSS y JavaScript con nuestro editor interactivo."
         />
       </Helmet>
       

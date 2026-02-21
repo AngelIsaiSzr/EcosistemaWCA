@@ -15,7 +15,7 @@ export default function AboutSection() {
           >
             <img 
               src="https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg" 
-              alt="Misión de Web Code Academy" 
+              alt="Misión de Ecosistema WCA" 
               className="rounded-xl shadow-lg"
             />
           </motion.div>
@@ -29,7 +29,7 @@ export default function AboutSection() {
           >
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">Nuestra Misión</h2>
             <p className="text-muted mb-6">
-              En <span className="accent-blue font-medium">Web Code Academy</span>, creemos que la educación tecnológica de calidad debe ser accesible para todos. Nuestra misión es combatir el analfabetismo digital ofreciendo cursos 100% gratuitos en alianza con otros proyectos educativos, que permitan a nuestros estudiantes desarrollar habilidades relevantes para el mercado laboral actual.
+              En <span className="accent-blue font-medium">Ecosistema WCA</span>, creemos que la educación tecnológica de calidad debe ser accesible para todos. Nuestra misión es combatir el analfabetismo digital ofreciendo cursos 100% gratuitos en alianza con otros proyectos educativos, que permitan a nuestros estudiantes desarrollar habilidades relevantes para el mercado laboral actual.
             </p>
             
             <div className="mb-8">

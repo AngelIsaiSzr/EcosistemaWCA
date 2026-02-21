@@ -6,7 +6,7 @@ export const initialTestimonials: InsertTestimonial[] = [
     name: "Alejandra Guzmán",
     courseName: "Desarrollo Web Frontend",
     image: "https://randomuser.me/api/portraits/women/45.jpg",
-    text: "Gracias a Web Code Academy pude aprender a programar desde cero y conseguir mi primer trabajo como desarrolladora frontend. El apoyo constante de los instructores fueron clave para mi éxito.",
+    text: "Gracias a Ecosistema WCA pude aprender a programar desde cero y conseguir mi primer trabajo como desarrolladora frontend. El apoyo constante de los instructores fueron clave para mi éxito.",
     rating: 5,
     order: 1
   },
@@ -14,7 +14,7 @@ export const initialTestimonials: InsertTestimonial[] = [
     name: "Miguel Ángel Hernández",
     courseName: "Python Fullstack",
     image: "https://randomuser.me/api/portraits/men/36.jpg",
-    text: "Lo que más valoro de Web Code Academy es la calidad del contenido y la pasión de los instructores. He tomado varios cursos gratuitos en línea, pero ninguno con el nivel que ofrecen aquí.",
+    text: "Lo que más valoro de Ecosistema WCA es la calidad del contenido y la pasión de los instructores. He tomado varios cursos gratuitos en línea, pero ninguno con el nivel que ofrecen aquí.",
     rating: 5,
     order: 2
   },
@@ -30,7 +30,7 @@ export const initialTestimonials: InsertTestimonial[] = [
     name: "Roberto Sánchez",
     courseName: "React & Redux",
     image: "https://randomuser.me/api/portraits/men/42.jpg",
-    text: "El curso de React & Redux me permitió actualizar mis conocimientos y dar el salto a tecnologías modernas de frontend. Ahora trabajo en una startup y aplico diariamente lo que aprendí en Web Code Academy.",
+    text: "El curso de React & Redux me permitió actualizar mis conocimientos y dar el salto a tecnologías modernas de frontend. Ahora trabajo en una startup y aplico diariamente lo que aprendí en Ecosistema WCA.",
     rating: 4,
     order: 4
   },

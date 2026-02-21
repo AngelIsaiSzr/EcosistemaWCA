@@ -6,10 +6,10 @@ export default function TermsPage() {
   return (
     <>
       <Helmet>
-        <title>Términos y Condiciones - Web Code Academy</title>
+        <title>Términos y Condiciones - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Términos y condiciones de uso de Web Code Academy. Conoce nuestros términos legales y condiciones de servicio."
+          content="Términos y condiciones de uso de Ecosistema WCA. Conoce nuestros términos legales y condiciones de servicio."
         />
       </Helmet>
 
@@ -29,7 +29,7 @@ export default function TermsPage() {
                     1. Aceptación de los Términos
                   </h2>
                   <p className="text-muted leading-relaxed">
-                    Al acceder y utilizar Web Code Academy, aceptas estar sujeto a estos términos y condiciones de uso. 
+                    Al acceder y utilizar Ecosistema WCA, aceptas estar sujeto a estos términos y condiciones de uso. 
                     Si no estás de acuerdo con alguna parte de estos términos, no debes utilizar nuestros servicios.
                   </p>
                 </div>
@@ -39,7 +39,7 @@ export default function TermsPage() {
                     2. Descripción del Servicio
                   </h2>
                   <p className="text-muted leading-relaxed mb-4">
-                    Web Code Academy es una plataforma educativa gratuita que ofrece:
+                    Ecosistema WCA es una plataforma educativa gratuita que ofrece:
                   </p>
                   <ul className="text-muted leading-relaxed space-y-2 ml-6">
                     <li>• Cursos de todas las áreas</li>
@@ -87,7 +87,7 @@ export default function TermsPage() {
                     5. Propiedad Intelectual
                   </h2>
                   <p className="text-muted leading-relaxed">
-                    Todo el contenido de Web Code Academy, incluyendo textos, gráficos, código, 
+                    Todo el contenido de Ecosistema WCA, incluyendo textos, gráficos, código, 
                     y software, está protegido por derechos de autor y otras leyes de propiedad intelectual. 
                     Se te otorga una licencia limitada para uso personal y educativo.
                   </p>
@@ -108,7 +108,7 @@ export default function TermsPage() {
                     7. Limitación de Responsabilidad
                   </h2>
                   <p className="text-muted leading-relaxed">
-                    Web Code Academy se proporciona "tal como está" sin garantías de ningún tipo. 
+                    Ecosistema WCA se proporciona "tal como está" sin garantías de ningún tipo. 
                     No nos hacemos responsables por daños directos, indirectos, incidentales o consecuentes 
                     que puedan resultar del uso de nuestros servicios.
                   </p>

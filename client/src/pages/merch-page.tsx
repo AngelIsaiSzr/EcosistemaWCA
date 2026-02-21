@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 const products = [
   {
     id: 1,
-    name: "Playera Web Code Academy",
+    name: "Playera Ecosistema WCA",
     price: 300.00,
     image: "https://i.ibb.co/Q7VZgWQs/playera1-soj6qu.png",
     category: "Ropa",
@@ -31,10 +31,10 @@ export default function MerchPage() {
   return (
     <>
       <Helmet>
-        <title>Merch Oficial - Web Code Academy</title>
+        <title>Merch Oficial - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Descubre nuestra colección oficial de merch: camisetas, hoodies, tazas y más productos con el diseño de Web Code Academy"
+          content="Descubre nuestra colección oficial de merch: camisetas, hoodies, tazas y más productos con el diseño de Ecosistema WCA"
         />
       </Helmet>
 
@@ -50,7 +50,7 @@ export default function MerchPage() {
                   Merch Oficial
                 </h1>
                 <p className="text-muted text-lg">
-                  Lleva contigo a Web Code Academy con nuestra colección exclusiva de productos
+                  Lleva contigo a Ecosistema WCA con nuestra colección exclusiva de productos
                 </p>
               </div>
             </div>

@@ -6,10 +6,10 @@ export default function PrivacyPage() {
   return (
     <>
       <Helmet>
-        <title>Política de Privacidad - Web Code Academy</title>
+        <title>Política de Privacidad - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Política de privacidad de Web Code Academy. Conoce cómo protegemos y utilizamos tu información personal."
+          content="Política de privacidad de Ecosistema WCA. Conoce cómo protegemos y utilizamos tu información personal."
         />
       </Helmet>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
                     1. Información que Recopilamos
                   </h2>
                   <p className="text-muted leading-relaxed mb-4">
-                    Recopilamos la siguiente información cuando utilizas Web Code Academy:
+                    Recopilamos la siguiente información cuando utilizas Ecosistema WCA:
                   </p>
                   <div className="space-y-4">
                     <div>
@@ -166,7 +166,7 @@ export default function PrivacyPage() {
                     8. Menores de Edad
                   </h2>
                   <p className="text-muted leading-relaxed">
-                    Web Code Academy no está dirigido a menores de 13 años. No recopilamos 
+                    Ecosistema WCA no está dirigido a menores de 13 años. No recopilamos 
                     intencionalmente información personal de menores de 13 años. Si eres padre 
                     o tutor y crees que tu hijo nos ha proporcionado información personal, 
                     contáctanos inmediatamente.

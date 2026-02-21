@@ -12,7 +12,7 @@ export default function Footer() {
               <div className="accent-blue mr-2">
                 <i className="fas fa-code text-2xl"></i>
               </div>
-              <span className="font-heading font-bold text-xl">Web Code Academy</span>
+              <span className="font-heading font-bold text-xl">Ecosistema WCA</span>
             </div>
             <p className="text-muted mb-6">
               La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa 100% Gratuita, comprometida con la educación de calidad y la reducción del analfabetismo digital creciente en el mundo.
@@ -70,7 +70,7 @@ export default function Footer() {
         <div className="border-t border-secondary-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-muted text-sm mb-4 md:mb-0">
-              © {currentYear} Web Code Academy. Todos los derechos reservados.
+              © {currentYear} Ecosistema WCA. Todos los derechos reservados.
             </p>
             <div className="flex space-x-6">
               <Link href="/terms" className="text-muted hover-accent-blue text-sm">Términos y Condiciones</Link>

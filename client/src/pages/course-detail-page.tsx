@@ -167,7 +167,7 @@ export default function CourseDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{course.title} - Web Code Academy</title>
+        <title>{course.title} - Ecosistema WCA</title>
         <meta
           name="description"
           content={course.description}

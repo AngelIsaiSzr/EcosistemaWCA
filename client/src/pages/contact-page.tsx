@@ -72,7 +72,7 @@ export default function ContactSection() {
   return (
     <>
       <Helmet>
-        <title>Web Code Academy</title>
+        <title>Ecosistema WCA</title>
         <meta
           name="description"
           content="Contáctanos para obtener más información sobre nuestros cursos o para cualquier consulta que tengas."
@@ -286,7 +286,7 @@ export default function ContactSection() {
 
                   <AccordionItem value="item-5" className="border-b border-primary-700 mt-4">
                     <AccordionTrigger className="text-xl font-heading font-semibold px-6 py-4 bg-primary-700 rounded-t-xl hover:no-underline">
-                      ¿Cómo puedo apoyar a Web Code Academy?
+                      ¿Cómo puedo apoyar a Ecosistema WCA?
                     </AccordionTrigger>
                     <AccordionContent className="bg-primary-700 px-6 pb-6 rounded-b-xl text-muted">
                       Puedes apoyarnos compartiendo nuestros cursos con otras personas, participando activamente en nuestra comunidad, a través de donaciones, o si eres un profesional de la tecnología, considerando unirte como facilitador o instructor. Contáctanos para más información.

@@ -5,7 +5,7 @@ export const initialTeam: InsertTeam[] = [
   {
     name: "Angel Salazar",
     role: "CEO & Fundador",
-    bio: "Creador de Web Code Academy, apasionado por democratizar la educación tecnológica y ayudar a otros a alcanzar sus metas profesionales.",
+    bio: "Creador de Ecosistema WCA, apasionado por democratizar la educación tecnológica y ayudar a otros a alcanzar sus metas profesionales.",
     image: "https://i.ibb.co/8Lpz1QrK/team1-ct12l5.png",
     linkedIn: "https://www.linkedin.com/in/angelisaiszr/",
     github: "https://github.com/AngelIsaiSzr",
@@ -24,7 +24,7 @@ export const initialTeam: InsertTeam[] = [
   {
     name: "Victoria García",
     role: "CFO & Diseñadora UX/UI",
-    bio: "Maestra de inglés y experta en gestión financiera. Su enfoque está en asegurar el crecimiento y la sostenibilidad de Web Code Academy.",
+    bio: "Maestra de inglés y experta en gestión financiera. Su enfoque está en asegurar el crecimiento y la sostenibilidad de Ecosistema WCA.",
     image: "https://i.ibb.co/qYF6rpKm/team3-ongwvm.jpg",
     linkedIn: "https://www.linkedin.com/in/",
     instagram: "https://www.instagram.com/",

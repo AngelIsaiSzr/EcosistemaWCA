@@ -9,6 +9,6 @@ export const initialUsers: InsertUser[] = [
     name: 'Administrador',
     role: 'admin',
     profileImage: 'https://randomuser.me/api/portraits/lego/1.jpg',
-    bio: 'Administrador principal de Web Code Academy.'
+    bio: 'Administrador principal de Ecosistema WCA.'
   }
 ];

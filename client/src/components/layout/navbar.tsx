@@ -59,7 +59,7 @@ export default function Navbar() {
               <div className="accent-blue mr-2">
                 <i className="fas fa-code text-2xl"></i>
               </div>
-              <span className="font-heading font-bold text-xl">Web Code Academy</span>
+              <span className="font-heading font-bold text-xl">Ecosistema WCA</span>
             </Link>
           </div>
 

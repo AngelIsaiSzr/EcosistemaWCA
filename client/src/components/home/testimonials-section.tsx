@@ -52,7 +52,7 @@ export default function TestimonialsSection() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">Lo que dicen nuestros estudiantes</h2>
-          <p className="text-muted max-w-2xl mx-auto">Descubre cómo Web Code Academy ha transformado la vida y el aprendizaje de nuestros alumnos.</p>
+          <p className="text-muted max-w-2xl mx-auto">Descubre cómo Ecosistema WCA ha transformado la vida y el aprendizaje de nuestros alumnos.</p>
         </motion.div>
 
         {isLoading ? (

@@ -34,7 +34,7 @@ const features = [
   {
     icon: 'fas fa-certificate',
     title: 'Certificaciones Conjuntas',
-    description: 'Certificaciones avaladas por Web Code Academy y los proyectos que imparten cada curso, reconocimiento de calidad internacional.',
+    description: 'Certificaciones avaladas por Ecosistema WCA y los proyectos que imparten cada curso, reconocimiento de calidad internacional.',
     color: 'accent-red'
   }
 ];
@@ -45,7 +45,7 @@ export default function FeaturesSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            ¿Por qué elegir Web Code Academy?
+            ¿Por qué elegir Ecosistema WCA?
           </h2>
           <p className="text-muted max-w-3xl mx-auto">
             Somos la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI

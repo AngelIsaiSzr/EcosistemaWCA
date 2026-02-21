@@ -17,4 +17,4 @@ export const titlesPage = [
   "¡Sé un maestro del código! 🎯"
 ];
 
-export const defaultTitle = "Web Code Academy"; 
+export const defaultTitle = "Ecosistema WCA"; 

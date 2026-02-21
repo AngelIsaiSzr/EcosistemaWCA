@@ -7,10 +7,10 @@ export default function AboutPage() {
   return (
     <>
       <Helmet>
-        <title>Acerca de - Web Code Academy | Primera Academia Tecnológica Multidisciplinaria y Colaborativa</title>
+        <title>Acerca de - Ecosistema WCA | Primera Academia Tecnológica Multidisciplinaria y Colaborativa</title>
         <meta 
           name="description" 
-          content="Conoce la evolución de Web Code Academy, la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI."
+          content="Conoce la evolución de Ecosistema WCA, la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI."
         />
       </Helmet>
       
@@ -41,7 +41,7 @@ export default function AboutPage() {
                     Nuestra Misión
                   </h2>
                   <p className="text-muted mb-6">
-                    En <span className="accent-blue font-medium">Web Code Academy</span>, creemos que la educación tecnológica de calidad debe ser accesible para todos. Nuestra misión es combatir el analfabetismo digital ofreciendo cursos 100% gratuitos en alianza con otros proyectos educativos, que permitan a nuestros estudiantes desarrollar habilidades relevantes para el mercado laboral actual.
+                    En <span className="accent-blue font-medium">Ecosistema WCA</span>, creemos que la educación tecnológica de calidad debe ser accesible para todos. Nuestra misión es combatir el analfabetismo digital ofreciendo cursos 100% gratuitos en alianza con otros proyectos educativos, que permitan a nuestros estudiantes desarrollar habilidades relevantes para el mercado laboral actual.
                   </p>
                   
                   <h3 className="text-xl font-heading font-semibold mb-4">
@@ -78,7 +78,7 @@ export default function AboutPage() {
                 <div className="w-full md:w-1/2 order-1 md:order-2">
                   <img 
                     src="https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg" 
-                    alt="Misión de Web Code Academy" 
+                    alt="Misión de Ecosistema WCA" 
                     className="rounded-xl shadow-lg"
                   />
                 </div>
@@ -93,7 +93,7 @@ export default function AboutPage() {
                 <div className="w-full md:w-1/2">
                   <img 
                     src="https://i.ibb.co/rKPSpHYq/about2-rxuu0v.jpg" 
-                    alt="Evolución de Web Code Academy" 
+                    alt="Evolución de Ecosistema WCA" 
                     className="rounded-xl shadow-lg"
                   />
                 </div>
@@ -103,7 +103,7 @@ export default function AboutPage() {
                     Nuestra Historia
                   </h2>
                   <p className="text-muted mb-6">
-                    Web Code Academy nació en 2022 como una respuesta a la creciente necesidad de educación tecnológica accesible. Fundada por Angel Salazar, quien experimentó de primera mano las barreras de acceso a la educación en tecnología, nuestra academia comenzó como un pequeño grupo de estudio y ha evolucionado hasta convertirse en la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita.
+                    Ecosistema WCA nació en 2022 como una respuesta a la creciente necesidad de educación tecnológica accesible. Fundada por Angel Salazar, quien experimentó de primera mano las barreras de acceso a la educación en tecnología, nuestra academia comenzó como un pequeño grupo de estudio y ha evolucionado hasta convertirse en la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita.
                   </p>
                   
                   <h3 className="text-xl font-heading font-semibold mb-4">
@@ -201,7 +201,7 @@ export default function AboutPage() {
                     Nuestro Compromiso
                   </h3>
                   <p className="text-lg font-medium mb-5 leading-relaxed">
-                    "Educación tecnológica gratuita para todos:<br />Forma, transforma e impulsa con Web Code Academy"
+                    "Educación tecnológica gratuita para todos:<br />Forma, transforma e impulsa con Ecosistema WCA"
                   </p>
                   <h4 className="text-xl font-heading font-semibold mb-4 text-accent-yellow">
                     Nuestro Lema Principal

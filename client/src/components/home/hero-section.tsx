@@ -26,7 +26,7 @@ export default function HeroSection() {
                 Aprende, <span className="accent-blue">Crea</span> y <br /><span className="accent-yellow">Transforma</span> tu FUTURO
               </h1>
               <p className="text-lg md:text-xl text-muted mb-8">
-                Web Code Academy es una academia tecnológica integral que te ofrece cursos totalmente gratuitos para combatir el analfabetismo digital y brindarte las herramientas para transformar tu futuro.
+                Ecosistema WCA es una academia tecnológica integral que te ofrece cursos totalmente gratuitos para combatir el analfabetismo digital y brindarte las herramientas para transformar tu futuro.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link href="/courses" className="px-6 py-3 bg-accent-blue text-white font-medium rounded-md hover:opacity-90 transition-colors inline-block">

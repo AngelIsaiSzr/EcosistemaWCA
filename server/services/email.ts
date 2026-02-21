@@ -54,7 +54,7 @@ transporter.verify(function (err: Error | null, success: true) {
 export async function sendEmail(data: EmailData): Promise<void> {
   try {
     const mailOptions = {
-      from: `"Web Code Academy" <${process.env.SMTP_USER || 'webcodeacademy0@gmail.com'}>`,
+      from: `"Ecosistema WCA" <${process.env.SMTP_USER || 'webcodeacademy0@gmail.com'}>`,
       to: data.to,
       replyTo: data.from,
       subject: data.subject,

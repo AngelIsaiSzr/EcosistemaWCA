@@ -90,10 +90,10 @@ export default function AuthPage() {
   return (
     <>
       <Helmet>
-        <title>Iniciar Sesión - Web Code Academy | Academia Tecnológica Multidisciplinaria y Colaborativa</title>
+        <title>Iniciar Sesión - Ecosistema WCA | Academia Tecnológica Multidisciplinaria y Colaborativa</title>
         <meta 
           name="description" 
-          content="Inicia sesión o regístrate en Web Code Academy, la academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI."
+          content="Inicia sesión o regístrate en Ecosistema WCA, la academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI."
         />
       </Helmet>
 
@@ -127,7 +127,7 @@ export default function AuthPage() {
               <div className="accent-blue mr-2">
                 <i className="fas fa-code text-2xl"></i>
               </div>
-              <span className="font-heading font-bold text-xl">Web Code Academy</span>
+              <span className="font-heading font-bold text-xl">Ecosistema WCA</span>
             </a>
             <h1 className="text-2xl md:text-3xl font-heading font-bold mb-2">Bienvenido</h1>
             <p className="text-muted max-w-md">
@@ -324,7 +324,7 @@ export default function AuthPage() {
               Aprende, <span className="accent-blue">Crea</span> y <span className="accent-yellow">Transforma</span><br /> tu FUTURO 100% Gratis
             </h2>
             <p className="text-muted mb-8">
-              Web Code Academy es una academia tecnológica integral donde conviven cursos de computación, historia, literatura, idiomas, matemáticas, arte digital y más, todos con la tecnología como eje transversal usando presentaciones hasta Realidad Virtual, IA y más.
+              Ecosistema WCA es una academia tecnológica integral donde conviven cursos de computación, historia, literatura, idiomas, matemáticas, arte digital y más, todos con la tecnología como eje transversal usando presentaciones hasta Realidad Virtual, IA y más.
             </p>
             
             <div className="space-y-6">

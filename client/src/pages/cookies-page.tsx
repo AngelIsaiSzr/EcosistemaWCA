@@ -6,10 +6,10 @@ export default function CookiesPage() {
   return (
     <>
       <Helmet>
-        <title>Política de Cookies - Web Code Academy</title>
+        <title>Política de Cookies - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Política de cookies de Web Code Academy. Conoce cómo utilizamos las cookies para mejorar tu experiencia."
+          content="Política de cookies de Ecosistema WCA. Conoce cómo utilizamos las cookies para mejorar tu experiencia."
         />
       </Helmet>
 

@@ -42,7 +42,7 @@ export async function saveRegistrationToSheet(registration: LiveCourseRegistrati
         registration.guardianPhoneNumber || '',    // Escribe el número de teléfono de tu Madre, Padre o Tutor
         registration.preferredModality,            // ¿Qué modalidad prefieres?
         registration.hasLaptop ? 'Sí' : 'No',     // ¿Cuentas con una computadora portátil? (Laptop)
-        'Web Code Academy',                        // Submitter
+        'Ecosistema WCA',                        // Submitter
         new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }), // Submission Date
         `WCA-${Date.now()}`                       // Submission ID (formato: WCA-timestamp)
       ]

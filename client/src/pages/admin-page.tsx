@@ -1169,7 +1169,7 @@ export default function AdminPage() {
       {testimonialDeleteDialog}
 
       <Helmet>
-        <title>Web Code Academy</title>
+        <title>Ecosistema WCA</title>
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">
