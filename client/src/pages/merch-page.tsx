@@ -50,7 +50,7 @@ export default function MerchPage() {
                   Merch Oficial
                 </h1>
                 <p className="text-muted text-lg">
-                  Lleva contigo a Ecosistema WCA con nuestra colección exclusiva de productos
+                  Lleva contigo al Ecosistema WCA con nuestra colección exclusiva de productos
                 </p>
               </div>
             </div>

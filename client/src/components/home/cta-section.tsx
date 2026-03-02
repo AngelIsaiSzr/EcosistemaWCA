@@ -16,7 +16,7 @@ export default function CtaSection() {
         >
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">¿Listo para ser parte de la revolución educativa?</h2>
           <p className="text-muted max-w-2xl mx-auto mb-10">
-            Únete a más de 120 estudiantes que ya están transformando su futuro profesional con nuestros cursos gratuitos.
+            Únete a más de 120 estudiantes que ya están transformando su futuro profesional con nuestros programas de especialización.
           </p>
           
           <motion.div 
@@ -26,8 +26,8 @@ export default function CtaSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Link href="/courses" className="px-8 py-4 bg-accent-blue text-white font-medium rounded-md hover:opacity-90 transition-colors inline-block">
-              Explorar Cursos
+            <Link href="/programs" className="px-8 py-4 bg-accent-blue text-white font-medium rounded-md hover:opacity-90 transition-colors inline-block">
+              Explorar Programas
             </Link>
             <Link href="/contact" className="px-8 py-4 border border-accent-blue text-accent-blue font-medium rounded-md hover:bg-accent-blue hover:text-white transition-colors inline-block">
               Únete a la Revolución

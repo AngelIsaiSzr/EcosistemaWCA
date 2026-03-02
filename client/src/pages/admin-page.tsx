@@ -97,11 +97,11 @@ const courseFormSchema = insertCourseSchema.extend({
   new: z.boolean().optional(),
   isLive: z.boolean().optional().default(false),
   liveDetails: z.object({
-    liveDuration: z.string().min(1, "La duración del curso en vivo es requerida."),
-    schedule: z.string().min(1, "El horario del curso en vivo es requerido."),
+    liveDuration: z.string().min(1, "La duración del programa en vivo es requerida."),
+    schedule: z.string().min(1, "El horario del programa en vivo es requerido."),
     modality: z.enum(["Presencial", "Virtual", "Mixta"], { message: "Por favor, selecciona una modalidad.", }),
-    address: z.string().min(1, "La dirección del curso en vivo es requerida."),
-    contact: z.string().min(1, "El contacto del curso en vivo es requerido."),
+    address: z.string().min(1, "La dirección del programa en vivo es requerida."),
+    contact: z.string().min(1, "El contacto del programa en vivo es requerido."),
   }).optional(),
   isDisabled: z.boolean().optional().default(false),
   comingSoon: z.boolean().optional().default(false),
@@ -110,7 +110,7 @@ const courseFormSchema = insertCourseSchema.extend({
     if (!data.liveDetails) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Los detalles del curso en vivo son requeridos si el curso es en vivo.',
+        message: 'Los detalles del programa en vivo son requeridos si el programa es en vivo.',
         path: ['liveDetails'],
       });
       return;
@@ -119,35 +119,35 @@ const courseFormSchema = insertCourseSchema.extend({
     if (!data.liveDetails.liveDuration || data.liveDetails.liveDuration.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'La duración del curso en vivo es requerida.',
+        message: 'La duración del programa en vivo es requerida.',
         path: ['liveDetails.liveDuration'],
       });
     }
     if (!data.liveDetails.schedule || data.liveDetails.schedule.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'El horario del curso en vivo es requerido.',
+        message: 'El horario del programa en vivo es requerido.',
         path: ['liveDetails.schedule'],
       });
     }
     if (!data.liveDetails.modality) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'La modalidad del curso en vivo es requerida.',
+        message: 'La modalidad del programa en vivo es requerida.',
         path: ['liveDetails.modality'],
       });
     }
     if (!data.liveDetails.address || data.liveDetails.address.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'La dirección del curso en vivo es requerida.',
+        message: 'La dirección del programa en vivo es requerida.',
         path: ['liveDetails.address'],
       });
     }
     if (!data.liveDetails.contact || data.liveDetails.contact.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'El contacto del curso en vivo es requerido.',
+        message: 'El contacto del programa en vivo es requerido.',
         path: ['liveDetails.contact'],
       });
     }
@@ -238,7 +238,7 @@ export default function AdminPage() {
 
   // Fetch data
   const { data: courses, refetch: refetchCourses } = useQuery<Course[]>({
-    queryKey: ["/api/courses"],
+    queryKey: ["/api/programs"],
   });
 
   const { data: teamMembers, refetch: refetchTeam } = useQuery<Team[]>({
@@ -252,17 +252,17 @@ export default function AdminPage() {
   // Delete course mutation
   const deleteCourse = useMutation({
     mutationFn: async (courseId: number) => {
-      const response = await apiRequest("DELETE", `/api/courses/${courseId}`);
+      const response = await apiRequest("DELETE", `/api/programs/${courseId}`);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Error al eliminar el curso");
+        throw new Error(errorData.message || "Error al eliminar el programa");
       }
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Curso eliminado",
-        description: "El curso ha sido eliminado correctamente",
+        title: "Programa eliminado",
+        description: "El programa ha sido eliminado correctamente",
       });
       refetchCourses();
     },
@@ -386,7 +386,7 @@ export default function AdminPage() {
         isDisabled: editingCourse.isDisabled || false, // Cargar valor de isDisabled
         comingSoon: editingCourse.comingSoon || false, // Cargar valor de comingSoon
       });
-      // Si estamos editando un curso en vivo, mostrar las configuraciones
+      // Si estamos editando un programa en vivo, mostrar las configuraciones
       if (editingCourse.isLive) {
         setShowLiveSettings(true);
       }
@@ -405,13 +405,13 @@ export default function AdminPage() {
   const createCourseMutation = useMutation({
     mutationFn: async (data: CourseFormValues) => {
       const payload = { ...data, liveDetails: data.isLive ? data.liveDetails : undefined }; // Ajustar payload
-      const res = await apiRequest("POST", "/api/courses", payload);
+      const res = await apiRequest("POST", "/api/programs", payload);
       return res.json();
     },
     onSuccess: () => {
       toast({
-        title: "Curso creado",
-        description: "El curso se ha creado correctamente.",
+        title: "Programa creado",
+        description: "El programa se ha creado correctamente.",
       });
       courseForm.reset();
       setEditingCourse(null);
@@ -420,7 +420,7 @@ export default function AdminPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error al crear el curso",
+        title: "Error al crear el programa",
         description: error.message,
         variant: "destructive",
       });
@@ -430,13 +430,13 @@ export default function AdminPage() {
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CourseFormValues }) => {
       const payload = { ...data, liveDetails: data.isLive ? data.liveDetails : undefined }; // Ajustar payload
-      const res = await apiRequest("PATCH", `/api/courses/${id}`, payload);
+      const res = await apiRequest("PATCH", `/api/programs/${id}`, payload);
       return res.json();
     },
     onSuccess: () => {
       toast({
-        title: "Curso actualizado",
-        description: "El curso se ha actualizado correctamente.",
+        title: "Programa actualizado",
+        description: "El programa se ha actualizado correctamente.",
       });
       // Explicitly reset with empty values
       courseForm.reset(emptyCourseValues);
@@ -446,7 +446,7 @@ export default function AdminPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error al actualizar el curso",
+        title: "Error al actualizar el programa",
         description: error.message,
         variant: "destructive",
       });
@@ -701,10 +701,10 @@ export default function AdminPage() {
 
   // Fetch modules for selected course
   const { data: modules, refetch: refetchModules } = useQuery<Module[]>({
-    queryKey: ["/api/courses", selectedCourse?.id, "modules"],
+    queryKey: ["/api/programs", selectedCourse?.id, "modules"],
     queryFn: async () => {
       if (!selectedCourse) return [];
-      const res = await fetch(`/api/courses/${selectedCourse.id}/modules`);
+      const res = await fetch(`/api/programs/${selectedCourse.id}/modules`);
       if (!res.ok) throw new Error("Error al cargar los módulos");
       return res.json();
     },
@@ -1060,7 +1060,7 @@ export default function AdminPage() {
         <DialogHeader>
           <DialogTitle>Confirmar eliminación</DialogTitle>
           <DialogDescription>
-            ¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.
+            ¿Estás seguro de que deseas eliminar este programa? Esta acción no se puede deshacer.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -1188,7 +1188,7 @@ export default function AdminPage() {
 
         <Tabs defaultValue="courses" className="w-full">
           <TabsList className="grid grid-cols-3 mb-8">
-            <TabsTrigger value="courses">Cursos</TabsTrigger>
+            <TabsTrigger value="courses">Programas</TabsTrigger>
             <TabsTrigger value="team">Equipo</TabsTrigger>
             <TabsTrigger value="testimonials">Testimonios</TabsTrigger>
           </TabsList>
@@ -1199,11 +1199,11 @@ export default function AdminPage() {
               <div>
                 <Card>
                   <CardHeader>
-                    <CardTitle>{editingCourse ? "Editar curso" : "Agregar nuevo curso"}</CardTitle>
+                    <CardTitle>{editingCourse ? "Editar programa" : "Agregar nuevo programa"}</CardTitle>
                     <CardDescription>
                       {editingCourse
-                        ? `Actualizando el curso: ${editingCourse.title}`
-                        : "Crea un nuevo curso para la plataforma."}
+                        ? `Actualizando el programa: ${editingCourse.title}`
+                        : "Crea un nuevo programa para la plataforma."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1214,7 +1214,7 @@ export default function AdminPage() {
                           name="title"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Título del curso</FormLabel>
+                              <FormLabel>Título del programa</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Ej: Desarrollo Web"
@@ -1240,7 +1240,7 @@ export default function AdminPage() {
                                 />
                               </FormControl>
                               <FormDescription>
-                                Identificador único para la URL del curso
+                                Identificador único para la URL del programa
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -1393,7 +1393,7 @@ export default function AdminPage() {
                               <FormLabel>Descripción completa</FormLabel>
                               <FormControl>
                                 <Textarea
-                                  placeholder="Descripción detallada del curso"
+                                  placeholder="Descripción detallada del programa"
                                   {...field}
                                   rows={4}
                                 />
@@ -1501,7 +1501,7 @@ export default function AdminPage() {
                             )}
                           />
 
-                          {/* Campo para curso en vivo */}
+                          {/* Campo para programa en vivo */}
                           <FormField
                             control={courseForm.control}
                             name="isLive"
@@ -1514,16 +1514,16 @@ export default function AdminPage() {
                                   />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
-                                  <FormLabel>Es un curso en vivo</FormLabel>
+                                  <FormLabel>Es un programa en vivo</FormLabel>
                                   <FormDescription>
-                                    Marca si este curso tendrá sesiones en vivo.
+                                    Marca si este programa tendrá sesiones en vivo.
                                   </FormDescription>
                                 </div>
                               </FormItem>
                             )}
                           />
 
-                          {/* Campo para curso próximo */}
+                          {/* Campo para programa próximo */}
                           <FormField
                             control={courseForm.control}
                             name="comingSoon"
@@ -1538,7 +1538,7 @@ export default function AdminPage() {
                                 <div className="space-y-1 leading-none">
                                   <FormLabel>Próximamente</FormLabel>
                                   <FormDescription>
-                                    Marca si este curso estará disponible próximamente.
+                                    Marca si este programa estará disponible próximamente.
                                   </FormDescription>
                                 </div>
                               </FormItem>
@@ -1553,15 +1553,15 @@ export default function AdminPage() {
                             onClick={() => setShowLiveSettings(prev => !prev)}
                             className="w-fit mt-4"
                           >
-                            {showLiveSettings ? 'Ocultar' : 'Mostrar'} más configuraciones de curso en vivo
+                            {showLiveSettings ? 'Ocultar' : 'Mostrar'} más configuraciones de programa en vivo
                           </Button>
                         )}
 
                         {showLiveSettings && courseForm.watch('isLive') && (
                           <Card className="border-dashed border-2 p-6 mt-4">
                             <CardHeader className="px-0 pt-0">
-                              <CardTitle className="text-xl">Detalles del Curso en Vivo</CardTitle>
-                              <CardDescription>Configura la información específica para cursos con sesiones en vivo.</CardDescription>
+                              <CardTitle className="text-xl">Detalles del Programa en Vivo</CardTitle>
+                              <CardDescription>Configura la información específica para programas con sesiones en vivo.</CardDescription>
                             </CardHeader>
                             <CardContent className="px-0 pb-0 space-y-4">
                               <FormField
@@ -1569,7 +1569,7 @@ export default function AdminPage() {
                                 name="liveDetails.liveDuration"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Duración del curso en vivo (Ej: 23 de Junio - 16 de Julio)</FormLabel>
+                                    <FormLabel>Duración del programa en vivo (Ej: 23 de Junio - 16 de Julio)</FormLabel>
                                     <FormControl>
                                       <Input placeholder="Ej: Desde el 23 de Junio del 2025 hasta el 16 de Julio del 2025" {...field} />
                                     </FormControl>
@@ -1660,7 +1660,7 @@ export default function AdminPage() {
                             {createCourseMutation.isPending || updateCourseMutation.isPending ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : null}
-                            {editingCourse ? "Actualizar curso" : "Crear curso"}
+                            {editingCourse ? "Actualizar programa" : "Crear programa"}
                           </Button>
                         </div>
                       </form>
@@ -1670,7 +1670,7 @@ export default function AdminPage() {
               </div>
 
               <div className="mt-8">
-                <h3 className="text-xl font-medium mb-4">Cursos existentes</h3>
+                <h3 className="text-xl font-medium mb-4">Programas existentes</h3>
 
                 {courses && courses.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1816,7 +1816,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div className="text-center py-10">
-                    <p className="text-muted-foreground">No hay cursos disponibles.</p>
+                    <p className="text-muted-foreground">No hay programas disponibles.</p>
                   </div>
                 )}
               </div>
@@ -1838,7 +1838,7 @@ export default function AdminPage() {
                           setSelectedModule(null);
                         }}
                       >
-                        Volver a la lista de cursos
+                        Volver a la lista de programas
                       </Button>
                     </div>
                   </div>
@@ -1851,7 +1851,7 @@ export default function AdminPage() {
                           <CardDescription>
                             {editingModule
                               ? `Actualizando el módulo: ${editingModule.title}`
-                              : `Agrega un nuevo módulo para el curso "${selectedCourse.title}".`}
+                              : `Agrega un nuevo módulo para el programa "${selectedCourse.title}".`}
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -2259,7 +2259,7 @@ export default function AdminPage() {
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground bg-muted rounded-md">
-                          No hay módulos para este curso. Agrega uno nuevo para comenzar.
+                          No hay módulos para este programa. Agrega uno nuevo para comenzar.
                         </div>
                       )}
                     </div>
@@ -2596,7 +2596,7 @@ export default function AdminPage() {
                           name="courseName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nombre del curso</FormLabel>
+                              <FormLabel>Nombre del programa</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Ej: Desarrollo Web"

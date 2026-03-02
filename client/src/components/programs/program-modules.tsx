@@ -4,13 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Lock, CheckCircle } from 'lucide-react';
 
-type CourseModulesProps = {
+type ProgramModulesProps = {
   modules: Module[];
   isEnrolled: boolean;
   isLive?: boolean;
 };
 
-export default function CourseModules({ modules, isEnrolled, isLive = false }: CourseModulesProps) {
+export default function ProgramModules({ modules, isEnrolled, isLive = false }: ProgramModulesProps) {
   const [expandedModuleId, setExpandedModuleId] = useState<number | null>(
     modules.length > 0 ? modules[0].id : null
   );
@@ -80,7 +80,6 @@ type ModuleAccordionProps = {
 };
 
 function ModuleAccordion({ module, isExpanded, toggleExpanded, isEnrolled, index }: ModuleAccordionProps) {
-  // Fetch sections for this module
   const { data: sections = [], isLoading } = useQuery<Section[]>({
     queryKey: [`/api/modules/${module.id}/sections`],
     enabled: isExpanded,
@@ -201,7 +200,7 @@ function ModuleAccordion({ module, isExpanded, toggleExpanded, isEnrolled, index
                 <div className="flex items-center">
                   <Lock className="h-5 w-5 text-accent-red mr-2" />
                   <p className="text-sm font-medium">
-                    Inscríbete en este curso para acceder a todo el contenido.
+                    Inscríbete en este programa para acceder a todo el contenido.
                   </p>
                 </div>
                   </motion.div>
@@ -215,7 +214,6 @@ function ModuleAccordion({ module, isExpanded, toggleExpanded, isEnrolled, index
   );
 }
 
-// Helper to display difficulty in Spanish
 function getDifficultyLabel(difficulty: string): string {
   const difficultyMap: { [key: string]: string } = {
     'Easy': 'Fácil',

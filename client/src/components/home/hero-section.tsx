@@ -5,17 +5,17 @@ import { motion } from 'framer-motion';
 
 export default function HeroSection() {
   const codeLines = [
-    { content: 'class <span class="text-accent-yellow">WebCodeAcademy</span> {', className: 'text-accent-blue' },
-    { content: '<span class="text-accent-red">constructor</span><span class="text-white">() {</span>', className: 'ml-4' },
-    { content: '// Academia Tecnológica Multidisciplinaria y Colaborativa', className: 'ml-8 text-muted' },
-    { content: 'this<span class="text-white">.</span>mission <span class="text-white">=</span> <span class="text-accent-red">"Educación tecnológica gratuita para todos"</span>;', className: 'ml-8 text-accent-blue' },
-    { content: '}', className: 'text-white ml-4' },
-    { content: '}', className: 'text-accent-blue' },
+    { content: 'class <span class="text-accent-blue">EcosistemaWCA</span> {', className: 'text-accent-red' },
+    { content: 'constructor<span class="text-white">() </span>{', className: 'ml-4 text-accent-cyan' },
+    { content: '// Primer Ecosistema de Aprendizaje TecnoHumano del Mundo', className: 'ml-8 text-muted' },
+    { content: 'this<span class="text-white">.</span>mission <span class="text-white">=</span> <span class="text-accent-blue">"Reinventar la educación para que todos puedan construir el futuro"</span>;', className: 'ml-8 text-accent-yellow' },
+    { content: '}', className: 'text-accent-cyan ml-4' },
+    { content: '}', className: 'text-accent-red' },
   ];
 
   return (
     <section className="min-h-[100vh] bg-gradient-to-b from-primary-900 to-primary-800 relative overflow-hidden max-w-[100vw] flex items-center pt-24 md:pt-32 pb-16 md:pb-24">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1587620962725-abab7fe55159?ixlib=rb-4.0.3&auto=format&fit=crop&w=1489&q=80')] opacity-[0.1] bg-center bg-cover"></div>
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1772395510694-5feb7ba00110?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] opacity-[0.1] bg-center bg-cover"></div>
       <div className="absolute inset-0 bg-gradient-to-r from-primary-900/95 to-primary-800/95"></div>
       
       <div className="container mx-auto px-4 relative z-10 overflow-x-hidden">
@@ -23,16 +23,16 @@ export default function HeroSection() {
           <AnimateInView className="w-full md:w-1/2 mb-10 md:mb-0 md:pr-10" animation="slideUp">
             <div className="mb-8">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-4 leading-tight">
-                Aprende, <span className="accent-blue">Crea</span> y <br /><span className="accent-yellow">Transforma</span> tu FUTURO
+                Aprende, <span className="accent-blue">Crea</span> y <br /><span className="accent-yellow">Transforma</span> tu <span className="accent-red">FUTURO</span>
               </h1>
-              <p className="text-lg md:text-xl text-muted mb-8">
-                Ecosistema WCA es una academia tecnológica integral que te ofrece cursos totalmente gratuitos para combatir el analfabetismo digital y brindarte las herramientas para transformar tu futuro.
+              <p className="text-lg md:text-xl text-muted mb-8 transition-colors">
+                World Community Academy es la Primera Academia Tecnológica, Multidisciplinaria y Colaborativa que ofrece Programas de Especialización y Rutas de Transformación para todas las personas.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link href="/courses" className="px-6 py-3 bg-accent-blue text-white font-medium rounded-md hover:opacity-90 transition-colors inline-block">
-                  Explorar Cursos
+                <Link href="/programs" className="px-6 py-3 bg-accent-blue text-white font-medium rounded-md hover:opacity-90 transition-colors inline-block">
+                  Explorar Programas
                 </Link>
-                <Link href="/about" className="px-6 py-3 border border-text-muted text-text-light font-medium rounded-md hover:bg-white hover:bg-opacity-5 transition-colors inline-block">
+                <Link href="/about" className="px-6 py-3 border border-accent-blue border-text-muted text-text-light font-medium rounded-md hover:bg-white hover:bg-opacity-5 transition-colors inline-block">
                   Conocer más
                 </Link>
               </div>
@@ -77,7 +77,7 @@ export default function HeroSection() {
               transition={{ duration: 0.3, type: 'spring', stiffness: 100 }}
             >
               <CodeWindow 
-                title="index.html"
+                title="script.js"
                 codeLines={codeLines}
               />
             </motion.div>

@@ -70,15 +70,15 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-// Define type for enrollments with course data
-interface EnrollmentWithCourse {
+// Define type for enrollments with program data
+interface EnrollmentWithProgram {
   id: number;
   userId: number;
   courseId: number;
   progress: number;
   completed: boolean;
   createdAt: string | null;
-  course: {
+  program: {
     id: number;
     title: string;
     slug: string;
@@ -106,13 +106,13 @@ export default function ProfilePage() {
     data: enrollments, 
     isLoading: isLoadingEnrollments,
     refetch: refetchEnrollments
-  } = useQuery<EnrollmentWithCourse[]>({ 
+  } = useQuery<EnrollmentWithProgram[]>({ 
     queryKey: ["/api/enrollments"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: Boolean(user),
   });
   
-  // Mutation to unenroll from a course
+  // Mutation to unenroll from a program
   const unenrollMutation = useMutation({
     mutationFn: async (enrollmentId: number) => {
       const response = await apiRequest("DELETE", `/api/enrollments/${enrollmentId}`);
@@ -125,7 +125,7 @@ export default function ProfilePage() {
     onSuccess: () => {
       toast({
         title: "Éxito", 
-        description: "Has cancelado tu inscripción al curso",
+        description: "Has cancelado tu inscripción al programa",
       });
       // Refetch enrollments to update the UI
       refetchEnrollments();
@@ -670,9 +670,9 @@ export default function ProfilePage() {
 
         <Card className="md:col-span-3">
           <CardHeader>
-            <CardTitle>Mis Cursos</CardTitle>
+            <CardTitle>Mis Programas</CardTitle>
             <CardDescription>
-              Visualiza tus cursos inscritos y sigue tu progreso.
+              Visualiza tus programas inscritos y sigue tu progreso.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -682,9 +682,9 @@ export default function ProfilePage() {
               </div>
             ) : !enrollments || enrollments.length === 0 ? (
               <div className="border rounded-md p-4 text-center">
-                <p className="text-muted-foreground">Aún no estás inscrito en ningún curso.</p>
+                <p className="text-muted-foreground">Aún no estás inscrito en ningún programa.</p>
                 <Button className="mt-4" variant="outline" asChild>
-                  <Link href="/courses">Explorar cursos</Link>
+                  <Link href="/programs">Explorar programas</Link>
                 </Button>
               </div>
             ) : (
@@ -696,8 +696,8 @@ export default function ProfilePage() {
                   >
                     <div className="w-full md:w-1/4">
                       <img 
-                        src={enrollment.course.image} 
-                        alt={enrollment.course.title}
+                        src={enrollment.program.image} 
+                        alt={enrollment.program.title}
                         className="h-40 md:h-full w-full object-cover" 
                       />
                     </div>
@@ -705,16 +705,16 @@ export default function ProfilePage() {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h3 className="text-lg font-semibold mb-1">
-                            {enrollment.course.title}
+                            {enrollment.program.title}
                           </h3>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                             <Badge variant="outline" className="px-2 py-0">
-                              {enrollment.course.level}
+                              {enrollment.program.level}
                             </Badge>
                             <span>•</span>
                             <span className="flex items-center">
                               <BookOpen className="h-3.5 w-3.5 mr-1" />
-                              {enrollment.course.duration} horas
+                              {enrollment.program.duration} horas
                             </span>
                           </div>
                         </div>
@@ -733,7 +733,7 @@ export default function ProfilePage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Cancelar inscripción</AlertDialogTitle>
                               <AlertDialogDescription>
-                                ¿Estás seguro que deseas cancelar tu inscripción de {enrollment.course.title}? 
+                                ¿Estás seguro que deseas cancelar tu inscripción de {enrollment.program.title}? 
                                 Tu progreso se perderá.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -758,7 +758,7 @@ export default function ProfilePage() {
                       </div>
                       
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {enrollment.course.shortDescription}
+                        {enrollment.program.shortDescription}
                       </p>
                       
                       <div className="mt-auto">
@@ -781,8 +781,8 @@ export default function ProfilePage() {
                           )}
                           
                           <Button variant="outline" size="sm" asChild>
-                            <Link href={`/courses/${enrollment.course.slug}/learn`}>
-                              {enrollment.progress > 0 ? "Continuar" : "Iniciar"} curso
+                            <Link href={`/programs/${enrollment.program.slug}/learn`}>
+                              {enrollment.progress > 0 ? "Continuar" : "Iniciar"} programa
                             </Link>
                           </Button>
                         </div>
@@ -822,7 +822,7 @@ export default function ProfilePage() {
                   <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Esta acción no se puede deshacer. Esto eliminará permanentemente tu cuenta
-                    y todos los datos asociados, incluyendo tu progreso en los cursos.
+                    y todos los datos asociados, incluyendo tu progreso en los programas.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

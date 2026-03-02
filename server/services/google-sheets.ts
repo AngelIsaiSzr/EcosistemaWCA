@@ -10,11 +10,11 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// Mapeo de cursos a IDs de hojas de cálculo
+// Mapeo de programas a IDs de hojas de cálculo
 const COURSE_SHEET_IDS: Record<string, string> = {
   'first-steps-in-python': '1CAbWH_GNSn82oWKnFKFy7PbiOpCPBeOKQpvs_amA_vc',
   'web-development': '1-ewKbBEiXvVLuTuDZL-JEZFBj1sdpTmEv64oekppa-s'
-  // Agregar aquí más cursos y sus IDs de hojas
+  // Agregar aquí más programas y sus IDs de hojas
 };
 
 // Función para guardar un registro en la hoja de cálculo
@@ -24,9 +24,9 @@ export async function saveRegistrationToSheet(registration: LiveCourseRegistrati
     const sheetId = COURSE_SHEET_IDS[courseSlug];
 
     if (!sheetId) {
-      console.error(`No se encontró una hoja de cálculo configurada para el curso: ${courseSlug}`);
+      console.error(`No se encontró una hoja de cálculo configurada para el programa: ${courseSlug}`);
       console.log('Slugs disponibles:', Object.keys(COURSE_SHEET_IDS));
-      throw new Error(`No se encontró una hoja de cálculo configurada para el curso: ${courseSlug}`);
+      throw new Error(`No se encontró una hoja de cálculo configurada para el programa: ${courseSlug}`);
     }
 
     // Preparar los datos para la hoja

@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'web-code-academy-project.html';
+    a.download = 'ecosistema-wca-project.html';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -21,14 +21,14 @@ const products = [
     ],
     category: "Ropa",
     description: "Viste el cambio. Con esta playera, no solo llevas nuestro logo, sino nuestro compromiso con la educación accesible para todos.",
-    longDescription: "Más que una prenda, es un símbolo de nuestro objetivo y compromiso. Cada compra apoya nuestra misión de combatir el analfabetismo digital y ofrecer educación tecnológica gratuita en todo el mundo. Fabricada con materiales de alta calidad para que la lleves con orgullo.",
+    longDescription: "Más que una prenda, es un símbolo de nuestro objetivo y compromiso. Cada compra apoya nuestra misión de combatir el analfabetismo digital y ofrecer educación tecnológica accesible en todo el mundo. Fabricada con materiales de alta calidad para que la lleves con orgullo.",
     inStock: true,
     sizes: ["CH", "M", "G", "XG"],
     colors: ["Negro", "Gris"],
     rating: 5,
     reviews: 2,
     features: [
-      "Apoya la educación gratuita",
+      "Apoya la educación tecnológica",
       "Símbolo de la comunidad",
       "Calidad que inspira"
     ]

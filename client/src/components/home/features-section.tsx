@@ -4,7 +4,7 @@ const features = [
   {
     icon: 'fas fa-laptop-code',
     title: 'Academia Multidisciplinaria',
-    description: 'Cursos de computación, historia, literatura, idiomas, matemáticas, arte digital y más, todos con tecnología como eje transversal.',
+    description: 'Programas de computación, historia, literatura, idiomas, matemáticas, arte y más, todos con tecnología como eje transversal.',
     color: 'accent-red'
   },
   {
@@ -22,7 +22,7 @@ const features = [
   {
     icon: 'fas fa-vr-cardboard',
     title: 'Tecnología Avanzada',
-    description: 'Desde presentaciones y diapositivas hasta Realidad Virtual, Realidad Aumentada e Inteligencia Artificial en cada curso.',
+    description: 'Desde presentaciones y diapositivas hasta Realidad Virtual, Realidad Aumentada e Inteligencia Artificial en cada programa.',
     color: 'accent-blue'
   },
   {
@@ -34,7 +34,7 @@ const features = [
   {
     icon: 'fas fa-certificate',
     title: 'Certificaciones Conjuntas',
-    description: 'Certificaciones avaladas por Ecosistema WCA y los proyectos que imparten cada curso, reconocimiento de calidad internacional.',
+    description: 'Certificaciones avaladas por Ecosistema WCA y los proyectos que imparten cada programa, reconocimiento de calidad internacional.',
     color: 'accent-red'
   }
 ];
@@ -45,10 +45,10 @@ export default function FeaturesSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            ¿Por qué elegir Ecosistema WCA?
+            ¿Por qué elegir al Ecosistema WCA?
           </h2>
           <p className="text-muted max-w-3xl mx-auto">
-            Somos la primera academia tecnológica multidisciplinaria y colaborativa 100% gratuita que revoluciona la educación del siglo XXI
+            Somos la Primera Academia Tecnológica, Multidisciplinaria y Colaborativa que Revoluciona la Educación del Siglo XXI
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

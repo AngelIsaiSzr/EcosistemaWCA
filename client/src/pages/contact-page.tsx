@@ -75,7 +75,7 @@ export default function ContactSection() {
         <title>Ecosistema WCA</title>
         <meta
           name="description"
-          content="Contáctanos para obtener más información sobre nuestros cursos o para cualquier consulta que tengas."
+          content="Contáctanos para obtener más información sobre nuestros programas o para cualquier consulta que tengas."
         />
       </Helmet>
 
@@ -115,12 +115,12 @@ export default function ContactSection() {
 
                   <div className="space-y-6 mb-10">
                     <div className="flex items-start">
-                      <div className="accent-red mr-4 mt-1">
+                      <div className="accent-red ml-1 mr-4 mt-1">
                         <i className="fas fa-map-marker-alt text-xl"></i>
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">Ubicación</h3>
-                        <p className="text-muted">Papantla de Olarte, Ver, MX</p>
+                        <p className="text-muted">Monterrey, Nuevo León, MX</p>
                       </div>
                     </div>
 
@@ -130,7 +130,7 @@ export default function ContactSection() {
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">Email</h3>
-                        <p className="text-muted">info@webcodeacademy.com.mx</p>
+                        <p className="text-muted">info@ecosistemawca.com</p>
                       </div>
                     </div>
 
@@ -148,19 +148,19 @@ export default function ContactSection() {
                   <div>
                     <h3 className="font-medium text-lg mb-3">Síguenos</h3>
                     <div className="flex space-x-4">
-                      <a href="https://facebook.com/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en Facebook">
+                      <a href="https://facebook.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en Facebook">
                         <i className="fab fa-facebook-f"></i>
                       </a>
-                      <a href="https://x.com/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-yellow hover:text-white transition-colors" aria-label="Síguenos en Twitter">
+                      <a href="https://x.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-yellow hover:text-white transition-colors" aria-label="Síguenos en Twitter">
                         <i className="fab fa-twitter"></i>
                       </a>
-                      <a href="https://instagram.com/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-white transition-colors" aria-label="Síguenos en Instagram">
+                      <a href="https://instagram.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-white transition-colors" aria-label="Síguenos en Instagram">
                         <i className="fab fa-instagram"></i>
                       </a>
-                      <a href="https://linkedin.com/in/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en LinkedIn">
+                      <a href="https://linkedin.com/in/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en LinkedIn">
                         <i className="fab fa-linkedin-in"></i>
                       </a>
-                      <a href="https://youtube.com/@webcodeacademy0" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-primary-900 transition-colors" aria-label="Síguenos en YouTube">
+                      <a href="https://youtube.com/@ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-primary-900 transition-colors" aria-label="Síguenos en YouTube">
                         <i className="fab fa-youtube"></i>
                       </a>
                     </div>
@@ -250,10 +250,10 @@ export default function ContactSection() {
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="item-1" className="border-b border-primary-700">
                     <AccordionTrigger className="text-xl font-heading font-semibold px-6 py-4 bg-primary-700 rounded-t-xl hover:no-underline">
-                      ¿Los cursos son realmente gratuitos?
+                      ¿Los programas son realmente gratuitos?
                     </AccordionTrigger>
                     <AccordionContent className="bg-primary-700 px-6 pb-6 rounded-b-xl text-muted">
-                      Sí, todos nuestros cursos son 100% gratuitos. Nuestro objetivo es combatir el analfabetismo digital y hacer que la educación tecnológica sea accesible para todos, independientemente de su situación económica.
+                      Sí, todos nuestros programas son 100% gratuitos. Nuestro objetivo es combatir el analfabetismo digital y hacer que la educación tecnológica sea accesible para todos, independientemente de su situación económica.
                     </AccordionContent>
                   </AccordionItem>
 
@@ -268,28 +268,28 @@ export default function ContactSection() {
 
                   <AccordionItem value="item-3" className="border-b border-primary-700 mt-4">
                     <AccordionTrigger className="text-xl font-heading font-semibold px-6 py-4 bg-primary-700 rounded-t-xl hover:no-underline">
-                      ¿Recibo algún certificado al completar un curso?
+                      ¿Recibo algún certificado al completar un programa?
                     </AccordionTrigger>
                     <AccordionContent className="bg-primary-700 px-6 pb-6 rounded-b-xl text-muted">
-                      Sí, al completar satisfactoriamente un curso, recibirás un certificado digital que acredita tus habilidades y conocimientos adquiridos además de una carta de recomendación. Este certificado puede ser añadido a tu currículum y perfil de LinkedIn.
+                      Sí, al completar satisfactoriamente un programa, recibirás un certificado digital que acredita tus habilidades y conocimientos adquiridos además de una carta de recomendación. Este certificado puede ser añadido a tu currículum y perfil de LinkedIn.
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="item-4" className="border-b border-primary-700 mt-4">
                     <AccordionTrigger className="text-xl font-heading font-semibold px-6 py-4 bg-primary-700 rounded-t-xl hover:no-underline">
-                      ¿Necesito conocimientos previos para tomar los cursos?
+                      ¿Necesito conocimientos previos para tomar los programas?
                     </AccordionTrigger>
                     <AccordionContent className="bg-primary-700 px-6 pb-6 rounded-b-xl text-muted">
-                      No necesariamente. Tenemos cursos diseñados para todos los niveles, desde principiantes absolutos hasta programadores con experiencia. Cada curso indica claramente el nivel de conocimientos previos recomendado.
+                      No necesariamente. Tenemos programas diseñados para todos los niveles, desde principiantes absolutos hasta programadores con experiencia. Cada programa indica claramente el nivel de conocimientos previos recomendado.
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="item-5" className="border-b border-primary-700 mt-4">
                     <AccordionTrigger className="text-xl font-heading font-semibold px-6 py-4 bg-primary-700 rounded-t-xl hover:no-underline">
-                      ¿Cómo puedo apoyar a Ecosistema WCA?
+                      ¿Cómo puedo apoyar al Ecosistema WCA?
                     </AccordionTrigger>
                     <AccordionContent className="bg-primary-700 px-6 pb-6 rounded-b-xl text-muted">
-                      Puedes apoyarnos compartiendo nuestros cursos con otras personas, participando activamente en nuestra comunidad, a través de donaciones, o si eres un profesional de la tecnología, considerando unirte como facilitador o instructor. Contáctanos para más información.
+                      Puedes apoyarnos compartiendo nuestros programas con otras personas, participando activamente en nuestra comunidad, a través de donaciones, o si eres un profesional de la tecnología, considerando unirte como facilitador o instructor. Contáctanos para más información.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

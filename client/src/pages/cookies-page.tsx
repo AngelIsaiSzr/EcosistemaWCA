@@ -50,7 +50,7 @@ export default function CookiesPage() {
                       <ul className="text-muted leading-relaxed space-y-1 ml-6">
                         <li>• Mantener tu sesión activa</li>
                         <li>• Recordar tus preferencias de idioma</li>
-                        <li>• Gestionar el carrito de cursos</li>
+                        <li>• Gestionar el carrito de programas</li>
                         <li>• Proporcionar funcionalidades de seguridad</li>
                       </ul>
                     </div>
@@ -95,7 +95,7 @@ export default function CookiesPage() {
                       <ul className="text-muted leading-relaxed space-y-1 ml-6">
                         <li>• Monitorear tiempos de carga</li>
                         <li>• Identificar errores técnicos</li>
-                        <li>• Optimizar recursos del servidor</li>
+                        <li>• Optimizar reprogramas del servidor</li>
                         <li>• Mejorar la velocidad del sitio</li>
                       </ul>
                     </div>
@@ -119,7 +119,7 @@ export default function CookiesPage() {
                     <div>
                       <h3 className="text-lg font-semibold mb-2 text-accent-red">YouTube</h3>
                       <p className="text-muted leading-relaxed">
-                        Para mostrar videos educativos en nuestros cursos.
+                        Para mostrar videos educativos en nuestros programas.
                       </p>
                     </div>
                     <div>
@@ -131,7 +131,7 @@ export default function CookiesPage() {
                     <div>
                       <h3 className="text-lg font-semibold mb-2 text-accent-red">Donorbox</h3>
                       <p className="text-muted leading-relaxed">
-                        Para procesar donaciones y mantener la plataforma gratuita.
+                        Para procesar donaciones y mantener la plataforma.
                       </p>
                     </div>
                   </div>
@@ -197,7 +197,7 @@ export default function CookiesPage() {
                   <ul className="text-muted leading-relaxed space-y-2 ml-6">
                     <li>• Es posible que algunas funciones no funcionen correctamente</li>
                     <li>• Tendrás que volver a configurar tus preferencias en cada visita</li>
-                    <li>• No podremos recordar tu progreso en los cursos</li>
+                    <li>• No podremos recordar tu progreso en los programas</li>
                     <li>• Algunas características de personalización no estarán disponibles</li>
                     <li>• El rendimiento del sitio puede verse afectado</li>
                   </ul>
@@ -223,7 +223,7 @@ export default function CookiesPage() {
                   </p>
                   <ul className="text-muted leading-relaxed space-y-1 ml-6 mt-4">
                     <li>• Nuestra página de contacto</li>
-                    <li>• Correo electrónico: cookies@webcodeacademy.com.mx</li>
+                    <li>• Correo electrónico: cookies@ecosistemawca.com</li>
                     <li>• Redes sociales oficiales</li>
                   </ul>
                 </div>

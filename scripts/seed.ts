@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { users, courses, teams, testimonials, modules, sections, contacts, enrollments } from '../shared/schema'; // Asegúrate de importar enrollments
 import { initialUsers } from '../client/src/data/users';
-import { initialCourses, webDevModules, webDevSections } from '../client/src/data/courses';
+import { initialPrograms, webDevModules, webDevSections } from '../client/src/data/programs';
 import { initialTeam } from '../client/src/data/team';
 import { initialTestimonials } from '../client/src/data/testimonials';
 
@@ -71,11 +71,11 @@ async function seed() {
       console.log('✅ Usuarios insertados correctamente');
     }
 
-    // Inserta cursos
-    if (initialCourses.length > 0) {
-      console.log(`Insertando ${initialCourses.length} cursos...`);
-      await db.insert(courses).values(initialCourses);
-      console.log('✅ Cursos insertados correctamente');
+    // Inserta programas
+    if (initialPrograms.length > 0) {
+      console.log(`Insertando ${initialPrograms.length} programas...`);
+      await db.insert(courses).values(initialPrograms);
+      console.log('✅ Programas insertados correctamente');
     }
 
     // Inserta equipo

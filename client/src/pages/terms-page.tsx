@@ -39,10 +39,10 @@ export default function TermsPage() {
                     2. Descripción del Servicio
                   </h2>
                   <p className="text-muted leading-relaxed mb-4">
-                    Ecosistema WCA es una plataforma educativa gratuita que ofrece:
+                    El Ecosistema WCA es una plataforma educativa que ofrece:
                   </p>
                   <ul className="text-muted leading-relaxed space-y-2 ml-6">
-                    <li>• Cursos de todas las áreas</li>
+                    <li>• Programas de todas las áreas</li>
                     <li>• Editor de código integrado</li>
                     <li>• Recursos educativos digitales</li>
                     <li>• Comunidad de aprendizaje</li>

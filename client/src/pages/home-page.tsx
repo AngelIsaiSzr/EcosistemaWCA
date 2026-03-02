@@ -3,8 +3,8 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import HeroSection from "@/components/home/hero-section";
 import FeaturesSection from "@/components/home/features-section";
-import CoursesSection from "@/components/home/courses-section";
-import CourseDetailPreview from "@/components/home/course-detail-preview";
+import ProgramsSection from "@/components/home/programs-section";
+import ProgramDetailPreview from "@/components/home/program-detail-preview";
 import AboutSection from "@/components/home/about-section";
 import TeamSection from "@/components/home/team-section";
 import TestimonialsSection from "@/components/home/testimonials-section";
@@ -32,7 +32,7 @@ export default function HomePage() {
         <title>Ecosistema WCA</title>
         <meta
           name="description"
-          content="La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa 100% Gratuita que busca combatir el analfabetismo digital creciente en el mundo, brindando educación tecnológica gratuita, accesible y de calidad para todas las personas."
+          content="La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa que busca combatir el analfabetismo digital creciente en el mundo, brindando educación tecnológica accesible y de calidad para todas las personas."
         />
       </Helmet>
 
@@ -45,8 +45,8 @@ export default function HomePage() {
               <HeroSection />
               <LogosCarousel />
               <FeaturesSection />
-              <CoursesSection />
-              <CourseDetailPreview />
+              <ProgramsSection />
+              <ProgramDetailPreview />
               <AboutSection />
               <TeamSection />
               <TestimonialsSection />

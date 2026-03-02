@@ -110,7 +110,7 @@ export function LiveCourseRegistrationForm({ course, onSuccessRegistration }: Li
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al registrarse en el curso.');
+        throw new Error(errorData.message || 'Error al registrarse en el programa.');
       }
       return response.json();
     },
@@ -141,7 +141,7 @@ export function LiveCourseRegistrationForm({ course, onSuccessRegistration }: Li
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle className="text-3xl font-bold text-center mb-2">
-          Curso: {course.title}
+          Programa: {course.title}
         </CardTitle>
         <CardDescription className="text-center text-muted-foreground">
           {course.shortDescription}

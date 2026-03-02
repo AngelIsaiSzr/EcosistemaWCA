@@ -57,9 +57,9 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <div className="accent-blue mr-2">
-                <i className="fas fa-code text-2xl"></i>
+                <img src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png" alt="Ecosistema WCA" className="w-8 h-8" />
               </div>
-              <span className="font-heading font-bold text-xl">Ecosistema WCA</span>
+              <span className="font-heading font-bold text-xl text-accent-blue" style={{ fontFamily: 'Cocomat Pro, sans-serif' }}>Ecosistema WCA</span>
             </Link>
           </div>
 
@@ -68,8 +68,8 @@ export default function Navbar() {
             <Link href="/" className={`nav-link text-light ${isActive('/') && 'accent-blue'}`}>
               Inicio
             </Link>
-            <Link href="/courses" className={`nav-link text-light ${isActive('/courses') && 'accent-blue'}`}>
-              Cursos
+            <Link href="/programs" className={`nav-link text-light ${isActive('/programs') && 'accent-blue'}`}>
+              Programas
             </Link>
             <Link href="/about" className={`nav-link text-light ${isActive('/about') && 'accent-blue'}`}>
               Acerca de
@@ -163,11 +163,9 @@ export default function Navbar() {
               </SheetTrigger>
               <SheetContent side="right" className="bg-primary-800 border-primary-700">
                 <div className="flex justify-between items-center">
-                  <Link href="/">
-                    <div className="flex items-center">
-                      <div className="accent-blue mr-2">
-                        <i className="fas fa-code text-2xl"></i>
-                      </div>
+                  <Link href="/" className="flex items-center">
+                    <div className="accent-blue mr-2">
+                      <img src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png" alt="Ecosistema WCA" className="w-8 h-8" />
                     </div>
                   </Link>
                   <div className="flex items-center space-x-2">
@@ -187,8 +185,8 @@ export default function Navbar() {
                     </Link>
                   </SheetClose>
                   <SheetClose asChild>
-                    <Link href="/courses" className={`text-xl py-2 ${isActive('/courses') ? 'accent-blue' : 'text-light'}`}>
-                      Cursos
+                    <Link href="/programs" className={`text-xl py-2 ${isActive('/programs') ? 'accent-blue' : 'text-light'}`}>
+                      Programas
                     </Link>
                   </SheetClose>
                   <SheetClose asChild>

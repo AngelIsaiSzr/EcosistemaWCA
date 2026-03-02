@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Course } from "@shared/schema";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
-import CourseGrid from "@/components/courses/course-grid";
+import ProgramGrid from "@/components/programs/program-grid";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,52 +17,47 @@ import { AnimateInView } from "@/components/ui/animate-in-view";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { usePageLoading } from "@/hooks/use-page-loading";
 
-export default function CoursesPage() {
+export default function ProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
   const [showLoading, setShowLoading] = useState(true);
   const { setLoading } = usePageLoading();
 
-  // Fetch courses
-  const { data: courses, isLoading, error } = useQuery<Course[]>({
-    queryKey: ["/api/courses"],
+  const { data: programs, isLoading, error } = useQuery<Course[]>({
+    queryKey: ["/api/programs"],
   });
   
-  // Mostrar spinner durante navegación entre páginas
   useEffect(() => {
     setShowLoading(true);
     const timer = setTimeout(() => {
       setShowLoading(false);
-    }, 800); // Mostrar spinner por al menos 800ms
+    }, 800);
     
     return () => clearTimeout(timer);
   }, []);
   
-  // Set global loading state based on data loading
   useEffect(() => {
     setLoading(isLoading || showLoading);
   }, [isLoading, showLoading, setLoading]);
 
-  // Filter courses
-  const filteredCourses = courses?.filter((course) => {
-    const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          course.description.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredPrograms = programs?.filter((program) => {
+    const matchesSearch = program.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          program.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = categoryFilter === "all" || course.category === categoryFilter;
-    const matchesLevel = levelFilter === "all" || course.level === levelFilter;
+    const matchesCategory = categoryFilter === "all" || program.category === categoryFilter;
+    const matchesLevel = levelFilter === "all" || program.level === levelFilter;
     
     return matchesSearch && matchesCategory && matchesLevel;
   });
 
-  // Extract unique categories and levels for filter options
-  const categories = courses ? 
-    courses.map(course => course.category)
+  const categories = programs ? 
+    programs.map(program => program.category)
       .filter((category, index, self) => self.indexOf(category) === index) : 
     [];
   
-  const levels = courses ? 
-    courses.map(course => course.level)
+  const levels = programs ? 
+    programs.map(program => program.level)
       .filter((level, index, self) => self.indexOf(level) === index && level !== "Todos los niveles")
       .sort((a, b) => {
         const order = ["Principiante", "Intermedio", "Avanzado", "Todos los niveles"];
@@ -76,7 +71,7 @@ export default function CoursesPage() {
         <title>Ecosistema WCA</title>
         <meta 
           name="description" 
-          content="Explora nuestra variedad de cursos 100% gratuitos, desde programación hasta idiomas."
+          content="Explora nuestra variedad de programas  de especialización, desde programación hasta idiomas."
         />
       </Helmet>
       
@@ -84,23 +79,21 @@ export default function CoursesPage() {
         <Navbar />
         
         <main className="flex-grow">
-          {/* Header */}
           <AnimateInView animation="fadeIn">
             <section className="bg-secondary-900 py-20 pb-10 md:pb-20">
               <div className="container mx-auto px-4">
                 <div className="max-w-3xl mx-auto text-center">
                   <h1 className="text-4xl md:text-5xl font-heading font-bold mt-6 mb-4">
-                    Nuestros Cursos
+                    Nuestros Programas
                   </h1>
                   <p className="text-muted text-lg">
-                    Explora nuestra variedad de cursos diseñados para todos los niveles, desde principiantes hasta estudiantes avanzados.
+                    Explora nuestra variedad de programas diseñados para todos los niveles, desde principiantes hasta estudiantes avanzados.
                   </p>
                 </div>
               </div>
             </section>
           </AnimateInView>
           
-          {/* Filters */}
           <AnimateInView animation="slideUp" delay={0.2}>
             <section className="bg-primary-700 py-8">
               <div className="container mx-auto px-4">
@@ -108,7 +101,7 @@ export default function CoursesPage() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Buscar</label>
                     <Input 
-                      placeholder="Buscar cursos..." 
+                      placeholder="Buscar programas..." 
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="bg-primary-800"
@@ -159,20 +152,19 @@ export default function CoursesPage() {
             </section>
           </AnimateInView>
           
-          {/* Courses Grid */}
           <section className="bg-primary-800 py-16">
             <div className="container mx-auto px-4">
               {isLoading || showLoading ? (
                 <div className="flex justify-center py-32">
-                  <LoadingSpinner size="lg" text="Cargando cursos..." />
+                  <LoadingSpinner size="lg" text="Cargando programas..." />
                 </div>
               ) : error ? (
                 <div className="text-center py-20">
                   <h3 className="text-xl font-heading font-semibold mb-2">
-                    Error al cargar los cursos
+                    Error al cargar los programas
                   </h3>
                   <p className="text-muted">
-                    Lo sentimos, ocurrió un error al cargar los cursos. Inténtalo de nuevo más tarde.
+                    Lo sentimos, ocurrió un error al cargar los programas. Inténtalo de nuevo más tarde.
                   </p>
                 </div>
               ) : (
@@ -180,22 +172,22 @@ export default function CoursesPage() {
                   <AnimateInView animation="fadeIn">
                     <div className="mb-8">
                       <h2 className="text-xl font-heading font-semibold">
-                        {filteredCourses?.length || 0} cursos encontrados
+                        {filteredPrograms?.length || 0} programas encontrados
                       </h2>
                     </div>
                   </AnimateInView>
                   
-                  {filteredCourses && filteredCourses.length > 0 ? (
+                  {filteredPrograms && filteredPrograms.length > 0 ? (
                     <AnimateInView animation="fadeIn" delay={0.2}>
-                      <CourseGrid courses={filteredCourses} />
+                      <ProgramGrid programs={filteredPrograms} />
                     </AnimateInView>
                   ) : (
                     <div className="text-center py-20">
                       <h3 className="text-xl font-heading font-semibold mb-2">
-                        No se encontraron cursos
+                        No se encontraron programas
                       </h3>
                       <p className="text-muted">
-                        No hay cursos que coincidan con tus filtros. Prueba con otros criterios de búsqueda.
+                        No hay programas que coincidan con tus filtros. Prueba con otros criterios de búsqueda.
                       </p>
                     </div>
                   )}

@@ -45,8 +45,8 @@ export default function PrivacyPage() {
                       <h3 className="text-lg font-semibold mb-2 text-accent-yellow">Información de Uso:</h3>
                       <ul className="text-muted leading-relaxed space-y-1 ml-6">
                         <li>• Páginas visitadas y tiempo de permanencia</li>
-                        <li>• Cursos en los que te inscribes</li>
-                        <li>• Progreso en los cursos</li>
+                        <li>• Programas en los que te inscribes</li>
+                        <li>• Progreso en los programas</li>
                         <li>• Código que escribes en el editor</li>
                         <li>• Interacciones con la comunidad</li>
                       </ul>
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
                   <ul className="text-muted leading-relaxed space-y-2 ml-6">
                     <li>• Proporcionar y mejorar nuestros servicios educativos</li>
                     <li>• Personalizar tu experiencia de aprendizaje</li>
-                    <li>• Comunicarnos contigo sobre tu cuenta y cursos</li>
+                    <li>• Comunicarnos contigo sobre tu cuenta y programas</li>
                     <li>• Enviar notificaciones importantes sobre la plataforma</li>
                     <li>• Analizar el uso de la plataforma para mejoras</li>
                     <li>• Prevenir fraudes y abusos</li>
@@ -194,7 +194,7 @@ export default function PrivacyPage() {
                   </p>
                   <ul className="text-muted leading-relaxed space-y-1 ml-6 mt-4">
                     <li>• Nuestra página de contacto</li>
-                    <li>• Correo electrónico: privacidad@webcodeacademy.com.mx</li>
+                    <li>• Correo electrónico: privacidad@ecosistemawca.com</li>
                     <li>• Redes sociales oficiales</li>
                   </ul>
                 </div>

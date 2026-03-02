@@ -4,11 +4,11 @@ import { InsertUser } from '@shared/schema';
 export const initialUsers: InsertUser[] = [
   {
     username: 'admin',
-    email: 'admin@webcodeacademy.com',
-    password: 'admin123456', // Contraseña actualizada
+    email: 'admin@ecosistemawca.com',
+    password: 'admin123456',
     name: 'Administrador',
     role: 'admin',
     profileImage: 'https://randomuser.me/api/portraits/lego/1.jpg',
-    bio: 'Administrador principal de Ecosistema WCA.'
+    bio: 'Administrador principal del Ecosistema WCA.'
   }
 ];

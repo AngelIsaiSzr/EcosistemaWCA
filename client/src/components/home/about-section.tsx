@@ -14,7 +14,7 @@ export default function AboutSection() {
             transition={{ duration: 0.5 }}
           >
             <img 
-              src="https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg" 
+              src="https://i.ibb.co/bjt2h1Tz/about3-yw5df.png" 
               alt="Misión de Ecosistema WCA" 
               className="rounded-xl shadow-lg"
             />
@@ -28,33 +28,32 @@ export default function AboutSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">Nuestra Misión</h2>
-            <p className="text-muted mb-6">
-              En <span className="accent-blue font-medium">Ecosistema WCA</span>, creemos que la educación tecnológica de calidad debe ser accesible para todos. Nuestra misión es combatir el analfabetismo digital ofreciendo cursos 100% gratuitos en alianza con otros proyectos educativos, que permitan a nuestros estudiantes desarrollar habilidades relevantes para el mercado laboral actual.
+            <p className="text-muted mb-6 text-justify">
+              En el <span className="accent-blue font-medium">Ecosistema WCA</span>, nuestra misión es combatir el analfabetismo digital y democratizar el acceso a la educación tecnológica y multidisciplinaria, formando agentes de cambio que impulsen el desarrollo sostenible y generen impacto tangible en la sociedad.
             </p>
             
             <div className="mb-8">
               <h3 className="text-xl font-heading font-semibold mb-4">Objetivos de Desarrollo Sostenible</h3>
-              <p className="text-muted mb-4">Nos alineamos con los siguientes ODS de la Agenda 2030 de la ONU:</p>
               
               <div className="flex flex-wrap gap-4">
                 <div className="px-3 py-2 bg-primary-800 rounded-lg text-sm flex items-center">
-                  <span className="w-6 h-6 flex items-center justify-center bg-accent-red rounded-full mr-2 text-xs font-bold">4</span>
+                  <span className="w-6 h-6 flex items-center justify-center bg-accent-blue rounded-full mr-2 text-xs font-bold text-white">4</span>
                   Educación de Calidad
                 </div>
                 <div className="px-3 py-2 bg-primary-800 rounded-lg text-sm flex items-center">
-                  <span className="w-6 h-6 flex items-center justify-center bg-accent-blue rounded-full mr-2 text-xs font-bold">8</span>
+                  <span className="w-6 h-6 flex items-center justify-center bg-accent-red rounded-full mr-2 text-xs font-bold text-white">8</span>
                   Trabajo Decente
                 </div>
                 <div className="px-3 py-2 bg-primary-800 rounded-lg text-sm flex items-center">
-                  <span className="w-6 h-6 flex items-center justify-center bg-accent-purple rounded-full mr-2 text-xs font-bold">9</span>
+                  <span className="w-6 h-6 flex items-center justify-center bg-accent-purple rounded-full mr-2 text-xs font-bold text-white">9</span>
                   Industria, Innovación e Infraestructura
                 </div>
                 <div className="px-3 py-2 bg-primary-800 rounded-lg text-sm flex items-center">
-                  <span className="w-6 h-6 flex items-center justify-center bg-accent-yellow rounded-full mr-2 text-xs font-bold">10</span>
+                  <span className="w-6 h-6 flex items-center justify-center bg-accent-yellow rounded-full mr-2 text-xs font-bold text-white">10</span>
                   Reducción de Desigualdades
                 </div>
                 <div className="px-3 py-2 bg-primary-800 rounded-lg text-sm flex items-center">
-                  <span className="w-6 h-6 flex items-center justify-center bg-accent-green rounded-full mr-2 text-xs font-bold">17</span>
+                  <span className="w-6 h-6 flex items-center justify-center bg-accent-green rounded-full mr-2 text-xs font-bold text-white">17</span>
                   Alianzas para los Objetivos
                 </div>
               </div>
@@ -62,8 +61,8 @@ export default function AboutSection() {
             
             <div>
               <h3 className="text-xl font-heading font-semibold mb-4">Nuestro Compromiso</h3>
-              <p className="text-muted mb-6">
-              Nos comprometemos a brindar contenido educativo actualizado, práctico y de alta calidad, desarrollado por expertos en la industria. Creemos en el aprendizaje práctico y en crear una comunidad donde estudiantes de diversos orígenes puedan crecer juntos.
+              <p className="text-muted mb-6 text-justify">
+              Nos comprometemos a ofrecer educación tecnológica actualizada, práctica y de alta calidad, desarrollada por expertos en la industria. Creemos en el aprendizaje colaborativo por lo que creamos una comunidad diversa donde personas de distintos contextos crecen juntas.
               </p>
               
               <Link href="/about" className="text-accent-blue underline-effect">

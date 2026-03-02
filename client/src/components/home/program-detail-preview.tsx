@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-export default function CourseDetailPreview() {
+export default function ProgramDetailPreview() {
   return (
     <section className="py-20 bg-primary-800">
       <div className="container mx-auto px-4">
@@ -13,8 +13,8 @@ export default function CourseDetailPreview() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">Estructura de nuestros cursos</h2>
-            <p className="text-muted mb-6">Nuestros cursos están diseñados para brindarte una experiencia de aprendizaje completa y práctica. Cada curso incluye:</p>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">Estructura de nuestros programas</h2>
+            <p className="text-muted mb-6">Nuestros programas están diseñados para brindarte una experiencia de aprendizaje completa y práctica. Cada programa incluye:</p>
             
             <div className="space-y-4">
               <div className="flex">
@@ -114,7 +114,7 @@ export default function CourseDetailPreview() {
               
               <div className="mt-6 text-center">
                 <Button className="bg-accent-blue hover:bg-accent-blue hover:opacity-90 inline-flex items-center">
-                  <a href="/courses/web-development">
+                  <a href="/programs/desarrollo-web">
                     Explorar contenido completo
                     <i className="fas fa-external-link-alt ml-2"></i>
                   </a>

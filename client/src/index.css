@@ -13,7 +13,7 @@
   --popover-foreground: 240 10% 3.9%;
   --card: 0 0% 98%;
   --card-foreground: 240 10% 3.9%;
-  --border: 240 5.9% 92%;
+  --border: 240 100% 92.8% / 0.9;
   --input: 240 5.9% 92%;
   --primary: 210 100% 50%;
   --primary-foreground: 211 100% 99%;
@@ -27,11 +27,12 @@
   --radius: 0.5rem;
 
   /* Ecosistema WCA Custom Colors */
-  --accent-blue: 210 100% 50%;
-  --accent-yellow: 50 100% 52%;
+  --accent-blue: 215 49.4% 65.9%;
+  --accent-yellow: 50 100% 50%;
   --accent-red: 355 100% 60%;
   --accent-green: 135 89% 25%;
   --accent-purple: 270 100% 60%;
+  --accent-cyan: 206 64.2% 75.9%;
   --primary-900: 0 0% 98%;
   --primary-800: 240 4.8% 96.9%;
   --primary-700: 240 5.9% 92%;
@@ -54,7 +55,7 @@
   --card-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --primary: 210 100% 50%;
+  --primary: 215 49.4% 65.9%;
   --primary-foreground: 211 100% 99%;
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 0 0% 98%;
@@ -66,11 +67,12 @@
   --radius: 0.5rem;
 
   /* Ecosistema WCA Custom Colors */
-  --accent-blue: 210 100% 50%;
-  --accent-yellow: 50 100% 52%;
+  --accent-blue: 215 49.4% 65.9%;
+  --accent-yellow: 50 100% 50%;
   --accent-red: 355 100% 60%;
   --accent-green: 135 89% 25%;
   --accent-purple: 270 100% 60%;
+  --accent-cyan: 206 64.2% 75.9%;
   --primary-900: 0 0% 3%;
   --primary-800: 0 0% 7%;
   --primary-700: 0 0% 12%;
@@ -141,6 +143,10 @@
     @apply text-[hsl(var(--accent-purple))];
   }
 
+  .accent-cyan {
+    @apply text-[hsl(var(--accent-cyan))];
+  }
+
   .text-accent-red {
     @apply text-[hsl(var(--accent-red))];
   }
@@ -160,7 +166,11 @@
   .text-accent-purple {
     @apply text-[hsl(var(--accent-purple))];
   }
-  
+
+  .text-accent-cyan {
+    @apply text-[hsl(var(--accent-cyan))];
+  }
+
   .bg-accent-red {
     @apply bg-[hsl(var(--accent-red))];
   }
@@ -179,6 +189,10 @@
 
   .bg-accent-purple {
     @apply bg-[hsl(var(--accent-purple))];
+  }
+
+  .bg-accent-cyan {
+    @apply bg-[hsl(var(--accent-cyan))];
   }
 
   .border-accent-red {
@@ -201,6 +215,10 @@
     @apply hover:text-[hsl(var(--accent-red))] transition-colors;
   }
 
+  .hover-accent-cyan {
+    @apply hover:text-[hsl(var(--accent-cyan))] transition-colors;
+  }
+
   .hover-accent-blue {
     @apply hover:text-[hsl(var(--accent-blue))] transition-colors;
   }
@@ -211,6 +229,10 @@
 
   .hover-accent-purple {
     @apply hover:text-[hsl(var(--accent-purple))] transition-colors;
+  }
+
+  .hover-accent-cyan {
+    @apply hover:text-[hsl(var(--accent-cyan))] transition-colors;
   }
 
   .hover-text-primary-900 {
@@ -265,11 +287,13 @@
     @apply bg-[#27C93F];
   }
 
-  .course-card {
+  .course-card,
+  .program-card {
     @apply transition-all duration-300;
   }
   
-  .course-card:hover {
+  .course-card:hover,
+  .program-card:hover {
     @apply transform -translate-y-1 shadow-xl;
   }
 

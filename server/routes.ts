@@ -10,36 +10,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
 
-  // Courses routes
-  app.get("/api/courses", async (req, res) => {
+  // Programs routes (API)
+  app.get("/api/programs", async (req, res) => {
     try {
-      const courses = await storage.getAllCourses();
-      res.json(courses);
+      const programs = await storage.getAllCourses();
+      res.json(programs);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch courses" });
+      res.status(500).json({ message: "Failed to fetch programs" });
     }
   });
 
-  app.get("/api/courses/:slug", async (req, res) => {
+  app.get("/api/programs/:slug", async (req, res) => {
     try {
-      const course = await storage.getCourseBySlug(req.params.slug);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
+      const program = await storage.getCourseBySlug(req.params.slug);
+      if (!program) {
+        return res.status(404).json({ message: "Program not found" });
       }
-      res.json(course);
+      res.json(program);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch course" });
+      res.status(500).json({ message: "Failed to fetch program" });
     }
   });
 
   // Modules routes
-  app.get("/api/courses/:courseId/modules", async (req, res) => {
+  app.get("/api/programs/:courseId/modules", async (req, res) => {
     try {
       const courseId = parseInt(req.params.courseId);
       const modules = await storage.getModulesByCourseId(courseId);
       res.json(modules);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch modules" });
+    }
+  });
+
+  app.get("/api/programs/:courseId/progress", async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.courseId);
+      if (!req.isAuthenticated()) {
+        return res.json({ completedSections: [] });
+      }
+      const enrollment = await storage.getEnrollmentByCourseAndUser(courseId, req.user.id);
+      if (!enrollment) {
+        return res.json({ completedSections: [] });
+      }
+      // Return enrollment progress; client may extend with section-level progress later
+      res.json({ completedSections: [] });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch progress" });
     }
   });
 
@@ -76,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { courseId } = req.body;
       if (!courseId) {
-        return res.status(400).json({ message: "Course ID is required" });
+        return res.status(400).json({ message: "Program ID is required" });
       }
 
       // Check if user is already enrolled
@@ -86,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (existingEnrollment) {
-        return res.status(400).json({ message: "You are already enrolled in this course" });
+        return res.status(400).json({ message: "You are already enrolled in this program" });
       }
 
       const enrollment = await storage.createEnrollment({
@@ -98,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(enrollment);
     } catch (error) {
-      res.status(500).json({ message: "Failed to enroll in course" });
+      res.status(500).json({ message: "Failed to enroll in program" });
     }
   });
 
@@ -110,18 +127,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const enrollments = await storage.getEnrollmentsByUserId(req.user.id);
       
-      // Get course details for each enrollment
-      const enrollmentsWithCourses = await Promise.all(
+      // Get program details for each enrollment
+      const enrollmentsWithPrograms = await Promise.all(
         enrollments.map(async (enrollment) => {
-          const course = await storage.getCourse(enrollment.courseId);
+          const program = await storage.getCourse(enrollment.courseId);
           return {
             ...enrollment,
-            course
+            program
           };
         })
       );
 
-      res.json(enrollmentsWithCourses);
+      res.json(enrollmentsWithPrograms);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch enrollments" });
     }
@@ -155,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/enrollments/:id", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "You must be logged in to unenroll from a course" });
+        return res.status(401).json({ message: "You must be logged in to unenroll from a program" });
       }
       
       const enrollmentId = parseInt(req.params.id);
@@ -169,9 +186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Enrollment not found" });
       }
       
-      res.status(200).json({ message: "Successfully unenrolled from course" });
+      res.status(200).json({ message: "Successfully unenrolled from program" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to unenroll from course" });
+      res.status(500).json({ message: "Failed to unenroll from program" });
     }
   });
 
@@ -209,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Preparar los datos del correo
       const emailData = {
-        to: "webcodeacademy0@gmail.com",
+        to: "contacto@ecosistemawca.com",
         from: validation.data.email,
         name: validation.data.name,
         subject: `Nuevo mensaje de contacto de ${validation.data.name}`,
@@ -254,21 +271,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIdToUse = req.isAuthenticated() && req.user ? (req.user as User).id : null;
       const registrationData = { ...validation.data, userId: userIdToUse };
 
-      // Verificar si ya existe un registro para este usuario y curso
+      // Verificar si ya existe un registro para este usuario y programa
       if (userIdToUse !== null && registrationData.courseId) {
         const existingRegistrations = await storage.getLiveCourseRegistrationsByUserIdAndCourseId(userIdToUse, registrationData.courseId);
         if (existingRegistrations && existingRegistrations.length > 0) {
-          return res.status(409).json({ message: "Ya estás registrado en este curso en vivo." });
+          return res.status(409).json({ message: "Ya estás registrado en este programa en vivo." });
         }
       }
 
       // Guardar en la base de datos
       const registration = await storage.createLiveCourseRegistration(registrationData);
 
-      // Obtener el curso para el slug
+      // Obtener el programa para el slug
       const course = await storage.getCourse(registration.courseId);
       if (!course) {
-        throw new Error("Curso no encontrado");
+        throw new Error("Programa no encontrado");
       }
 
       // Guardar en Google Sheets
@@ -279,38 +296,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // No devolvemos el error al cliente, pero lo registramos
       }
 
-      const courseName = course ? course.title : "Curso Desconocido";
+      const courseName = course ? course.title : "Programa Desconocido";
 
       const emailToUser: EmailData = {
         to: registration.email,
-        from: "webcodeacademy0@gmail.com",
+        from: "contacto@ecosistemawca.com",
         name: `${registration.firstName} ${registration.lastName}`,
-        subject: `Confirmación de registro al curso: ${courseName}`,
-        text: `¡Muchas gracias por registrarte en el curso! Días antes de iniciar el curso se te enviará un mensaje confirmando tu asistencia y modalidad. Para dudas o aclaraciones: +52 784 110 0108 - Ecosistema WCA`,
+        subject: `Confirmación de registro al programa: ${courseName}`,
+        text: `¡Muchas gracias por registrarte en el programa! Días antes de iniciar el programa se te enviará un mensaje confirmando tu asistencia y modalidad. Para dudas o aclaraciones: +52 784 110 0108 - Ecosistema WCA`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #297de0; margin-bottom: 20px;">¡Gracias por registrarte!</h1>
-              <p style="font-size: 18px; color: #333; margin-bottom: 15px;">Tu registro al curso <strong>${courseName}</strong> ha sido confirmado.</p>
+              <h1 style="color: #87b1e0; margin-bottom: 20px;">¡Gracias por registrarte!</h1>
+              <p style="font-size: 18px; color: #333; margin-bottom: 15px;">Tu registro al programa <strong>${courseName}</strong> ha sido confirmado.</p>
             </div>
             
             <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #297de0; margin-bottom: 15px;">Próximos pasos:</h2>
-              <p style="color: #555; line-height: 1.6;">Días antes de iniciar el curso recibirás un mensaje confirmando tu asistencia y la modalidad del curso.</p>
+              <h2 style="color: #87b1e0; margin-bottom: 15px;">Próximos pasos:</h2>
+              <p style="color: #555; line-height: 1.6;">Días antes de iniciar el programa recibirás un mensaje confirmando tu asistencia y la modalidad del programa.</p>
             </div>
 
             <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #297de0; margin-bottom: 15px;">¿Tienes dudas?</h2>
+              <h2 style="color: #87b1e0; margin-bottom: 15px;">¿Tienes dudas?</h2>
               <p style="color: #555; line-height: 1.6;">Estamos aquí para ayudarte. Contáctanos a través de:</p>
-              <p style="color: #555; line-height: 1.6;">📞 Teléfono: <a href="tel:+527841100108" style="color: #297de0; text-decoration: none;">+52 784 110 0108</a></p>
+              <p style="color: #555; line-height: 1.6;">📞 Teléfono: <a href="tel:+527841100108" style="color: #87b1e0; text-decoration: none;">+52 784 110 0108</a></p>
             </div>
 
             <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
               <p style="color: #666; margin-bottom: 10px;">Síguenos en nuestras redes sociales:</p>
               <div style="margin-bottom: 20px;">
-                <a href="https://facebook.com/webcodeacademy0" style="color: #297de0; text-decoration: none; margin: 0 10px;">Facebook</a>
-                <a href="https://instagram.com/webcodeacademy0" style="color: #297de0; text-decoration: none; margin: 0 10px;">Instagram</a>
-                <a href="https://linkedin.com/in/webcodeacademy0" style="color: #297de0; text-decoration: none; margin: 0 10px;">Linkedin</a>
+                <a href="https://facebook.com/ecosistemawca" style="color: #87b1e0; text-decoration: none; margin: 0 10px;">Facebook</a>
+                <a href="https://instagram.com/ecosistemawca" style="color: #87b1e0; text-decoration: none; margin: 0 10px;">Instagram</a>
+                <a href="https://linkedin.com/in/ecosistemawca" style="color: #87b1e0; text-decoration: none; margin: 0 10px;">Linkedin</a>
               </div>
               <p style="color: #666; font-size: 14px;">© 2025 Ecosistema WCA. Todos los derechos reservados.</p>
             </div>
@@ -319,24 +336,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const emailToAdmin: EmailData = {
-        to: "webcodeacademy0@gmail.com",
+        to: "contacto@ecosistemawca.com",
         from: registration.email,
         name: `Registro de ${registration.firstName} ${registration.lastName}`,
-        subject: `Nuevo registro desde la plataforma a curso en vivo: ${registration.firstName} ${registration.lastName}`,
-        text: `Nuevo registro para curso en vivo:\n          Nombre: ${registration.firstName} ${registration.lastName}\n          Correo: ${registration.email}\n          Teléfono: ${registration.phoneNumber}\n          Edad: ${registration.age}\n          Modalidad preferida: ${registration.preferredModality}\n          Tiene laptop: ${registration.hasLaptop ? 'Sí' : 'No'}\n          ${registration.guardianFirstName ? `Nombre del tutor: ${registration.guardianFirstName} ${registration.guardianLastName}` : ''}\n          ${registration.guardianPhoneNumber ? `Teléfono del tutor: ${registration.guardianPhoneNumber}` : ''}\n          Curso: ${courseName}\n        `,
+        subject: `Nuevo registro desde la plataforma a programa en vivo: ${registration.firstName} ${registration.lastName}`,
+        text: `Nuevo registro para programa en vivo:\n          Nombre: ${registration.firstName} ${registration.lastName}\n          Correo: ${registration.email}\n          Teléfono: ${registration.phoneNumber}\n          Edad: ${registration.age}\n          Modalidad preferida: ${registration.preferredModality}\n          Tiene laptop: ${registration.hasLaptop ? 'Sí' : 'No'}\n          ${registration.guardianFirstName ? `Nombre del tutor: ${registration.guardianFirstName} ${registration.guardianLastName}` : ''}\n          ${registration.guardianPhoneNumber ? `Teléfono del tutor: ${registration.guardianPhoneNumber}` : ''}\n          Programa: ${courseName}\n        `,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #297de0; margin-bottom: 20px;">¡Nuevo Registro!</h1>
-              <p style="font-size: 18px; color: #333;">Se ha registrado un nuevo estudiante para el curso <strong>${courseName}</strong></p>
+              <h1 style="color: #87b1e0; margin-bottom: 20px;">¡Nuevo Registro!</h1>
+              <p style="font-size: 18px; color: #333;">Se ha registrado un nuevo estudiante para el programa <strong>${courseName}</strong></p>
             </div>
             
             <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #297de0; margin-bottom: 15px;">Información del Registro:</h2>
+              <h2 style="color: #87b1e0; margin-bottom: 15px;">Información del Registro:</h2>
               <ul style="list-style: none; padding: 0; margin: 0;">
                 <li style="margin-bottom: 10px; color: #555;"><strong>Nombre:</strong> ${registration.firstName} ${registration.lastName}</li>
-                <li style="margin-bottom: 10px; color: #555;"><strong>Correo:</strong> <a href="mailto:${registration.email}" style="color: #297de0; text-decoration: none;">${registration.email}</a></li>
-                <li style="margin-bottom: 10px; color: #555;"><strong>Teléfono:</strong> <a href="tel:${registration.phoneNumber}" style="color: #297de0; text-decoration: none;">${registration.phoneNumber}</a></li>
+                <li style="margin-bottom: 10px; color: #555;"><strong>Correo:</strong> <a href="mailto:${registration.email}" style="color: #87b1e0; text-decoration: none;">${registration.email}</a></li>
+                <li style="margin-bottom: 10px; color: #555;"><strong>Teléfono:</strong> <a href="tel:${registration.phoneNumber}" style="color: #87b1e0; text-decoration: none;">${registration.phoneNumber}</a></li>
                 <li style="margin-bottom: 10px; color: #555;"><strong>Edad:</strong> ${registration.age}</li>
                 ${registration.guardianFirstName ? `<li style="margin-bottom: 10px; color: #555;"><strong>Nombre del tutor:</strong> ${registration.guardianFirstName} ${registration.guardianLastName}</li>` : ''}
                 ${registration.guardianPhoneNumber ? `<li style="margin-bottom: 10px; color: #555;"><strong>Teléfono del tutor:</strong> ${registration.guardianPhoneNumber}</li>` : ''}
@@ -356,86 +373,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await sendEmail(emailToUser);
         await sendEmail(emailToAdmin);
       } catch (emailError) {
-        console.error("Error al enviar correo de registro de curso en vivo:", emailError);
+        console.error("Error al enviar correo de registro de programa en vivo:", emailError);
       }
 
       res.status(201).json({ message: "Registro exitoso", registration });
     } catch (error) {
-      console.error("Error en el registro de curso en vivo:", error);
-      res.status(500).json({ message: "Error al registrarse en el curso." });
+      console.error("Error en el registro de programa en vivo:", error);
+      res.status(500).json({ message: "Error al registrarse en el programa." });
     }
   });
 
   app.get("/api/live-course-registrations", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Debes iniciar sesión para ver los registros de cursos en vivo" });
+        return res.status(401).json({ message: "Debes iniciar sesión para ver los registros de programas en vivo" });
       }
 
       const userId = parseInt(req.query.userId as string);
       const courseId = parseInt(req.query.courseId as string);
 
       if (isNaN(userId) || isNaN(courseId)) {
-        return res.status(400).json({ message: "ID de usuario y ID de curso son requeridos y deben ser números válidos." });
+        return res.status(400).json({ message: "ID de usuario y ID de programa son requeridos y deben ser números válidos." });
       }
 
       // Asumo que storage tiene un método para obtener registros por userId y courseId
       const registrations = await storage.getLiveCourseRegistrationsByUserIdAndCourseId(userId, courseId);
       res.json(registrations);
     } catch (error) {
-      console.error("Error al obtener registros de cursos en vivo:", error);
-      res.status(500).json({ message: "Error al obtener registros de cursos en vivo." });
+      console.error("Error al obtener registros de programas en vivo:", error);
+      res.status(500).json({ message: "Error al obtener registros de programas en vivo." });
     }
   });
 
   // Admin routes
-  app.post("/api/courses", async (req, res) => {
+  app.post("/api/programs", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
-      const course = await storage.createCourse(req.body);
-      res.status(201).json(course);
+      const program = await storage.createCourse(req.body);
+      res.status(201).json(program);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create course" });
+      res.status(500).json({ message: "Failed to create program" });
     }
   });
   
-  app.patch("/api/courses/:id", async (req, res) => {
+  app.patch("/api/programs/:id", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
       
-      const courseId = parseInt(req.params.id);
-      const updatedCourse = await storage.updateCourse(courseId, req.body);
+      const programId = parseInt(req.params.id);
+      const updatedProgram = await storage.updateCourse(programId, req.body);
       
-      if (!updatedCourse) {
-        return res.status(404).json({ message: "Course not found" });
+      if (!updatedProgram) {
+        return res.status(404).json({ message: "Program not found" });
       }
       
-      res.status(200).json(updatedCourse);
+      res.status(200).json(updatedProgram);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update course" });
+      res.status(500).json({ message: "Failed to update program" });
     }
   });
 
-  app.delete("/api/courses/:id", async (req, res) => {
+  app.delete("/api/programs/:id", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
       
-      const courseId = parseInt(req.params.id);
-      const success = await storage.deleteCourse(courseId);
+      const programId = parseInt(req.params.id);
+      const success = await storage.deleteCourse(programId);
       
       if (!success) {
-        return res.status(404).json({ message: "Course not found" });
+        return res.status(404).json({ message: "Program not found" });
       }
       
-      res.status(200).json({ message: "Course deleted successfully" });
+      res.status(200).json({ message: "Program deleted successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete course" });
+      res.status(500).json({ message: "Failed to delete program" });
     }
   });
 
@@ -694,23 +711,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Special route to fix Web Dev course modules (temporary)
+  // Special route to fix Web Dev program modules (temporary)
   app.post("/api/fix-web-dev", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
       
-      // Import Python modules data
-      const { webDevModules } = await import("../client/src/data/courses");
+      // Import program modules data
+      const { webDevModules } = await import("@/data/programs");
       
-      // Get Python course
-      const webDevCourse = await storage.getCourseBySlug("desarrollo-web");
-      if (!webDevCourse) {
-        return res.status(404).json({ message: "Web Dev course not found" });
+      // Get Web Dev program
+      const webDevProgram = await storage.getCourseBySlug("desarrollo-web");
+      if (!webDevProgram) {
+        return res.status(404).json({ message: "Web Dev program not found" });
       }
-      // Get all current modules for Web Dev course
-      const existingModules = await storage.getModulesByCourseId(webDevCourse.id);
+      // Get all current modules for Web Dev program
+      const existingModules = await storage.getModulesByCourseId(webDevProgram.id);
       // Delete all existing modules
       for (const module of existingModules) {
         await storage.deleteModule(module.id);
@@ -720,12 +737,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const moduleData of webDevModules) {
         const module = await storage.createModule({
           ...moduleData,
-          courseId: webDevCourse.id
+          courseId: webDevProgram.id
         });
         newModules.push(module);
       }
       res.status(200).json({
-        message: "Web Dev course modules fixed successfully",
+        message: "Web Dev program modules fixed successfully",
         deleted: existingModules.length,
         added: newModules.length
       });
@@ -858,29 +875,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create admin user if not exists
-      const existingAdmin = await storage.getUserByEmail("admin@webcodeacademy.com");
+      const existingAdmin = await storage.getUserByEmail("admin@ecosistemawca.com");
       if (!existingAdmin) {
         const hashedPassword = await hashPassword("admin123456");
         await storage.createUser({
-          email: "admin@webcodeacademy.com",
+          email: "admin@ecosistemawca.com",
           username: "admin",
           name: "Administrador",
           password: hashedPassword,
           role: "admin"
         });
-        console.log("Created admin user: admin@webcodeacademy.com / admin123456");
+        console.log("Created admin user: admin@ecosistemawca.com / admin123456");
       }
       
-      // Import course data
-      const { initialCourses, webDevModules, webDevSections } = await import("../client/src/data/courses");
+      // Import program data
+      const { initialPrograms, webDevModules, webDevSections } = await import("@/data/programs");
       
-      // Seed courses
-      for (const courseData of initialCourses) {
-        // Check if course already exists
-        const existingCourse = await storage.getCourseBySlug(courseData.slug);
-        if (!existingCourse) {
-          await storage.createCourse(courseData);
-          console.log(`Created course: ${courseData.title}`);
+      // Seed programs
+      for (const programData of initialPrograms) {
+        // Check if program already exists
+        const existingProgram = await storage.getCourseBySlug(programData.slug);
+        if (!existingProgram) {
+          await storage.createCourse(programData);
+          console.log(`Created program: ${programData.title}`);
         }
       }
       

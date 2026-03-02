@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
-Sitemap: https://www.webcodeacademy.com.mx/sitemap.xml
+Sitemap: https://ecosistemawca.com/sitemap.xml
 
 # No permitir rastreo de rutas de API y admin
 Disallow: /api/
@@ -8,7 +8,7 @@ Disallow: /admin/
 Disallow: /auth/
 
 # Permitir rastreo de páginas principales
-Allow: /courses/
+Allow: /programs/
 Allow: /editor/
 Allow: /about/
 Allow: /contact/ 

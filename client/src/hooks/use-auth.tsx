@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registro Exitoso",
-        description: `¡Bienvenid@ a Ecosistema WCA, ${user.name}!`,
+        description: `¡Bienvenid@ al Ecosistema WCA, ${user.name}!`,
       });
     },
     onError: (error: Error) => {

@@ -10,24 +10,24 @@ export default function Footer() {
           <div>
             <div className="flex items-center mb-6">
               <div className="accent-blue mr-2">
-                <i className="fas fa-code text-2xl"></i>
+                <img src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png" alt="Ecosistema WCA" className="w-8 h-8" />
               </div>
-              <span className="font-heading font-bold text-xl">Ecosistema WCA</span>
+              <span className="font-heading font-bold text-xl text-accent-blue" style={{ fontFamily: 'Cocomat Pro, sans-serif' }}>Ecosistema WCA</span>
             </div>
-            <p className="text-muted mb-6">
-              La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa 100% Gratuita, comprometida con la educación de calidad y la reducción del analfabetismo digital creciente en el mundo.
+            <p className="text-muted mb-6 text-justify pr-0 xl:pr-11">
+              La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa, comprometida con la educación de calidad y la reducción del analfabetismo digital creciente en el mundo.
             </p>
             <div className="flex space-x-4">
-              <a href="https://facebook.com/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en Facebook">
+              <a href="https://facebook.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en Facebook">
                 <i className="fab fa-facebook-f"></i>
               </a>
-              <a href="https://instagram.com/webcodeacademy0" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en Instagram">
+              <a href="https://instagram.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en Instagram">
                 <i className="fab fa-instagram"></i>
               </a>
-              <a href="https://youtube.com/@webcodeacademy0" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en YouTube">
+              <a href="https://youtube.com/@ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en YouTube">
                 <i className="fab fa-youtube"></i>
               </a>
-              <a href="https://linkedin.com/in/webcodeacademy0/" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en LinkedIn">
+              <a href="https://linkedin.com/in/ecosistemawca/" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en LinkedIn">
                 <i className="fab fa-linkedin-in"></i>
               </a>
             </div>
@@ -37,7 +37,7 @@ export default function Footer() {
             <h3 className="text-lg font-heading font-semibold mb-6">Enlaces Rápidos</h3>
             <ul className="space-y-4">
               <li><Link href="/" className="text-muted hover-accent-blue">Inicio</Link></li>
-              <li><Link href="/courses" className="text-muted hover-accent-blue">Cursos</Link></li>
+              <li><Link href="/programs" className="text-muted hover-accent-blue">Programas</Link></li>
               <li><Link href="/about" className="text-muted hover-accent-blue">Acerca de</Link></li>
               <li><Link href="/contact" className="text-muted hover-accent-blue">Contacto</Link></li>
               <li><Link href="/editor" className="text-muted hover-accent-blue">Editor</Link></li>
@@ -45,13 +45,13 @@ export default function Footer() {
           </div>
           
           <div>
-            <h3 className="text-lg font-heading font-semibold mb-6">Cursos</h3>
+            <h3 className="text-lg font-heading font-semibold mb-6">Programas</h3>
             <ul className="space-y-4">
-              <li><Link href="/courses/web-development" className="text-muted hover-accent-blue">Desarrollo Web</Link></li>
-              <li><Link href="/courses/discover-computing" className="text-muted hover-accent-blue">Descubre la Computación</Link></li>
-              <li><Link href="/courses/first-steps-in-python" className="text-muted hover-accent-blue">Primeros Pasos en Python</Link></li>
-              <li><Link href="/courses" className="text-muted hover-accent-blue">Edición de Video</Link></li>
-              <li><Link href="/courses" className="text-muted hover-accent-blue">Desarrollo Móvil</Link></li>
+              <li><Link href="/programs/desarrollo-web" className="text-muted hover-accent-blue">Desarrollo Web</Link></li>
+              <li><Link href="/programs/desarrollo-web" className="text-muted hover-accent-blue">Descubre la Computación</Link></li>
+              <li><Link href="/programs/python-fullstack" className="text-muted hover-accent-blue">Primeros Pasos en Python</Link></li>
+              <li><Link href="/programs" className="text-muted hover-accent-blue">Edición de Video</Link></li>
+              <li><Link href="/programs" className="text-muted hover-accent-blue">Desarrollo Móvil</Link></li>
             </ul>
           </div>
           
