@@ -34,7 +34,7 @@ const features = [
   {
     icon: 'fas fa-certificate',
     title: 'Certificaciones Conjuntas',
-    description: 'Certificaciones avaladas por Ecosistema WCA y los proyectos que imparten cada programa, reconocimiento de calidad internacional.',
+    description: 'Certificaciones avaladas por el Ecosistema WCA y los proyectos que imparten cada programa, reconocimiento de calidad internacional.',
     color: 'accent-red'
   }
 ];

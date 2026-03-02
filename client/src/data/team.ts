@@ -5,7 +5,7 @@ export const initialTeam: InsertTeam[] = [
   {
     name: "Angel Salazar",
     role: "CEO & Fundador",
-    bio: "Creador de Ecosistema WCA, apasionado por democratizar la educación tecnológica y ayudar a otros a alcanzar sus metas profesionales.",
+    bio: "Creador del Ecosistema WCA, apasionado por democratizar la educación tecnológica y ayudar a otros a alcanzar sus metas profesionales.",
     image: "https://i.ibb.co/8Lpz1QrK/team1-ct12l5.png",
     linkedIn: "https://www.linkedin.com/in/angelisaiszr/",
     github: "https://github.com/AngelIsaiSzr",

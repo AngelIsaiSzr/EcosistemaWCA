@@ -15,7 +15,7 @@ export default function AboutSection() {
           >
             <img 
               src="https://i.ibb.co/bjt2h1Tz/about3-yw5df.png" 
-              alt="Misión de Ecosistema WCA" 
+              alt="Misión del Ecosistema WCA" 
               className="rounded-xl shadow-lg"
             />
           </motion.div>

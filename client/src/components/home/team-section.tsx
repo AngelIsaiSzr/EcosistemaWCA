@@ -19,7 +19,7 @@ export default function TeamSection() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">Nuestro Equipo</h2>
-          <p className="text-muted max-w-2xl mx-auto">Conoce a los profesionales apasionados que hacen posible Ecosistema WCA.</p>
+          <p className="text-muted max-w-2xl mx-auto">Conoce a los profesionales apasionados que hacen posible al Ecosistema WCA.</p>
         </motion.div>
         
         {isLoading ? (

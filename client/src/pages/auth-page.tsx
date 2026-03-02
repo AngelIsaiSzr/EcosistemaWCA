@@ -320,10 +320,10 @@ export default function AuthPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-secondary-900 to-secondary-800 opacity-90 transition-all duration-300 ease-in-out"></div>
           
           <div className="relative z-10 flex flex-col justify-center px-12 w-full">
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">
-              Aprende, <span className="accent-blue">Crea</span> y <span className="accent-yellow">Transforma</span><br /> tu FUTURO 100% Gratis
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-center">
+              Aprende, <span className="accent-blue">Crea</span> y <span className="accent-yellow">Transforma</span><br /> tu <span className="accent-red">FUTURO</span>
             </h2>
-            <p className="text-muted mb-8">
+            <p className="text-muted mb-8 text-center">
               World Community Academy es una academia tecnológica donde convergen programas de computación, historia, literatura, idiomas, matemáticas, arte y más, todos con la tecnología como eje central del aprendizaje, utilizando Realidad Virtual, IA y más.
             </p>
             
