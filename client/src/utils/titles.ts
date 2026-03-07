@@ -17,4 +17,7 @@ export const titlesPage = [
   "¡Sé un agente de cambio! 🎯"
 ];
 
-export const defaultTitle = "Ecosistema WCA"; 
+export const defaultTitle = "Ecosistema WCA";
+
+/** URL canónica del sitio (sin barra final, para construir rutas) */
+export const SITE_URL = "https://ecosistemawca.com"; 

@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { SITE_URL } from "@/utils/titles";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -77,6 +78,8 @@ export default function ContactSection() {
           name="description"
           content="Contáctanos para obtener más información sobre nuestros programas o para cualquier consulta que tengas."
         />
+        <link rel="canonical" href={`${SITE_URL}/contact`} />
+        <meta property="og:url" content={`${SITE_URL}/contact`} />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

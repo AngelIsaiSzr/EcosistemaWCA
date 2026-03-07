@@ -16,6 +16,7 @@ import {
 import { AnimateInView } from "@/components/ui/animate-in-view";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { usePageLoading } from "@/hooks/use-page-loading";
+import { SITE_URL } from "@/utils/titles";
 
 export default function ProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,6 +74,8 @@ export default function ProgramsPage() {
           name="description" 
           content="Explora nuestra variedad de programas  de especialización, desde programación hasta idiomas."
         />
+        <link rel="canonical" href={`${SITE_URL}/programs`} />
+        <meta property="og:url" content={`${SITE_URL}/programs`} />
       </Helmet>
       
       <div className="flex flex-col min-h-screen">

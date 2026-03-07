@@ -12,6 +12,7 @@ import CtaSection from "@/components/home/cta-section";
 import { useEffect, useState } from "react";
 import LogosCarousel from "@/components/home/logos-carousel";
 import FlagsCarousel from "@/components/home/flags-carousel";
+import { SITE_URL } from "@/utils/titles";
 
 export default function HomePage() {
   const [isReady, setIsReady] = useState(false);
@@ -34,6 +35,8 @@ export default function HomePage() {
           name="description"
           content="La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa que busca combatir el analfabetismo digital creciente en el mundo, brindando educación tecnológica accesible y de calidad para todas las personas."
         />
+        <link rel="canonical" href={`${SITE_URL}/`} />
+        <meta property="og:url" content={`${SITE_URL}/`} />
       </Helmet>
 
       <div className="flex flex-col min-h-screen overflow-x-hidden">

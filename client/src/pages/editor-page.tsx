@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Download, Copy, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { SITE_URL } from "@/utils/titles";
 
 type LanguageType = "html" | "css" | "javascript";
 
@@ -131,6 +132,8 @@ document.addEventListener('DOMContentLoaded', function() {
           name="description" 
           content="Editor de código en línea de Ecosistema WCA. Practica HTML, CSS y JavaScript con nuestro editor interactivo."
         />
+        <link rel="canonical" href={`${SITE_URL}/editor`} />
+        <meta property="og:url" content={`${SITE_URL}/editor`} />
       </Helmet>
       
       <div className="flex flex-col min-h-screen">

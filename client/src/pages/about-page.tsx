@@ -2,6 +2,7 @@ import { Helmet } from "react-helmet";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import TeamSection from "@/components/home/team-section";
+import { SITE_URL } from "@/utils/titles";
 
 export default function AboutPage() {
   return (
@@ -12,6 +13,8 @@ export default function AboutPage() {
           name="description" 
           content="Conoce la evolución de World Community Academy, la primera academia tecnológica multidisciplinaria y colaborativa que revoluciona la educación del siglo XXI."
         />
+        <link rel="canonical" href={`${SITE_URL}/about`} />
+        <meta property="og:url" content={`${SITE_URL}/about`} />
       </Helmet>
       
       <div className="flex flex-col min-h-screen">
