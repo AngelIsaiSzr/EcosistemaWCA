@@ -722,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { webDevModules } = await import("@/data/programs");
       
       // Get Web Dev program
-      const webDevProgram = await storage.getCourseBySlug("desarrollo-web");
+      const webDevProgram = await storage.getCourseBySlug("web-development");
       if (!webDevProgram) {
         return res.status(404).json({ message: "Web Dev program not found" });
       }

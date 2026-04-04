@@ -4,7 +4,7 @@ import { InsertCourse } from '@shared/schema';
 export const initialPrograms: InsertCourse[] = [
   {
     title: "Desarrollo Web",
-    slug: "desarrollo-web",
+    slug: "web-development",
     description: "En este programa aprenderás todo sobre el Desarrollo Web. Desde la estructura básica de una página web en HTML, hasta la aplicación de estilos en CSS y la implementación de interactividad con JavaScript, desarrollarás las habilidades necesarias para construir interfaces de usuario claras y funcionales.",
     shortDescription: "Aprende a crear sitios web con HTML, CSS y JavaScript. Inicia tu camino en la programación y el desarrollo web.",
     level: "Principiante",

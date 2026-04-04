@@ -114,7 +114,7 @@ export default function ProgramDetailPreview() {
               
               <div className="mt-6 text-center">
                 <Button className="bg-accent-blue hover:bg-accent-blue hover:opacity-90 inline-flex items-center">
-                  <a href="/programs/desarrollo-web">
+                  <a href="/programs/web-development">
                     Explorar contenido completo
                     <i className="fas fa-external-link-alt ml-2"></i>
                   </a>

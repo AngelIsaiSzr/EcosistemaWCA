@@ -47,9 +47,9 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-heading font-semibold mb-6">Programas</h3>
             <ul className="space-y-4">
-              <li><Link href="/programs/desarrollo-web" className="text-muted hover-accent-blue">Desarrollo Web</Link></li>
-              <li><Link href="/programs/desarrollo-web" className="text-muted hover-accent-blue">Descubre la Computación</Link></li>
-              <li><Link href="/programs/python-fullstack" className="text-muted hover-accent-blue">Primeros Pasos en Python</Link></li>
+              <li><Link href="/programs/web-development" className="text-muted hover-accent-blue">Desarrollo Web</Link></li>
+              <li><Link href="/programs/discover-computing" className="text-muted hover-accent-blue">Descubre la Computación</Link></li>
+              <li><Link href="/programs/first-steps-in-python" className="text-muted hover-accent-blue">Primeros Pasos en Python</Link></li>
               <li><Link href="/programs" className="text-muted hover-accent-blue">Edición de Video</Link></li>
               <li><Link href="/programs" className="text-muted hover-accent-blue">Desarrollo Móvil</Link></li>
             </ul>
