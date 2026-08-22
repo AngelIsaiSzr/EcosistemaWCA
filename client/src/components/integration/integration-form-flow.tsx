@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   IntegrationField,
@@ -27,24 +35,28 @@ interface IntegrationFormFlowProps {
   preview?: boolean;
 }
 
+const slide = {
+  initial: { opacity: 0, x: 28 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -28 },
+};
+
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
-const formFieldClass =
-  "h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40 focus-visible:ring-2 focus-visible:ring-[#87b1e0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1220]";
 
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
     phone: { dial: "+52", number: "" },
     privacyConsent: false,
   };
-  for (const field of (definition.sections ?? []).flatMap((s) => s.fields ?? [])) {
+  for (const field of definition.sections.flatMap((s) => s.fields)) {
     if (field.type === "multiple_choice") answers[field.id] = [];
     if (field.type === "checkbox") answers[field.id] = false;
   }
   return answers;
 }
 
-function visibleFields(fields: IntegrationField[] | undefined, answers: Answers) {
-  return (fields ?? []).filter((field) => isFieldVisible(field, answers));
+function visibleFields(fields: IntegrationField[], answers: Answers) {
+  return fields.filter((field) => isFieldVisible(field, answers));
 }
 
 function validateField(field: IntegrationField, value: unknown): string | null {
@@ -88,7 +100,7 @@ function validateField(field: IntegrationField, value: unknown): string | null {
 }
 
 export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFormFlowProps) {
-  const sections = Array.isArray(definition.sections) ? definition.sections : [];
+  const sections = definition.sections;
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>(() => emptyAnswers(definition));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -180,7 +192,9 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
 
   if (submitted) {
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
         className={cn("relative z-10 mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center", emojiFont)}
       >
         {preview && (
@@ -197,7 +211,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         <p className="mt-4 whitespace-pre-line text-lg leading-relaxed text-white/85">
           {definition.ending.message}
         </p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -209,13 +223,23 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         </div>
       )}
       <div className="mb-8 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-[#87b1e0] transition-[width] duration-300"
-          style={{ width: `${progress}%` }}
+        <motion.div
+          className="h-full rounded-full bg-[#87b1e0]"
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.35 }}
         />
       </div>
 
-      <div key={section?.id ?? step}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={section?.id ?? step}
+          layout
+          variants={slide}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.32, ease: "easeOut" }}
+        >
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
               <WcaLogo alt="Ecosistema WCA" className="mb-6 h-16 w-16 object-contain" />
@@ -228,23 +252,33 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             <div>
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
-              <div className="space-y-7">
-                {currentFields.map((field) => (
-                  <div key={field.id} className="p-1">
-                    <FieldControl
-                      field={field}
-                      value={answers[field.id]}
-                      error={errors[field.id]}
-                      otherValue={otherValues[field.id] ?? ""}
-                      onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
-                      onChange={(value) => setValue(field.id, value)}
-                    />
-                  </div>
-                ))}
+              <div className="space-y-7 overflow-hidden">
+                <AnimatePresence initial={false}>
+                  {currentFields.map((field) => (
+                    <motion.div
+                      key={field.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                      <FieldControl
+                        field={field}
+                        value={answers[field.id]}
+                        error={errors[field.id]}
+                        otherValue={otherValues[field.id] ?? ""}
+                        onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
+                        onChange={(value) => setValue(field.id, value)}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           )}
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       {submitError && (
         <p className="mt-6 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -325,7 +359,7 @@ function FieldControl({
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             maxLength={field.maxLength}
-            className={formFieldClass}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "email" && (
@@ -334,7 +368,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={formFieldClass}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "url" && (
@@ -348,29 +382,27 @@ function FieldControl({
               if (next) onChange(normalizeUrl(next));
             }}
             placeholder={field.placeholder}
-            className={formFieldClass}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "number" && (
-          <div className="relative">
-            <Input
-              type="number"
-              min={field.min ?? 0}
-              max={field.max ?? 100}
-              step={1}
-              value={value === undefined || value === null ? "" : String(value)}
-              onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-              placeholder={field.placeholder}
-              className={cn(formFieldClass, "wca-number-input pr-2")}
-            />
-          </div>
+          <Input
+            type="number"
+            min={field.min ?? 0}
+            max={field.max ?? 100}
+            step={1}
+            value={value === undefined || value === null ? "" : String(value)}
+            onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+            placeholder={field.placeholder}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+          />
         )}
         {field.type === "long_text" && (
           <Textarea
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={cn("min-h-[140px]", formFieldClass, "h-auto")}
+            className="min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
@@ -470,14 +502,24 @@ function FieldControl({
                 >
                   <span className="font-medium text-white">Otro</span>
                 </button>
-                {selected.includes("otro") && (
-                  <Input
-                    value={otherValue}
-                    onChange={(e) => onOtherChange(e.target.value)}
-                    placeholder="Especifica..."
-                    className={formFieldClass}
-                  />
-                )}
+                <AnimatePresence initial={false}>
+                  {selected.includes("otro") && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.28 }}
+                      className="overflow-hidden"
+                    >
+                      <Input
+                        value={otherValue}
+                        onChange={(e) => onOtherChange(e.target.value)}
+                        placeholder="Especifica..."
+                        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </>
             )}
           </div>
@@ -516,39 +558,41 @@ function PhoneField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
-  const phone =
-    value && typeof value === "object"
-      ? (value as { dial?: string; number?: string })
-      : { dial: "+52", number: "" };
+  const phone = (value as { dial?: string; number?: string }) ?? { dial: "+52", number: "" };
   const selected = PHONE_COUNTRIES.find((c) => c.dial === (phone.dial ?? "+52")) ?? PHONE_COUNTRIES[0];
   return (
     <div className="flex gap-2">
-      <div className="relative w-[158px] shrink-0">
-        <img
-          src={countryFlagUrl(selected.code)}
-          alt=""
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-5 -translate-y-1/2 rounded-sm object-cover"
-        />
-        <select
-          value={phone.dial ?? "+52"}
-          onChange={(e) => onChange({ ...phone, dial: e.target.value })}
-          className="h-12 w-full appearance-none rounded-md border border-white/15 bg-white/10 pl-10 pr-8 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[#87b1e0]"
+      <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
+        <SelectTrigger className="h-12 w-[170px] border-white/15 bg-white/10 text-white">
+          <SelectValue>
+            <span className="flex items-center gap-2">
+              <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
+              {selected.dial}
+            </span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent
+          collisionPadding={16}
+          className="min-w-[min(20rem,calc(100vw-1.5rem))]"
         >
           {PHONE_COUNTRIES.map((country) => (
-            <option key={country.code} value={country.dial} className="bg-[#0b1220] text-white">
-              {country.dial} {country.name}
-            </option>
+            <SelectItem key={country.code} value={country.dial} className="pr-3">
+              <span className="flex items-center gap-2 whitespace-nowrap">
+                <img src={countryFlagUrl(country.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
+                <span>{country.flag}</span>
+                {country.dial} {country.name}
+              </span>
+            </SelectItem>
           ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-      </div>
+        </SelectContent>
+      </Select>
       <Input
         type="tel"
         inputMode="numeric"
         value={phone.number ?? ""}
         onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
-        className={cn("min-w-0 flex-1", formFieldClass)}
+        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
       />
     </div>
   );

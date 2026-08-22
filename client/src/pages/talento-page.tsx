@@ -293,7 +293,7 @@ export default function TalentoPage() {
             </TabsContent>
 
             <TabsContent value="preview">
-              <div className="relative min-h-[720px] overflow-x-hidden rounded-2xl border bg-[#0b1220] p-1">
+              <div className="relative min-h-[720px] overflow-hidden rounded-2xl border bg-[#0b1220]">
                 <FormAtmosphere definition={definition} contained />
                 <IntegrationFormFlow definition={definition} slug={form?.slug ?? "integracion"} preview />
               </div>
