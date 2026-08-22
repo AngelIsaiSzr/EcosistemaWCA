@@ -1,17 +1,9 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   IntegrationField,
@@ -44,15 +36,15 @@ function emptyAnswers(definition: IntegrationFormDefinition): Answers {
     phone: { dial: "+52", number: "" },
     privacyConsent: false,
   };
-  for (const field of definition.sections.flatMap((s) => s.fields)) {
+  for (const field of (definition.sections ?? []).flatMap((s) => s.fields ?? [])) {
     if (field.type === "multiple_choice") answers[field.id] = [];
     if (field.type === "checkbox") answers[field.id] = false;
   }
   return answers;
 }
 
-function visibleFields(fields: IntegrationField[], answers: Answers) {
-  return fields.filter((field) => isFieldVisible(field, answers));
+function visibleFields(fields: IntegrationField[] | undefined, answers: Answers) {
+  return (fields ?? []).filter((field) => isFieldVisible(field, answers));
 }
 
 function validateField(field: IntegrationField, value: unknown): string | null {
@@ -96,7 +88,7 @@ function validateField(field: IntegrationField, value: unknown): string | null {
 }
 
 export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFormFlowProps) {
-  const sections = definition.sections;
+  const sections = Array.isArray(definition.sections) ? definition.sections : [];
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>(() => emptyAnswers(definition));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -188,9 +180,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
 
   if (submitted) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
+      <div
         className={cn("relative z-10 mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center", emojiFont)}
       >
         {preview && (
@@ -207,7 +197,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         <p className="mt-4 whitespace-pre-line text-lg leading-relaxed text-white/85">
           {definition.ending.message}
         </p>
-      </motion.div>
+      </div>
     );
   }
 
@@ -219,14 +209,13 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         </div>
       )}
       <div className="mb-8 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <motion.div
-          className="h-full rounded-full bg-[#87b1e0]"
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.35 }}
+        <div
+          className="h-full rounded-full bg-[#87b1e0] transition-[width] duration-300"
+          style={{ width: `${progress}%` }}
         />
       </div>
 
-      <div key={section?.id ?? step} className="animate-in fade-in slide-in-from-right-3 duration-300 fill-mode-both">
+      <div key={section?.id ?? step}>
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
               <WcaLogo alt="Ecosistema WCA" className="mb-6 h-16 w-16 object-contain" />
@@ -363,13 +352,18 @@ function FieldControl({
           />
         )}
         {field.type === "number" && (
-          <NumberField
-            value={value}
-            min={field.min ?? 0}
-            max={field.max ?? 100}
-            placeholder={field.placeholder}
-            onChange={onChange}
-          />
+          <div className="relative">
+            <Input
+              type="number"
+              min={field.min ?? 0}
+              max={field.max ?? 100}
+              step={1}
+              value={value === undefined || value === null ? "" : String(value)}
+              onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder={field.placeholder}
+              className={cn(formFieldClass, "wca-number-input pr-2")}
+            />
+          </div>
         )}
         {field.type === "long_text" && (
           <Textarea
@@ -515,63 +509,6 @@ function FieldControl({
   );
 }
 
-function NumberField({
-  value,
-  min,
-  max,
-  placeholder,
-  onChange,
-}: {
-  value: unknown;
-  min: number;
-  max: number;
-  placeholder?: string;
-  onChange: (value: unknown) => void;
-}) {
-  const numeric = typeof value === "number" && !Number.isNaN(value) ? value : null;
-  const bump = (delta: number) => {
-    const base = numeric ?? min;
-    onChange(Math.min(max, Math.max(min, base + delta)));
-  };
-
-  return (
-    <div className="relative">
-      <Input
-        type="number"
-        min={min}
-        max={max}
-        step={1}
-        value={value === undefined || value === null ? "" : String(value)}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        placeholder={placeholder}
-        className={cn(
-          formFieldClass,
-          "pr-12 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-        )}
-      />
-      <div className="absolute right-1.5 top-1.5 flex h-9 w-8 flex-col overflow-hidden rounded-md border border-white/15 bg-white/10">
-        <button
-          type="button"
-          aria-label="Aumentar"
-          onClick={() => bump(1)}
-          className="flex flex-1 items-center justify-center text-white/75 transition hover:bg-white/15 hover:text-white"
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
-        </button>
-        <div className="h-px bg-white/10" />
-        <button
-          type="button"
-          aria-label="Disminuir"
-          onClick={() => bump(-1)}
-          className="flex flex-1 items-center justify-center text-white/75 transition hover:bg-white/15 hover:text-white"
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function PhoneField({
   value,
   onChange,
@@ -579,30 +516,32 @@ function PhoneField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
-  const phone = (value as { dial?: string; number?: string }) ?? { dial: "+52", number: "" };
+  const phone =
+    value && typeof value === "object"
+      ? (value as { dial?: string; number?: string })
+      : { dial: "+52", number: "" };
   const selected = PHONE_COUNTRIES.find((c) => c.dial === (phone.dial ?? "+52")) ?? PHONE_COUNTRIES[0];
   return (
-    <div className="flex gap-2 overflow-visible">
-      <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
-        <SelectTrigger className="h-12 w-[158px] shrink-0 border-white/15 bg-white/10 text-white focus:ring-[#87b1e0] focus:ring-offset-2 focus:ring-offset-[#0b1220] [&>span]:line-clamp-none">
-          <SelectValue>
-            <span className="flex items-center gap-2">
-              <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
-              {selected.dial}
-            </span>
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent className="z-[80] max-h-72 w-[min(90vw,20rem)] min-w-[18rem] max-w-[min(90vw,20rem)]">
+    <div className="flex gap-2">
+      <div className="relative w-[158px] shrink-0">
+        <img
+          src={countryFlagUrl(selected.code)}
+          alt=""
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-5 -translate-y-1/2 rounded-sm object-cover"
+        />
+        <select
+          value={phone.dial ?? "+52"}
+          onChange={(e) => onChange({ ...phone, dial: e.target.value })}
+          className="h-12 w-full appearance-none rounded-md border border-white/15 bg-white/10 pl-10 pr-8 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[#87b1e0]"
+        >
           {PHONE_COUNTRIES.map((country) => (
-            <SelectItem key={country.code} value={country.dial} className="pr-3">
-              <span className="flex items-center gap-2 whitespace-nowrap">
-                <img src={countryFlagUrl(country.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
-                {country.dial} {country.name}
-              </span>
-            </SelectItem>
+            <option key={country.code} value={country.dial} className="bg-[#0b1220] text-white">
+              {country.dial} {country.name}
+            </option>
           ))}
-        </SelectContent>
-      </Select>
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+      </div>
       <Input
         type="tel"
         inputMode="numeric"

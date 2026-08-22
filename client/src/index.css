@@ -428,6 +428,13 @@
   .wca-drift { animation: wca-drift 14s ease-in-out infinite; }
   .wca-pulse-glow { animation: wca-pulse-glow 8s ease-in-out infinite; }
 
+  .wca-number-input::-webkit-outer-spin-button,
+  .wca-number-input::-webkit-inner-spin-button {
+    height: 2.2rem;
+    opacity: 1;
+    filter: invert(0.85);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .wca-stars, .wca-stars-slow, .wca-twinkle, .wca-ripple, .wca-drift, .wca-pulse-glow {
       animation: none;
