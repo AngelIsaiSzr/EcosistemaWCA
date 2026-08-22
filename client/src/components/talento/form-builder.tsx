@@ -204,7 +204,7 @@ export function IntegrationFormBuilder({
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="space-y-1 px-2 py-1">
+              <div className="space-y-1 px-2 pb-2">
                 {section.fields.map((field, fieldIndex) => (
                   <div
                     key={field.id}
@@ -238,7 +238,7 @@ export function IntegrationFormBuilder({
                         selection.kind === "field" &&
                           selection.sectionIndex === sectionIndex &&
                           selection.fieldIndex === fieldIndex &&
-                          "bg-[#5b8fd4]/15 text-[#5b8fd4] ring-1 ring-inset ring-[#5b8fd4]",
+                          "bg-[#5b8fd4]/15 text-[#5b8fd4]",
                       )}
                     >
                       {field.label}
@@ -390,8 +390,8 @@ function AppearanceEditor({
             <input
               type="color"
               aria-label="Color de fondo"
-              className="h-10 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-              value={/^#([0-9a-f]{6})$/i.test(theme?.backgroundColor ?? "") ? theme!.backgroundColor! : "#0b1220"}
+              className="h-10 w-12 cursor-pointer rounded-md border bg-transparent p-0.5"
+              value={/^#[0-9a-fA-F]{6}$/.test(theme?.backgroundColor ?? "") ? theme!.backgroundColor! : "#0b1220"}
               onChange={(e) => onChange({ backgroundColor: e.target.value })}
             />
             <Input
@@ -400,7 +400,9 @@ function AppearanceEditor({
               placeholder="#0b1220"
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Solo cambia el color base. El estilo elegido se mantiene encima.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cambia solo el color base. El estilo (luces, ondas, etc.) se mantiene encima.
+          </p>
         </div>
         <Field
           label="URL o ruta de la imagen (opcional)"

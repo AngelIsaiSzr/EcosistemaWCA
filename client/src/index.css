@@ -416,10 +416,10 @@
     50% { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
   }
 
-  @keyframes form-ripple {
-    0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.55; }
-    70% { opacity: 0.18; }
-    100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+  @keyframes form-wave {
+    0% { transform: scale(0.08); opacity: 0.6; }
+    75% { opacity: 0.14; }
+    100% { transform: scale(1); opacity: 0; }
   }
 
   @keyframes form-starfield {
@@ -427,9 +427,18 @@
     100% { background-position: 42px -28px, -18px 60px, 28px -20px; }
   }
 
-  @keyframes form-wave-x {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  .form-wave-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(140vmin, 1100px);
+    height: min(140vmin, 1100px);
+    border-radius: 9999px;
+    translate: -50% -50%;
+    transform: scale(0.08);
+    transform-origin: center;
+    animation: form-wave 6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite both;
+    will-change: transform, opacity;
   }
 
   .form-anim-twinkle { animation: form-twinkle 4.5s ease-in-out infinite; }
@@ -437,23 +446,19 @@
   .form-anim-float { animation: form-float 16s ease-in-out infinite; }
   .form-anim-pulse { animation: form-pulse-glow 7s ease-in-out infinite; }
   .form-anim-stars { animation: form-starfield 48s linear infinite; }
-  .form-anim-wave-a { animation: form-wave-x 14s linear infinite; }
-  .form-anim-wave-b { animation: form-wave-x 20s linear infinite reverse; }
-  .form-anim-wave-c { animation: form-wave-x 26s linear infinite; }
 
   @media (prefers-reduced-motion: reduce) {
     .form-anim-twinkle,
     .form-anim-drift,
     .form-anim-float,
     .form-anim-pulse,
-    .form-anim-ripple,
-    .form-anim-ripple-delay,
-    .form-anim-ripple-delay-2,
     .form-anim-stars,
-    .form-anim-wave-a,
-    .form-anim-wave-b,
-    .form-anim-wave-c {
+    .form-wave-ring {
       animation: none;
+    }
+    .form-wave-ring {
+      transform: scale(0.45);
+      opacity: 0.25;
     }
   }
 }

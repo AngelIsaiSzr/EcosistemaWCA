@@ -41,8 +41,7 @@ const slide = {
   exit: { opacity: 0, x: -28 },
 };
 
-const fieldFocus =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#87b1e0] focus-visible:ring-offset-0";
+const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
 
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
@@ -253,7 +252,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             <div>
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
-              <div className="space-y-7">
+              <div className="space-y-7 overflow-hidden">
                 <AnimatePresence initial={false}>
                   {currentFields.map((field) => (
                     <motion.div
@@ -340,7 +339,7 @@ function FieldControl({
   };
 
   return (
-    <div className="p-0.5">
+    <div>
       {field.type !== "checkbox" && (
         <>
           <label className="block text-xl font-semibold text-white">
@@ -360,7 +359,7 @@ function FieldControl({
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             maxLength={field.maxLength}
-            className={cn("h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "email" && (
@@ -369,7 +368,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={cn("h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "url" && (
@@ -383,16 +382,19 @@ function FieldControl({
               if (next) onChange(normalizeUrl(next));
             }}
             placeholder={field.placeholder}
-            className={cn("h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "number" && (
-          <NumberField
+          <Input
+            type="number"
             min={field.min ?? 0}
             max={field.max ?? 100}
-            value={value}
+            step={1}
+            value={value === undefined || value === null ? "" : String(value)}
+            onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
-            onChange={onChange}
+            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "long_text" && (
@@ -400,7 +402,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={cn("min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+            className="min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
         {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
@@ -414,7 +416,7 @@ function FieldControl({
                   type="button"
                   onClick={() => onChange(option.value)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#87b1e0]",
+                    "w-full rounded-2xl border px-4 py-4 text-left transition",
                     active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
@@ -456,7 +458,7 @@ function FieldControl({
                   type="button"
                   onClick={() => toggleMulti(option.value)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#87b1e0]",
+                    "w-full rounded-2xl border px-4 py-4 text-left transition",
                     active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
@@ -492,7 +494,7 @@ function FieldControl({
                   type="button"
                   onClick={() => toggleMulti("otro")}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#87b1e0]",
+                    "w-full rounded-2xl border px-4 py-4 text-left transition",
                     selected.includes("otro")
                       ? "border-[#87b1e0] bg-[#87b1e0]/15"
                       : "border-white/10 bg-white/5 hover:border-white/25",
@@ -513,7 +515,7 @@ function FieldControl({
                         value={otherValue}
                         onChange={(e) => onOtherChange(e.target.value)}
                         placeholder="Especifica..."
-                        className={cn("h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+                        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
                       />
                     </motion.div>
                   )}
@@ -549,64 +551,6 @@ function FieldControl({
   );
 }
 
-function NumberField({
-  min,
-  max,
-  value,
-  placeholder,
-  onChange,
-}: {
-  min: number;
-  max: number;
-  value: unknown;
-  placeholder?: string;
-  onChange: (value: unknown) => void;
-}) {
-  const numeric = value === undefined || value === null || value === "" ? null : Number(value);
-  const step = (delta: number) => {
-    const current = Number.isFinite(numeric) ? (numeric as number) : min;
-    const next = Math.min(max, Math.max(min, current + delta));
-    onChange(next);
-  };
-
-  return (
-    <div className="relative">
-      <Input
-        type="number"
-        min={min}
-        max={max}
-        step={1}
-        value={numeric === null || Number.isNaN(numeric) ? "" : String(numeric)}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        placeholder={placeholder}
-        className={cn(
-          "h-12 border-white/15 bg-white/10 pr-12 text-white placeholder:text-white/40",
-          "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-          fieldFocus,
-        )}
-      />
-      <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 flex-col overflow-hidden rounded-md border border-white/15 bg-white/10">
-        <button
-          type="button"
-          aria-label="Aumentar"
-          className="flex h-5 w-7 items-center justify-center text-white/80 hover:bg-white/10"
-          onClick={() => step(1)}
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Disminuir"
-          className="flex h-5 w-7 items-center justify-center border-t border-white/10 text-white/80 hover:bg-white/10"
-          onClick={() => step(-1)}
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function PhoneField({
   value,
   onChange,
@@ -619,7 +563,7 @@ function PhoneField({
   return (
     <div className="flex gap-2">
       <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
-        <SelectTrigger className={cn("h-12 w-[170px] border-white/15 bg-white/10 text-white", fieldFocus)}>
+        <SelectTrigger className="h-12 w-[170px] border-white/15 bg-white/10 text-white">
           <SelectValue>
             <span className="flex items-center gap-2">
               <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
@@ -648,7 +592,7 @@ function PhoneField({
         value={phone.number ?? ""}
         onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
-        className={cn("h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40", fieldFocus)}
+        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
       />
     </div>
   );
