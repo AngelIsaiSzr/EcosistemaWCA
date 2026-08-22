@@ -15,6 +15,9 @@ import AboutPage from "@/pages/about-page";
 import ContactPage from "@/pages/contact-page";
 import EditorPage from "@/pages/editor-page";
 import AdminPage from "@/pages/admin-page";
+import TalentoPage from "@/pages/talento-page";
+import IntegrationFormPage from "@/pages/integration-form-page";
+import IntegrationFormBySlugPage from "@/pages/integration-form-by-slug-page";
 import ProfilePage from "@/pages/profile-page";
 import NotFound from "@/pages/not-found";
 import MerchPage from "@/pages/merch-page";
@@ -22,7 +25,7 @@ import MerchDetailPage from "@/pages/merch-detail-page";
 import TermsPage from "@/pages/terms-page";
 import PrivacyPage from "@/pages/privacy-page";
 import CookiesPage from "@/pages/cookies-page";
-import { ProtectedRoute } from "@/lib/protected-route";
+import { ProtectedRoute, RoleProtectedRoute } from "@/lib/protected-route";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
@@ -46,9 +49,12 @@ function Router() {
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPage} />
         <Route path="/cookies" component={CookiesPage} />
+        <Route path="/integracion" component={IntegrationFormPage} />
+        <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/admin" component={AdminPage} />
+        <RoleProtectedRoute path="/admin" component={AdminPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/talento" component={TalentoPage} roles={["talento"]} />
         <Route component={NotFound} />
       </Switch>
     </PageTransition>
@@ -81,6 +87,9 @@ function App() {
   // Ocultar en /programs/:slug/learn y en el registro en vivo
   const hideDonorbox =
     /^\/programs\/[^/]+\/learn$/.test(location) ||
+    location === "/integracion" ||
+    location.startsWith("/f/") ||
+    location === "/talento" ||
     location.includes("registro-en-vivo") ||
     location.includes("live-course-registration");
   return (

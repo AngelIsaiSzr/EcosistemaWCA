@@ -1,75 +1,102 @@
-import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
+import { Client } from "pg";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const updateSchema = async () => {
+function createClient() {
   if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined');
+    throw new Error("DATABASE_URL is not defined");
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
+  const url = process.env.DATABASE_URL.includes("sslmode=")
+    ? process.env.DATABASE_URL
+    : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes("?") ? "&" : "?"}sslmode=require`;
+
+  return new Client({
+    connectionString: url,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15000,
+    keepAlive: true,
   });
+}
+
+async function runQuery(client: Client, label: string, sql: string) {
+  try {
+    await client.query(sql);
+    console.log(`  ✓ ${label}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`  ⚠ ${label}: ${message}`);
+  }
+}
+
+const updateSchema = async () => {
+  const client = createClient();
 
   try {
-    console.log('⏳ Actualizando esquema de la base de datos...');
+    console.log("⏳ Conectando a la base de datos...");
+    await client.connect();
+    await client.query("SET statement_timeout = 20000");
+    console.log("⏳ Actualizando esquema...");
 
-    // Agregar columnas a la tabla courses si no existen
-    await pool.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'courses' 
-          AND column_name = 'is_live'
-        ) THEN
-          ALTER TABLE courses ADD COLUMN is_live boolean DEFAULT false;
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'courses' 
-          AND column_name = 'live_details'
-        ) THEN
-          ALTER TABLE courses ADD COLUMN live_details jsonb;
-        END IF;
-      END $$;
-    `);
-
-    // Crear tabla live_course_registrations si no existe
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS live_course_registrations (
+    await runQuery(
+      client,
+      "tabla integration_forms",
+      `
+      CREATE TABLE IF NOT EXISTS integration_forms (
         id SERIAL PRIMARY KEY,
-        course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone_number TEXT NOT NULL,
-        age INTEGER NOT NULL,
-        guardian_name TEXT,
-        guardian_phone_number TEXT,
-        preferred_modality TEXT NOT NULL CHECK (preferred_modality IN ('Presencial', 'Virtual')),
-        has_laptop BOOLEAN NOT NULL,
-        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        title TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        schema JSONB NOT NULL,
+        spreadsheet_id TEXT,
+        spreadsheet_tab TEXT DEFAULT 'Respuestas',
+        is_published BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-    `);
+      `,
+    );
 
-    console.log('✅ Esquema actualizado exitosamente');
+    await runQuery(
+      client,
+      "tabla integration_responses",
+      `
+      CREATE TABLE IF NOT EXISTS integration_responses (
+        id SERIAL PRIMARY KEY,
+        form_id INTEGER NOT NULL REFERENCES integration_forms(id) ON DELETE CASCADE,
+        email TEXT NOT NULL,
+        answers JSONB NOT NULL,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      `,
+    );
+
+    await runQuery(
+      client,
+      "índice unique de correo",
+      `
+      CREATE UNIQUE INDEX IF NOT EXISTS integration_responses_form_email_unique
+        ON integration_responses (form_id, email);
+      `,
+    );
+
+    await runQuery(
+      client,
+      "columnas live en courses",
+      `
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS is_live boolean DEFAULT false;
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS live_details jsonb;
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS is_disabled boolean DEFAULT false;
+      `,
+    );
+
+    console.log("✅ Esquema actualizado");
   } catch (err) {
-    console.error('❌ Error al actualizar el esquema:', err);
-    throw err;
+    console.error("❌ Error al actualizar el esquema:", err);
+    process.exitCode = 1;
   } finally {
-    await pool.end();
+    await client.end().catch(() => undefined);
   }
 };
 
-updateSchema().catch((err) => {
-  console.error('Error:', err);
-  process.exit(1);
-}); 
+updateSchema();

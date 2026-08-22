@@ -7,8 +7,11 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /auth/
 
+Disallow: /talento/
+
 # Permitir rastreo de páginas principales
 Allow: /programs/
 Allow: /editor/
 Allow: /about/
-Allow: /contact/ 
+Allow: /contact/
+Allow: /integracion 

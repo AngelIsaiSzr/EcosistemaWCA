@@ -8,7 +8,7 @@ import {
   SheetClose
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, X, LogOut, User } from 'lucide-react';
+import { Menu, X, LogOut, User, HeartHandshake } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserAvatar } from './user-avatar';
 import {
@@ -123,6 +123,14 @@ export default function Navbar() {
                             <path d="m19.2 14.8-3.4 3.4" />
                           </svg>
                           <span>Administración</span>
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
+                    {user.role === 'talento' && (
+                      <Link href="/talento">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <HeartHandshake className="mr-2 h-4 w-4" />
+                          <span>Talento y Bienestar</span>
                         </DropdownMenuItem>
                       </Link>
                     )}
@@ -247,6 +255,17 @@ export default function Navbar() {
                                   <path d="m19.2 14.8-3.4 3.4" />
                                 </svg>
                                 Administración
+                              </Button>
+                            </Link>
+                          </SheetClose>
+                        )}
+
+                        {user.role === 'talento' && (
+                          <SheetClose asChild>
+                            <Link href="/talento">
+                              <Button variant="outline" className="w-full justify-start">
+                                <HeartHandshake className="mr-2 h-4 w-4" />
+                                Talento y Bienestar
                               </Button>
                             </Link>
                           </SheetClose>

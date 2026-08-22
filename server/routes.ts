@@ -5,10 +5,12 @@ import { setupAuth, hashPassword } from "./auth";
 import { insertContactSchema, insertLiveCourseRegistrationSchema, User } from "@shared/schema";
 import { sendEmail, EmailData } from "./services/email";
 import { saveRegistrationToSheet } from './services/google-sheets';
+import { registerTalentoRoutes } from "./routes-talento";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
+  registerTalentoRoutes(app);
 
   // Programs routes (API)
   app.get("/api/programs", async (req, res) => {
@@ -886,6 +888,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: "admin"
         });
         console.log("Created admin user: admin@ecosistemawca.com / admin123456");
+      }
+
+      const existingTalento = await storage.getUserByEmail("talento@ecosistemawca.com");
+      if (!existingTalento) {
+        const hashedPassword = await hashPassword("TalentoWCA2026");
+        await storage.createUser({
+          email: "talento@ecosistemawca.com",
+          username: "talento",
+          name: "Talento y Bienestar",
+          password: hashedPassword,
+          role: "talento"
+        });
+        console.log("Created talento user: talento@ecosistemawca.com");
       }
       
       // Import program data

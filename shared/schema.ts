@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import type { IntegrationFormDefinition } from "./integration-form";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -96,6 +97,28 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const integrationForms = pgTable("integration_forms", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  schema: jsonb("schema").$type<IntegrationFormDefinition>().notNull(),
+  spreadsheetId: text("spreadsheet_id"),
+  spreadsheetTab: text("spreadsheet_tab").default("Respuestas"),
+  isPublished: boolean("is_published").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const integrationResponses = pgTable("integration_responses", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").notNull().references(() => integrationForms.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  answers: jsonb("answers").$type<Record<string, unknown>>().notNull(),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("integration_responses_form_email_unique").on(table.formId, table.email),
+]);
+
 export const liveCourseRegistrations = pgTable("live_course_registrations", {
   id: serial("id").primaryKey(),
   courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
@@ -162,6 +185,17 @@ export const insertLiveCourseRegistrationSchema = createInsertSchema(liveCourseR
   registeredAt: true,
 });
 
+export const insertIntegrationFormSchema = createInsertSchema(integrationForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIntegrationResponseSchema = createInsertSchema(integrationResponses).omit({
+  id: true,
+  submittedAt: true,
+});
+
 // Types for insertion
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
@@ -172,6 +206,8 @@ export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertLiveCourseRegistration = z.infer<typeof insertLiveCourseRegistrationSchema>;
+export type InsertIntegrationForm = z.infer<typeof insertIntegrationFormSchema>;
+export type InsertIntegrationResponse = z.infer<typeof insertIntegrationResponseSchema>;
 
 // Types for selection
 export type User = typeof users.$inferSelect;
@@ -183,3 +219,5 @@ export type Team = typeof teams.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
 export type LiveCourseRegistration = typeof liveCourseRegistrations.$inferSelect;
+export type IntegrationForm = typeof integrationForms.$inferSelect;
+export type IntegrationResponse = typeof integrationResponses.$inferSelect;

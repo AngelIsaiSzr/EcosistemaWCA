@@ -8,13 +8,17 @@ import {
   InsertTestimonial, Testimonial,
   InsertContact, Contact,
   InsertLiveCourseRegistration, LiveCourseRegistration,
-  users, courses, enrollments, modules, sections, teams, testimonials, contacts, liveCourseRegistrations
+  InsertIntegrationForm, IntegrationForm,
+  InsertIntegrationResponse, IntegrationResponse,
+  users, courses, enrollments, modules, sections, teams, testimonials, contacts, liveCourseRegistrations,
+  integrationForms, integrationResponses
 } from "@shared/schema";
+import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, syncOfficialCopy } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import * as connectPgModule from "connect-pg-simple";
 import { db, pool } from "./db";
-import { eq, desc, asc, and } from "drizzle-orm";
+import { eq, desc, asc, and, sql } from "drizzle-orm";
 
 const connectPg = connectPgModule.default || connectPgModule;
 
@@ -80,6 +84,13 @@ export interface IStorage {
   createLiveCourseRegistration(registration: InsertLiveCourseRegistration): Promise<LiveCourseRegistration>;
   getLiveCourseRegistrationsByUserIdAndCourseId(userId: number, courseId: number): Promise<LiveCourseRegistration[]>;
 
+  getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm>;
+  getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined>;
+  updateIntegrationForm(id: number, data: Partial<InsertIntegrationForm>): Promise<IntegrationForm | undefined>;
+  getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]>;
+  getIntegrationResponseByEmail(formId: number, email: string): Promise<IntegrationResponse | undefined>;
+  createIntegrationResponse(response: InsertIntegrationResponse): Promise<IntegrationResponse>;
+
   // Session store
   sessionStore: any;
 }
@@ -94,6 +105,8 @@ export class MemStorage implements IStorage {
   private testimonials: Map<number, Testimonial>;
   private contacts: Map<number, Contact>;
   private liveCourseRegistrations: Map<number, LiveCourseRegistration>;
+  private integrationForms: Map<number, IntegrationForm>;
+  private integrationResponses: Map<number, IntegrationResponse>;
   
   private currentUserIds: number;
   private currentCourseIds: number;
@@ -104,6 +117,8 @@ export class MemStorage implements IStorage {
   private currentTestimonialIds: number;
   private currentContactIds: number;
   private currentLiveCourseRegistrationIds: number;
+  private currentIntegrationFormIds: number;
+  private currentIntegrationResponseIds: number;
 
   sessionStore: any;
 
@@ -117,6 +132,8 @@ export class MemStorage implements IStorage {
     this.testimonials = new Map();
     this.contacts = new Map();
     this.liveCourseRegistrations = new Map();
+    this.integrationForms = new Map();
+    this.integrationResponses = new Map();
     
     this.currentUserIds = 1;
     this.currentCourseIds = 1;
@@ -127,6 +144,8 @@ export class MemStorage implements IStorage {
     this.currentTestimonialIds = 1;
     this.currentContactIds = 1;
     this.currentLiveCourseRegistrationIds = 1;
+    this.currentIntegrationFormIds = 1;
+    this.currentIntegrationResponseIds = 1;
 
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
@@ -482,6 +501,62 @@ export class MemStorage implements IStorage {
       (reg) => reg.userId === userId && reg.courseId === courseId
     );
   }
+
+  async getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm> {
+    const existing = Array.from(this.integrationForms.values())[0];
+    if (existing) return existing;
+    const id = this.currentIntegrationFormIds++;
+    const form: IntegrationForm = {
+      id,
+      title: DEFAULT_INTEGRATION_FORM.title,
+      slug: DEFAULT_INTEGRATION_SLUG,
+      schema: DEFAULT_INTEGRATION_FORM,
+      spreadsheetId: null,
+      spreadsheetTab: "Respuestas",
+      isPublished: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.integrationForms.set(id, form);
+    return form;
+  }
+
+  async getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined> {
+    return Array.from(this.integrationForms.values()).find((form) => form.slug === slug);
+  }
+
+  async updateIntegrationForm(id: number, data: Partial<InsertIntegrationForm>): Promise<IntegrationForm | undefined> {
+    const form = this.integrationForms.get(id);
+    if (!form) return undefined;
+    const updated: IntegrationForm = { ...form, ...data, updatedAt: new Date() };
+    this.integrationForms.set(id, updated);
+    return updated;
+  }
+
+  async getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]> {
+    const query = search?.toLowerCase().trim();
+    return Array.from(this.integrationResponses.values())
+      .filter((item) => item.formId === formId)
+      .filter((item) => !query || item.email.toLowerCase().includes(query) || JSON.stringify(item.answers).toLowerCase().includes(query))
+      .sort((a, b) => (b.submittedAt?.getTime() ?? 0) - (a.submittedAt?.getTime() ?? 0));
+  }
+
+  async getIntegrationResponseByEmail(formId: number, email: string): Promise<IntegrationResponse | undefined> {
+    return Array.from(this.integrationResponses.values()).find(
+      (item) => item.formId === formId && item.email.toLowerCase() === email.toLowerCase(),
+    );
+  }
+
+  async createIntegrationResponse(response: InsertIntegrationResponse): Promise<IntegrationResponse> {
+    const id = this.currentIntegrationResponseIds++;
+    const created: IntegrationResponse = {
+      ...response,
+      id,
+      submittedAt: new Date(),
+    };
+    this.integrationResponses.set(id, created);
+    return created;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -813,6 +888,83 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(liveCourseRegistrations.userId, userId), eq(liveCourseRegistrations.courseId, courseId)))
       .execute();
     return regs;
+  }
+
+  async getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm> {
+    const [existing] = await db.select().from(integrationForms).limit(1);
+    if (existing) {
+      const current = existing.schema;
+      const synced = syncOfficialCopy(current);
+      if (JSON.stringify(current) !== JSON.stringify(synced)) {
+        const [updated] = await db
+          .update(integrationForms)
+          .set({ schema: synced, updatedAt: new Date() })
+          .where(eq(integrationForms.id, existing.id))
+          .returning();
+        return updated ?? { ...existing, schema: synced };
+      }
+      return existing;
+    }
+    const [created] = await db.insert(integrationForms).values({
+      title: DEFAULT_INTEGRATION_FORM.title,
+      slug: DEFAULT_INTEGRATION_SLUG,
+      schema: DEFAULT_INTEGRATION_FORM,
+      isPublished: true,
+      spreadsheetTab: "Respuestas",
+    }).returning();
+    return created;
+  }
+
+  async getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined> {
+    const [form] = await db.select().from(integrationForms).where(eq(integrationForms.slug, slug));
+    return form;
+  }
+
+  async updateIntegrationForm(id: number, data: Partial<InsertIntegrationForm>): Promise<IntegrationForm | undefined> {
+    const [form] = await db
+      .update(integrationForms)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(integrationForms.id, id))
+      .returning();
+    return form;
+  }
+
+  async getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]> {
+    const query = search?.trim();
+    if (query) {
+      return await db
+        .select()
+        .from(integrationResponses)
+        .where(and(
+          eq(integrationResponses.formId, formId),
+          sql`(${integrationResponses.email} ILIKE ${"%" + query + "%"} OR CAST(${integrationResponses.answers} AS TEXT) ILIKE ${"%" + query + "%"})`,
+        ))
+        .orderBy(desc(integrationResponses.submittedAt));
+    }
+    return await db
+      .select()
+      .from(integrationResponses)
+      .where(eq(integrationResponses.formId, formId))
+      .orderBy(desc(integrationResponses.submittedAt));
+  }
+
+  async getIntegrationResponseByEmail(formId: number, email: string): Promise<IntegrationResponse | undefined> {
+    const [response] = await db
+      .select()
+      .from(integrationResponses)
+      .where(and(eq(integrationResponses.formId, formId), eq(integrationResponses.email, email.toLowerCase())));
+    return response;
+  }
+
+  async createIntegrationResponse(response: InsertIntegrationResponse): Promise<IntegrationResponse> {
+    const [created] = await db.insert(integrationResponses).values({
+      ...response,
+      email: response.email.toLowerCase(),
+    }).returning();
+    if (!created) {
+      throw new Error("Failed to create integration response");
+    }
+    return created;
   }
 }
 

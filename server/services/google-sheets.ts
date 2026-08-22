@@ -63,4 +63,43 @@ export async function saveRegistrationToSheet(registration: LiveCourseRegistrati
     console.error('Error al guardar en Google Sheets:', error);
     throw error;
   }
+}
+
+function sheetRange(tab: string, range: string) {
+  const safeTab = tab.includes(" ") || tab.includes("!") ? `'${tab.replace(/'/g, "''")}'` : tab;
+  return `${safeTab}!${range}`;
+}
+
+export async function saveIntegrationRowToSheet(
+  spreadsheetId: string,
+  tabName: string,
+  headers: string[],
+  row: string[],
+) {
+  const sheets = google.sheets({ version: 'v4', auth });
+  const tab = tabName?.trim() || "Respuestas";
+
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: sheetRange(tab, "1:1"),
+  });
+
+  const firstRow = existing.data.values?.[0] ?? [];
+  if (firstRow.length === 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: sheetRange(tab, "A1"),
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [headers] },
+    });
+  }
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: sheetRange(tab, "A:ZZ"),
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [row] },
+  });
+
+  return true;
 } 
