@@ -3,7 +3,6 @@ import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  Copy,
   Download,
   Eye,
   Pencil,
@@ -18,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -32,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
 import { IntegrationFormFlow } from "@/components/integration/integration-form-flow";
+import { FormAtmosphere } from "@/components/integration/form-atmosphere";
 import {
   DEFAULT_INTEGRATION_FORM,
   IntegrationFormDefinition,
@@ -87,7 +85,6 @@ export default function TalentoPage() {
   const [published, setPublished] = useState(true);
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [spreadsheetTab, setSpreadsheetTab] = useState("Respuestas");
-  const [schemaJson, setSchemaJson] = useState("");
 
   useEffect(() => {
     if (!form) return;
@@ -96,7 +93,6 @@ export default function TalentoPage() {
     setPublished(form.isPublished);
     setSpreadsheetId(form.spreadsheetId ?? "");
     setSpreadsheetTab(form.spreadsheetTab ?? "Respuestas");
-    setSchemaJson(JSON.stringify(form.schema ?? DEFAULT_INTEGRATION_FORM, null, 2));
   }, [form]);
 
   const saveMutation = useMutation({
@@ -139,20 +135,6 @@ export default function TalentoPage() {
     });
   };
 
-  const saveSchema = () => {
-    try {
-      const parsed = JSON.parse(schemaJson) as IntegrationFormDefinition;
-      if (!parsed.sections) throw new Error("Falta sections");
-      saveMutation.mutate({ schema: parsed, title: parsed.title || title });
-    } catch {
-      toast({
-        title: "JSON inválido",
-        description: "Revisa el formato del formulario antes de guardar.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <>
       <Helmet>
@@ -163,21 +145,21 @@ export default function TalentoPage() {
         <main className="container mx-auto px-4 pb-16 pt-24">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Home › Respuestas</p>
+              <p className="text-sm text-muted-foreground">Inicio › Respuestas</p>
               <h1 className="mt-1 font-heading text-4xl font-bold">{form?.title || "¡Súmate a WCA!"}</h1>
               <p className="mt-2 text-muted-foreground">
                 Panel de Dirección de Talento y Bienestar. Reclutamiento, integración y postulaciones.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-[#5b8fd4] hover:bg-[#4a7fc4]" onClick={() => setTab("edit")}>
+              <Button className="bg-[#5b8fd4] hover:bg-[#4a7fc4]" onClick={() => navigate("/talento/editar")}>
                 <Pencil className="h-4 w-4" />
-                Edit Form
+                Editar formulario
               </Button>
               <Button variant="outline" asChild>
                 <a href={publicPath} target="_blank" rel="noreferrer">
                   <Eye className="h-4 w-4" />
-                  View Form
+                  Ver formulario
                 </a>
               </Button>
             </div>
@@ -186,14 +168,13 @@ export default function TalentoPage() {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="responses">Respuestas</TabsTrigger>
-              <TabsTrigger value="edit">Editar</TabsTrigger>
               <TabsTrigger value="preview">Vista previa</TabsTrigger>
               <TabsTrigger value="sheet">Google Sheets</TabsTrigger>
             </TabsList>
 
             <TabsContent value="responses">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-lg font-semibold">My responses</h2>
+                <h2 className="text-lg font-semibold">Respuestas</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -215,7 +196,7 @@ export default function TalentoPage() {
                   </Button>
                   <Button variant="outline" onClick={copyLink}>
                     <Share2 className="h-4 w-4" />
-                    Share
+                    Compartir
                   </Button>
                 </div>
               </div>
@@ -293,7 +274,7 @@ export default function TalentoPage() {
                                       className="mt-1 text-xs text-[#5b8fd4]"
                                       onClick={() => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
                                     >
-                                      {expanded[key] ? "Ver menos" : "Read more"}
+                                      {expanded[key] ? "Ver menos" : "Ver más"}
                                     </button>
                                   </div>
                                 ) : (
@@ -310,63 +291,16 @@ export default function TalentoPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="edit">
-              <div className="grid gap-8 lg:grid-cols-2">
-                <div className="space-y-4 rounded-xl border bg-card p-6">
-                  <h2 className="font-heading text-xl font-semibold">Configuración</h2>
-                  <div>
-                    <Label>Título</Label>
-                    <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Slug público</Label>
-                    <Input className="mt-1" value={slug} onChange={(e) => setSlug(e.target.value)} />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      El enlace será {window.location.origin}/{slug || "integracion"}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium">Publicado</p>
-                      <p className="text-xs text-muted-foreground">Si se desactiva, el enlace público deja de funcionar.</p>
-                    </div>
-                    <Switch checked={published} onCheckedChange={setPublished} />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={saveSettings} disabled={saveMutation.isPending}>
-                      Guardar configuración
-                    </Button>
-                    <Button variant="outline" onClick={copyLink}>
-                      <Copy className="h-4 w-4" />
-                      Copiar enlace
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-3 rounded-xl border bg-card p-6">
-                  <h2 className="font-heading text-xl font-semibold">JSON del formulario</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Aquí editas secciones, preguntas, opciones y lógica `showIf`. No cambies los `id` si ya hay respuestas.
-                  </p>
-                  <Textarea
-                    value={schemaJson}
-                    onChange={(e) => setSchemaJson(e.target.value)}
-                    className="min-h-[420px] font-mono text-xs"
-                  />
-                  <Button onClick={saveSchema} disabled={saveMutation.isPending}>
-                    Guardar formulario
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-
             <TabsContent value="preview">
-              <div className="min-h-[720px] overflow-hidden rounded-2xl border bg-[#111318]">
+              <div className="relative min-h-[720px] overflow-hidden rounded-2xl border bg-[#0b1220]">
+                <FormAtmosphere definition={definition} />
                 <IntegrationFormFlow definition={definition} slug={form?.slug ?? "integracion"} preview />
               </div>
             </TabsContent>
 
             <TabsContent value="sheet">
-              <div className="max-w-2xl space-y-4 rounded-xl border bg-card p-6">
+              <div className="grid gap-6 rounded-xl border bg-card p-6 lg:grid-cols-[1.2fr_1fr]">
+                <div className="space-y-4">
                 <h2 className="font-heading text-xl font-semibold">Hoja de cálculo</h2>
                 <p className="text-sm text-muted-foreground">
                   Crea una Google Sheet a partir de la plantilla, compártela con la cuenta de servicio de Google
@@ -399,6 +333,7 @@ export default function TalentoPage() {
                       Descargar plantilla CSV
                     </a>
                   </Button>
+                </div>
                 </div>
                 <div className="rounded-lg bg-muted p-4 text-sm">
                   <p className="font-medium">Encabezados que debe tener la fila 1</p>

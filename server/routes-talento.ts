@@ -12,6 +12,10 @@ import {
   getAllFields,
   getSheetHeaders,
   isFieldVisible,
+  isValidEmail,
+  isValidHttpUrl,
+  isValidPhoneNumber,
+  normalizeUrl,
   slugify,
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet } from "./services/google-sheets";
@@ -56,62 +60,56 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
   for (const field of getAllFields(definition)) {
     if (!isFieldVisible(field, answers)) continue;
     const value = answers[field.id];
+    const empty =
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0);
 
-    if (field.required) {
-      if (field.type === "checkbox" && value !== true && value !== "true") {
+    if (field.type === "checkbox") {
+      if (field.required && value !== true && value !== "true") {
         errors[field.id] = "Debes aceptar para continuar.";
-        continue;
       }
-      if (field.type === "phone") {
-        const phone = value as { dial?: string; number?: string } | undefined;
-        if (!phone?.number?.trim()) {
-          errors[field.id] = "El teléfono es requerido.";
-          continue;
-        }
-      } else if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) {
-        errors[field.id] = "Este campo es requerido.";
-        continue;
-      }
-    }
-
-    if (value === undefined || value === null || value === "") continue;
-
-    if (field.type === "email") {
-      const email = String(value).trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errors[field.id] = "Ingresa un correo válido.";
-      }
-    }
-
-    if (field.type === "url") {
-      try {
-        const url = new URL(String(value));
-        if (!["http:", "https:"].includes(url.protocol)) {
-          errors[field.id] = "El enlace debe comenzar con https://";
-        }
-      } catch {
-        errors[field.id] = "Ingresa un enlace válido (Drive, LinkedIn u otro).";
-      }
-    }
-
-    if (field.type === "number") {
-      const num = Number(value);
-      if (Number.isNaN(num)) {
-        errors[field.id] = "Ingresa un número válido.";
-      } else {
-        if (field.min !== undefined && num < field.min) errors[field.id] = `El valor mínimo es ${field.min}.`;
-        if (field.max !== undefined && num > field.max) errors[field.id] = `El valor máximo es ${field.max}.`;
-      }
+      continue;
     }
 
     if (field.type === "phone") {
-      const phone = value as { dial?: string; number?: string };
-      const digits = (phone.number ?? "").replace(/\D/g, "");
-      if (digits.length < 7 || digits.length > 15) {
-        errors[field.id] = "El número no parece válido.";
+      const phone = value as { dial?: string; number?: string } | undefined;
+      if (field.required && !phone?.number?.trim()) {
+        errors[field.id] = "El teléfono es requerido.";
+        continue;
       }
-      if (phone.dial && !PHONE_COUNTRIES.some((c) => c.dial === phone.dial)) {
+      if (phone?.number?.trim() && !isValidPhoneNumber(phone.number)) {
+        errors[field.id] = "Ingresa un número de 8 a 15 dígitos, sin la lada.";
+      }
+      if (phone?.dial && !PHONE_COUNTRIES.some((c) => c.dial === phone.dial)) {
         errors[field.id] = "Selecciona una lada válida.";
+      }
+      continue;
+    }
+
+    if (field.required && empty) {
+      errors[field.id] = "Este campo es requerido.";
+      continue;
+    }
+    if (empty) continue;
+
+    if (field.type === "email" && !isValidEmail(String(value))) {
+      errors[field.id] = "Ingresa un correo válido, por ejemplo nombre@correo.com";
+    }
+    if (field.type === "url" && !isValidHttpUrl(String(value))) {
+      errors[field.id] = "Ingresa un enlace válido (LinkedIn, Drive u otro).";
+    }
+    if (field.type === "number") {
+      const num = Number(value);
+      if (Number.isNaN(num) || !Number.isInteger(num)) {
+        errors[field.id] = "Ingresa una edad en números enteros.";
+      } else {
+        const min = field.min ?? 0;
+        const max = field.max ?? 100;
+        if (num < min || num > max) {
+          errors[field.id] = `La edad debe estar entre ${min} y ${max} años.`;
+        }
       }
     }
   }
@@ -192,7 +190,15 @@ export function registerTalentoRoutes(app: Express) {
       }
 
       const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
-      const answers = parsed.data.answers;
+      const answers = { ...parsed.data.answers } as Record<string, unknown>;
+      for (const field of getAllFields(definition)) {
+        if (field.type === "url" && typeof answers[field.id] === "string" && String(answers[field.id]).trim()) {
+          answers[field.id] = normalizeUrl(String(answers[field.id]));
+        }
+        if (field.type === "email" && typeof answers[field.id] === "string") {
+          answers[field.id] = String(answers[field.id]).trim().toLowerCase();
+        }
+      }
       const errors = validateAnswers(definition, answers);
       if (Object.keys(errors).length > 0) {
         return res.status(400).json({ message: "Por favor completa los campos requeridos", errors });

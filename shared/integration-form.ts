@@ -50,6 +50,13 @@ export interface IntegrationEnding {
   message: string;
 }
 
+export type IntegrationBackground = "aurora" | "logo" | "custom";
+
+export interface IntegrationTheme {
+  background?: IntegrationBackground;
+  backgroundImage?: string;
+}
+
 export interface IntegrationFormDefinition {
   version: number;
   title: string;
@@ -57,6 +64,7 @@ export interface IntegrationFormDefinition {
   description: string;
   cta: string;
   ending: IntegrationEnding;
+  theme?: IntegrationTheme;
   sections: IntegrationSection[];
 }
 
@@ -104,6 +112,10 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
     message:
       "Valoramos mucho tu interés en formar parte de World Community Academy. Nos pondremos pronto en contacto contigo. 💙 Gracias por creer en la educación, la tecnología y el impacto humano.\n\n— Equipo WCA",
   },
+  theme: {
+    background: "aurora",
+    backgroundImage: "/logo-wca.png",
+  },
   sections: [
     {
       id: "welcome",
@@ -130,8 +142,8 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
           label: "Edad",
           placeholder: "Ingresa tu edad...",
           required: true,
-          min: 15,
-          max: 99,
+          min: 0,
+          max: 100,
         },
         {
           id: "email",
@@ -396,23 +408,60 @@ export function isFieldVisible(
   return answers[field.showIf.field] === field.showIf.equals;
 }
 
+export const FIELD_TYPE_LABELS: Record<IntegrationFieldType, string> = {
+  short_text: "Texto corto",
+  long_text: "Texto largo",
+  number: "Número",
+  email: "Correo",
+  phone: "Teléfono",
+  url: "Enlace",
+  single_choice: "Opción única",
+  multiple_choice: "Varias opciones",
+  checkbox: "Casilla",
+};
+
+export function countryFlagUrl(code: string) {
+  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+}
+
+export function normalizeUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(normalizeUrl(value));
+    if (!["http:", "https:"].includes(url.protocol)) return false;
+    return Boolean(url.hostname.includes("."));
+  } catch {
+    return false;
+  }
+}
+
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+}
+
+export function isValidPhoneNumber(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15;
+}
+
+export function newFieldId(prefix = "campo") {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function getAllFields(definition: IntegrationFormDefinition): IntegrationField[] {
   return definition.sections.flatMap((section) => section.fields);
 }
 
 export function syncOfficialCopy(definition: IntegrationFormDefinition): IntegrationFormDefinition {
-  const officialSkills = getAllFields(DEFAULT_INTEGRATION_FORM).find((field) => field.id === "skills");
-  if (!officialSkills) return definition;
   return {
     ...definition,
-    sections: definition.sections.map((section) => ({
-      ...section,
-      fields: section.fields.map((field) =>
-        field.id === "skills"
-          ? { ...field, label: officialSkills.label, description: officialSkills.description }
-          : field,
-      ),
-    })),
+    theme: definition.theme ?? DEFAULT_INTEGRATION_FORM.theme,
   };
 }
 

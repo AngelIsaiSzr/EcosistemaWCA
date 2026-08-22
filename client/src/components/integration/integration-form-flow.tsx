@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +17,13 @@ import {
   IntegrationField,
   IntegrationFormDefinition,
   PHONE_COUNTRIES,
+  countryFlagUrl,
+  getAllFields,
   isFieldVisible,
+  isValidEmail,
+  isValidHttpUrl,
+  isValidPhoneNumber,
+  normalizeUrl,
 } from "@shared/integration-form";
 import { WcaLogo } from "@/components/integration/wca-logo";
 
@@ -36,6 +41,8 @@ const slide = {
   exit: { opacity: 0, x: -28 },
 };
 
+const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
+
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
     phone: { dial: "+52", number: "" },
@@ -52,6 +59,46 @@ function visibleFields(fields: IntegrationField[], answers: Answers) {
   return fields.filter((field) => isFieldVisible(field, answers));
 }
 
+function validateField(field: IntegrationField, value: unknown): string | null {
+  const empty =
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0);
+
+  if (field.type === "checkbox") {
+    if (field.required && value !== true) return "Debes aceptar para continuar.";
+    return null;
+  }
+
+  if (field.type === "phone") {
+    const phone = value as { dial?: string; number?: string } | undefined;
+    if (field.required && !phone?.number?.trim()) return "El teléfono es requerido.";
+    if (phone?.number?.trim() && !isValidPhoneNumber(phone.number)) {
+      return "Ingresa un número de 8 a 15 dígitos, sin la lada.";
+    }
+    return null;
+  }
+
+  if (field.required && empty) return "Este campo es requerido.";
+  if (empty) return null;
+
+  if (field.type === "email" && !isValidEmail(String(value))) {
+    return "Ingresa un correo válido, por ejemplo nombre@correo.com";
+  }
+  if (field.type === "url" && !isValidHttpUrl(String(value))) {
+    return "Ingresa un enlace válido (puedes pegar LinkedIn o Drive con o sin https).";
+  }
+  if (field.type === "number") {
+    const num = Number(value);
+    if (Number.isNaN(num) || !Number.isInteger(num)) return "Ingresa una edad en números enteros.";
+    const min = field.min ?? 0;
+    const max = field.max ?? 100;
+    if (num < min || num > max) return `La edad debe estar entre ${min} y ${max} años.`;
+  }
+  return null;
+}
+
 export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFormFlowProps) {
   const sections = definition.sections;
   const [step, setStep] = useState(0);
@@ -64,7 +111,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
 
   const section = sections[step];
   const isLast = step === sections.length - 1;
-  const progress = ((step + 1) / sections.length) * 100;
+  const progress = ((step + 1) / Math.max(sections.length, 1)) * 100;
 
   const currentFields = useMemo(
     () => (section ? visibleFields(section.fields, answers) : []),
@@ -83,16 +130,8 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   const validateSection = () => {
     const nextErrors: Record<string, string> = {};
     for (const field of currentFields) {
-      const value = answers[field.id];
-      if (!field.required) continue;
-      if (field.type === "checkbox" && value !== true) {
-        nextErrors[field.id] = "Debes aceptar para continuar.";
-      } else if (field.type === "phone") {
-        const phone = value as { number?: string };
-        if (!phone?.number?.trim()) nextErrors[field.id] = "El teléfono es requerido.";
-      } else if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) {
-        nextErrors[field.id] = "Este campo es requerido.";
-      }
+      const message = validateField(field, answers[field.id]);
+      if (message) nextErrors[field.id] = message;
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -116,6 +155,11 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
     setSubmitError(null);
     try {
       const payload = { ...answers };
+      for (const field of getAllFields(definition)) {
+        if (field.type === "url" && typeof payload[field.id] === "string" && String(payload[field.id]).trim()) {
+          payload[field.id] = normalizeUrl(String(payload[field.id]));
+        }
+      }
       for (const [fieldId, extra] of Object.entries(otherValues)) {
         if (!extra.trim()) continue;
         const current = payload[fieldId];
@@ -151,8 +195,13 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center"
+        className={cn("relative z-10 mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center", emojiFont)}
       >
+        {preview && (
+          <p className="mb-4 rounded-full bg-amber-400/15 px-4 py-1 text-sm text-amber-200">
+            Modo de prueba: no se guardó ninguna respuesta
+          </p>
+        )}
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#87b1e0] text-white shadow-lg shadow-[#87b1e0]/30">
           <CircleCheck className="h-12 w-12" />
         </div>
@@ -162,15 +211,17 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         <p className="mt-4 whitespace-pre-line text-lg leading-relaxed text-white/85">
           {definition.ending.message}
         </p>
-        <Link href="/" className="mt-10 text-sm text-[#87b1e0] underline-offset-4 hover:underline">
-          Volver al inicio
-        </Link>
       </motion.div>
     );
   }
 
   return (
-    <div className="relative z-10 mx-auto flex min-h-[80vh] w-full max-w-2xl flex-col justify-center px-5 py-10 md:px-8">
+    <div className={cn("relative z-10 mx-auto flex min-h-[80vh] w-full max-w-2xl flex-col justify-center px-5 py-10 md:px-8", emojiFont)}>
+      {preview && (
+        <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
+          Vista previa de prueba. Al enviar no se guardan datos reales.
+        </div>
+      )}
       <div className="mb-8 h-1.5 overflow-hidden rounded-full bg-white/10">
         <motion.div
           className="h-full rounded-full bg-[#87b1e0]"
@@ -198,12 +249,8 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             </div>
           ) : (
             <div>
-              <p className="mb-1 text-sm font-medium text-[#87b1e0]">
-                {section?.title}
-              </p>
-              {section?.subtitle && (
-                <p className="mb-8 text-white/65">{section.subtitle}</p>
-              )}
+              <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
+              {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
               <div className="space-y-7">
                 {currentFields.map((field) => (
                   <FieldControl
@@ -270,7 +317,7 @@ function FieldControl({
   otherValue: string;
   onOtherChange: (value: string) => void;
 }) {
-  const selected = Array.isArray(value) ? value as string[] : [];
+  const selected = Array.isArray(value) ? (value as string[]) : [];
 
   const toggleMulti = (optionValue: string) => {
     if (selected.includes(optionValue)) {
@@ -315,9 +362,14 @@ function FieldControl({
         )}
         {field.type === "url" && (
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
+            onBlur={(e) => {
+              const next = e.target.value.trim();
+              if (next) onChange(normalizeUrl(next));
+            }}
             placeholder={field.placeholder}
             className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
@@ -325,8 +377,9 @@ function FieldControl({
         {field.type === "number" && (
           <Input
             type="number"
-            min={field.min}
-            max={field.max}
+            min={field.min ?? 0}
+            max={field.max ?? 100}
+            step={1}
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
@@ -341,9 +394,7 @@ function FieldControl({
             className="min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40"
           />
         )}
-        {field.type === "phone" && (
-          <PhoneField value={value} onChange={onChange} />
-        )}
+        {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
         {field.type === "single_choice" && (
           <div className="space-y-3">
             {field.options?.map((option) => {
@@ -355,16 +406,16 @@ function FieldControl({
                   onClick={() => onChange(option.value)}
                   className={cn(
                     "w-full rounded-2xl border px-4 py-4 text-left transition",
-                    active
-                      ? "border-[#87b1e0] bg-[#87b1e0]/15"
-                      : "border-white/10 bg-white/5 hover:border-white/25",
+                    active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className={cn(
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                      active ? "border-[#87b1e0] bg-[#87b1e0]" : "border-white/30",
-                    )}>
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                        active ? "border-[#87b1e0] bg-[#87b1e0]" : "border-white/30",
+                      )}
+                    >
                       {active && <span className="h-2 w-2 rounded-full bg-white" />}
                     </span>
                     <div>
@@ -397,16 +448,16 @@ function FieldControl({
                   onClick={() => toggleMulti(option.value)}
                   className={cn(
                     "w-full rounded-2xl border px-4 py-4 text-left transition",
-                    active
-                      ? "border-[#87b1e0] bg-[#87b1e0]/15"
-                      : "border-white/10 bg-white/5 hover:border-white/25",
+                    active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className={cn(
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                      active ? "border-[#87b1e0] bg-[#87b1e0] text-white" : "border-white/30",
-                    )}>
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                        active ? "border-[#87b1e0] bg-[#87b1e0] text-white" : "border-white/30",
+                      )}
+                    >
                       {active && <Check className="h-3.5 w-3.5" />}
                     </span>
                     <div>
@@ -444,7 +495,7 @@ function FieldControl({
                   <Input
                     value={otherValue}
                     onChange={(e) => onOtherChange(e.target.value)}
-                    placeholder="Especifica el idioma..."
+                    placeholder="Especifica..."
                     className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
                   />
                 )}
@@ -461,9 +512,14 @@ function FieldControl({
             />
             <span className="text-sm leading-relaxed text-white/85">
               {field.label}{" "}
-              <Link href="/privacy" className="text-[#87b1e0] underline-offset-4 hover:underline">
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#87b1e0] underline-offset-4 hover:underline"
+              >
                 Ver política de privacidad
-              </Link>
+              </a>
               .
             </span>
           </label>
@@ -482,27 +538,35 @@ function PhoneField({
   onChange: (value: unknown) => void;
 }) {
   const phone = (value as { dial?: string; number?: string }) ?? { dial: "+52", number: "" };
+  const selected = PHONE_COUNTRIES.find((c) => c.dial === (phone.dial ?? "+52")) ?? PHONE_COUNTRIES[0];
   return (
     <div className="flex gap-2">
-      <Select
-        value={phone.dial ?? "+52"}
-        onValueChange={(dial) => onChange({ ...phone, dial })}
-      >
-        <SelectTrigger className="h-12 w-[148px] border-white/15 bg-white/10 text-white">
-          <SelectValue />
+      <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
+        <SelectTrigger className="h-12 w-[170px] border-white/15 bg-white/10 text-white">
+          <SelectValue>
+            <span className="flex items-center gap-2">
+              <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
+              {selected.dial}
+            </span>
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {PHONE_COUNTRIES.map((country) => (
             <SelectItem key={country.code} value={country.dial}>
-              {country.flag} {country.dial}
+              <span className="flex items-center gap-2">
+                <img src={countryFlagUrl(country.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
+                <span>{country.flag}</span>
+                {country.dial} {country.name}
+              </span>
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <Input
         type="tel"
+        inputMode="numeric"
         value={phone.number ?? ""}
-        onChange={(e) => onChange({ ...phone, number: e.target.value })}
+        onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
         className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
       />

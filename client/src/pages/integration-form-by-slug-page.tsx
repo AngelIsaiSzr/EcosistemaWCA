@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { IntegrationFormFlow } from "@/components/integration/integration-form-flow";
-import { WcaLogo } from "@/components/integration/wca-logo";
+import { FormAtmosphere } from "@/components/integration/form-atmosphere";
 import { DEFAULT_INTEGRATION_FORM } from "@shared/integration-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -23,11 +23,8 @@ export default function IntegrationFormBySlugPage({
       <Helmet>
         <title>Formulario de Integración | Ecosistema WCA</title>
       </Helmet>
-      <div className="relative min-h-screen overflow-hidden bg-[#111318]">
-        <WcaLogo
-          decorative
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[min(70vw,520px)] w-[min(70vw,520px)] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]"
-        />
+      <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
+        <FormAtmosphere definition={form?.schema ?? DEFAULT_INTEGRATION_FORM} />
         {isLoading && (
           <div className="flex min-h-screen items-center justify-center">
             <LoadingSpinner size="lg" text="Cargando formulario..." />
