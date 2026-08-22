@@ -61,9 +61,21 @@ function Router() {
   );
 }
 
+function removeDonorboxWidgets() {
+  document.getElementById("donorbox-popup-button-installer")?.remove();
+  document.querySelectorAll("iframe[src*='donorbox']").forEach((el) => el.remove());
+  document.querySelectorAll("a[href*='donorbox.org']").forEach((el) => el.remove());
+  document.querySelectorAll("[style*='rotate(-90deg)']").forEach((el) => {
+    const href = (el as HTMLElement).getAttribute("href") || "";
+    const text = el.textContent || "";
+    if (href.includes("donorbox") || text.includes("Apóyanos")) {
+      el.remove();
+    }
+  });
+}
+
 function DonorboxButton() {
   useEffect(() => {
-    // Evitar duplicados
     if (document.getElementById("donorbox-popup-button-installer")) return;
     const script = document.createElement("script");
     script.id = "donorbox-popup-button-installer";
@@ -76,6 +88,7 @@ function DonorboxButton() {
     document.body.appendChild(script);
     return () => {
       script.remove();
+      removeDonorboxWidgets();
     };
   }, []);
   return null;
@@ -89,9 +102,15 @@ function App() {
     /^\/programs\/[^/]+\/learn$/.test(location) ||
     location === "/integracion" ||
     location.startsWith("/f/") ||
-    location === "/talento" ||
+    location.startsWith("/talento") ||
     location.includes("registro-en-vivo") ||
     location.includes("live-course-registration");
+
+  useEffect(() => {
+    if (hideDonorbox) {
+      removeDonorboxWidgets();
+    }
+  }, [hideDonorbox]);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

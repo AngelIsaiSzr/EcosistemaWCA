@@ -121,7 +121,7 @@ export default function TalentoPage() {
     );
   }
 
-  const publicPath = `/${slug || "integracion"}`;
+  const publicPath = !slug || slug === "integracion" ? "/integracion" : `/f/${slug}`;
   const publicUrl = `${window.location.origin}${publicPath}`;
 
   const copyLink = async () => {

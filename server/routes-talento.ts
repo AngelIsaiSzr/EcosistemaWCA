@@ -15,6 +15,7 @@ import {
   slugify,
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet } from "./services/google-sheets";
+import { ensureIntegrationTables } from "./db/ensure-integration-tables";
 
 const TALENTO_ROLE = "talento";
 
@@ -135,12 +136,15 @@ async function ensureTalentoAccount() {
 }
 
 export function registerTalentoRoutes(app: Express) {
-  ensureTalentoAccount().catch((error) => {
-    console.error("No se pudo crear la cuenta de Talento y Bienestar:", error);
-  });
+  ensureIntegrationTables()
+    .then(() => ensureTalentoAccount())
+    .catch((error) => {
+      console.error("No se pudo inicializar Talento y Bienestar:", error);
+    });
 
   app.get("/api/integration/public", async (_req, res) => {
     try {
+      await ensureIntegrationTables();
       const form = await storage.getOrCreateDefaultIntegrationForm();
       if (!form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
@@ -158,6 +162,7 @@ export function registerTalentoRoutes(app: Express) {
 
   app.get("/api/integration/public/:slug", async (req, res) => {
     try {
+      await ensureIntegrationTables();
       const form = await storage.getIntegrationFormBySlug(req.params.slug);
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
@@ -175,6 +180,7 @@ export function registerTalentoRoutes(app: Express) {
 
   app.post("/api/integration/public/:slug/submit", async (req, res) => {
     try {
+      await ensureIntegrationTables();
       const form = await storage.getIntegrationFormBySlug(req.params.slug);
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
@@ -230,6 +236,7 @@ export function registerTalentoRoutes(app: Express) {
 
   app.get("/api/talento/form", requireTalento, async (_req, res) => {
     try {
+      await ensureIntegrationTables();
       const form = await storage.getOrCreateDefaultIntegrationForm();
       res.json(form);
     } catch (error) {
