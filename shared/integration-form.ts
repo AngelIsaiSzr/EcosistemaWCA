@@ -50,12 +50,59 @@ export interface IntegrationEnding {
   message: string;
 }
 
-export type IntegrationBackground = "aurora" | "logo" | "custom";
+export type IntegrationBackground =
+  | "aurora"
+  | "logo"
+  | "midnight"
+  | "mist"
+  | "horizon"
+  | "constellation"
+  | "spotlight"
+  | "ripple"
+  | "glass"
+  | "duotone"
+  | "minimal"
+  | "custom";
+
+export type IntegrationImageFit = "cover" | "contain" | "auto";
+export type IntegrationImageAttachment = "fixed" | "scroll";
+export type IntegrationImageRepeat = "no-repeat" | "repeat";
+export type IntegrationImagePosition =
+  | "center"
+  | "top"
+  | "bottom"
+  | "left"
+  | "right"
+  | "top left"
+  | "top right"
+  | "bottom left"
+  | "bottom right";
 
 export interface IntegrationTheme {
   background?: IntegrationBackground;
   backgroundImage?: string;
+  imageFit?: IntegrationImageFit;
+  imagePosition?: IntegrationImagePosition;
+  imageAttachment?: IntegrationImageAttachment;
+  imageRepeat?: IntegrationImageRepeat;
+  imageOpacity?: number;
+  overlayOpacity?: number;
 }
+
+export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hint: string }[] = [
+  { id: "aurora", label: "Aurora WCA", hint: "Luces azules, retícula y logo suave" },
+  { id: "logo", label: "Marca de agua", hint: "Logo grande al centro, fondo sólido" },
+  { id: "midnight", label: "Medianoche", hint: "Azul profundo con brillo inferior" },
+  { id: "mist", label: "Niebla", hint: "Velos suaves y poco contraste" },
+  { id: "horizon", label: "Horizonte", hint: "Degradado de cielo a marino" },
+  { id: "constellation", label: "Constelación", hint: "Puntos de luz tipo estrellas" },
+  { id: "spotlight", label: "Foco", hint: "Haz de luz desde arriba" },
+  { id: "ripple", label: "Ondas", hint: "Anillos concéntricos de marca" },
+  { id: "glass", label: "Cristal", hint: "Viñeta y brillo tipo vidrio" },
+  { id: "duotone", label: "Duotono", hint: "Dos manchas de color WCA" },
+  { id: "minimal", label: "Minimal", hint: "Fondo limpio, casi sin ornamento" },
+  { id: "custom", label: "Imagen propia", hint: "Sube o pega una URL y recórtala" },
+];
 
 export interface IntegrationFormDefinition {
   version: number;
@@ -511,6 +558,15 @@ export function buildSheetRow(
     submissionId,
     ...fieldValues,
   ];
+}
+
+export function sheetTabFilename(tab: string): string {
+  const safe = (tab || "Respuestas")
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  return `${safe || "Respuestas"}.csv`;
 }
 
 export function extractSpreadsheetId(input: string): string | null {

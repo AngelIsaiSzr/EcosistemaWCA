@@ -35,6 +35,7 @@ import {
   IntegrationFormDefinition,
   formatAnswerForSheet,
   getAllFields,
+  sheetTabFilename,
 } from "@shared/integration-form";
 import { IntegrationForm, IntegrationResponse } from "@shared/schema";
 
@@ -61,7 +62,7 @@ export default function TalentoPage() {
     }
   }, [user, isLoading, navigate, toast]);
 
-  const { data: form, isLoading: formLoading } = useQuery<IntegrationForm>({
+  const { data: form, isLoading: formLoading } = useQuery<IntegrationForm & { googleServiceEmail?: string | null }>({
     queryKey: ["/api/talento/form"],
     enabled: user?.role === "talento",
   });
@@ -293,19 +294,39 @@ export default function TalentoPage() {
 
             <TabsContent value="preview">
               <div className="relative min-h-[720px] overflow-hidden rounded-2xl border bg-[#0b1220]">
-                <FormAtmosphere definition={definition} />
+                <FormAtmosphere definition={definition} contained />
                 <IntegrationFormFlow definition={definition} slug={form?.slug ?? "integracion"} preview />
               </div>
             </TabsContent>
 
             <TabsContent value="sheet">
-              <div className="grid gap-6 rounded-xl border bg-card p-6 lg:grid-cols-[1.2fr_1fr]">
+              <div className="grid items-start gap-6 rounded-xl border bg-card p-6 lg:grid-cols-2">
                 <div className="space-y-4">
                 <h2 className="font-heading text-xl font-semibold">Hoja de cálculo</h2>
                 <p className="text-sm text-muted-foreground">
-                  Crea una Google Sheet a partir de la plantilla, compártela con la cuenta de servicio de Google
-                  (editor) y pega aquí el ID o la URL. La primera fila se llena sola con los encabezados si está vacía.
+                  Crea una Google Sheet, comparte el archivo con la cuenta de servicio (editor) y pega aquí el ID o la URL.
+                  La primera fila se llena sola con los encabezados si está vacía. Si mueves o editas preguntas, vuelve a
+                  descargar la plantilla: las columnas siguen el orden actual del formulario.
                 </p>
+                <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+                  <p className="font-medium">Estado</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {spreadsheetId.trim()
+                      ? `Hoja vinculada. Pestaña: ${spreadsheetTab || "Respuestas"}. ${fields.length + 2} columnas.`
+                      : "Aún no hay una hoja vinculada. Descarga la plantilla y conéctala."}
+                  </p>
+                  {form?.googleServiceEmail && (
+                    <p className="mt-2 break-all text-xs text-muted-foreground">
+                      Comparte la Sheet con: <span className="font-medium text-foreground">{form.googleServiceEmail}</span>
+                    </p>
+                  )}
+                </div>
+                <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>Descarga la plantilla CSV (el archivo se llama igual que la pestaña).</li>
+                  <li>Ábrela en Google Sheets o impórtala a una hoja nueva.</li>
+                  <li>Comparte el documento con la cuenta de servicio, con permiso de editor.</li>
+                  <li>Pega la URL, revisa el nombre de la pestaña y pulsa Vincular hoja.</li>
+                </ol>
                 <div>
                   <Label>ID o URL de Google Sheets</Label>
                   <Input
@@ -322,27 +343,34 @@ export default function TalentoPage() {
                     value={spreadsheetTab}
                     onChange={(e) => setSpreadsheetTab(e.target.value)}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    La plantilla se descarga como <code>{sheetTabFilename(spreadsheetTab)}</code> para que Excel y Sheets
+                    usen esa misma pestaña.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={saveSettings} disabled={saveMutation.isPending}>
                     Vincular hoja
                   </Button>
                   <Button variant="outline" asChild>
-                    <a href="/api/talento/template.csv">
+                    <a href={`/api/talento/template.csv?tab=${encodeURIComponent(spreadsheetTab || "Respuestas")}`}>
                       <Download className="h-4 w-4" />
-                      Descargar plantilla CSV
+                      Descargar {sheetTabFilename(spreadsheetTab)}
                     </a>
                   </Button>
                 </div>
                 </div>
                 <div className="rounded-lg bg-muted p-4 text-sm">
                   <p className="font-medium">Encabezados que debe tener la fila 1</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Se actualizan al guardar el formulario, incluido si arrastras una pregunta a otra sección.
+                  </p>
                   <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
                     {fields.length === 0 ? (
                       <li>Se generan al guardar el formulario.</li>
                     ) : (
-                      ["Fecha de envío", "ID de envío", ...fields.map((f) => f.label)].map((header) => (
-                        <li key={header}>{header}</li>
+                      ["Fecha de envío", "ID de envío", ...fields.map((f) => f.label)].map((header, index) => (
+                        <li key={`${header}-${index}`}>{header}</li>
                       ))
                     )}
                   </ol>

@@ -56,6 +56,7 @@ export default function TalentoFormEditorPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/talento/form"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/talento/responses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/integration/public"] });
       toast({ title: "Formulario guardado" });
     },
@@ -88,7 +89,7 @@ export default function TalentoFormEditorPage() {
               </Link>
               <h1 className="font-heading text-3xl font-bold">Editar formulario</h1>
               <p className="mt-1 text-muted-foreground">
-                Arrastra el orden con las flechas, edita preguntas y configura la apariencia sin tocar JSON.
+                Arrastra preguntas entre secciones, edita textos y configura la apariencia. Al guardar, la tabla de respuestas y la plantilla CSV siguen el nuevo orden.
               </p>
             </div>
             <Button className="bg-[#5b8fd4] hover:bg-[#4a7fc4]" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>

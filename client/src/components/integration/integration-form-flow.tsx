@@ -216,7 +216,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   }
 
   return (
-    <div className={cn("relative z-10 mx-auto flex min-h-[80vh] w-full max-w-2xl flex-col justify-center px-5 py-10 md:px-8", emojiFont)}>
+    <div className={cn("relative z-10 mx-auto flex w-full max-w-2xl flex-col justify-start px-5 pb-16 pt-14 md:px-8 md:pt-16", emojiFont)}>
       {preview && (
         <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
           Vista previa de prueba. Al enviar no se guardan datos reales.
@@ -233,11 +233,12 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       <AnimatePresence mode="wait">
         <motion.div
           key={section?.id ?? step}
+          layout
           variants={slide}
           initial="initial"
           animate="animate"
           exit="exit"
-          transition={{ duration: 0.28, ease: "easeOut" }}
+          transition={{ duration: 0.32, ease: "easeOut" }}
         >
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
@@ -251,18 +252,28 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             <div>
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
-              <div className="space-y-7">
-                {currentFields.map((field) => (
-                  <FieldControl
-                    key={field.id}
-                    field={field}
-                    value={answers[field.id]}
-                    error={errors[field.id]}
-                    otherValue={otherValues[field.id] ?? ""}
-                    onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
-                    onChange={(value) => setValue(field.id, value)}
-                  />
-                ))}
+              <div className="space-y-7 overflow-hidden">
+                <AnimatePresence initial={false}>
+                  {currentFields.map((field) => (
+                    <motion.div
+                      key={field.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                      <FieldControl
+                        field={field}
+                        value={answers[field.id]}
+                        error={errors[field.id]}
+                        otherValue={otherValues[field.id] ?? ""}
+                        onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
+                        onChange={(value) => setValue(field.id, value)}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -491,14 +502,24 @@ function FieldControl({
                 >
                   <span className="font-medium text-white">Otro</span>
                 </button>
-                {selected.includes("otro") && (
-                  <Input
-                    value={otherValue}
-                    onChange={(e) => onOtherChange(e.target.value)}
-                    placeholder="Especifica..."
-                    className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
-                  />
-                )}
+                <AnimatePresence initial={false}>
+                  {selected.includes("otro") && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.28 }}
+                      className="overflow-hidden"
+                    >
+                      <Input
+                        value={otherValue}
+                        onChange={(e) => onOtherChange(e.target.value)}
+                        placeholder="Especifica..."
+                        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </>
             )}
           </div>

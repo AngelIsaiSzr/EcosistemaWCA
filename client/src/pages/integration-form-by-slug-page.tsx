@@ -23,7 +23,7 @@ export default function IntegrationFormBySlugPage({
       <Helmet>
         <title>Formulario de Integración | Ecosistema WCA</title>
       </Helmet>
-      <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
+      <div className="relative min-h-screen overflow-x-hidden bg-[#0b1220]">
         <FormAtmosphere definition={form?.schema ?? DEFAULT_INTEGRATION_FORM} />
         {isLoading && (
           <div className="flex min-h-screen items-center justify-center">

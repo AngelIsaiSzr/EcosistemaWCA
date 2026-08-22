@@ -16,6 +16,7 @@ import {
   isValidHttpUrl,
   isValidPhoneNumber,
   normalizeUrl,
+  sheetTabFilename,
   slugify,
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet } from "./services/google-sheets";
@@ -244,7 +245,10 @@ export function registerTalentoRoutes(app: Express) {
     try {
       await ensureIntegrationTables();
       const form = await storage.getOrCreateDefaultIntegrationForm();
-      res.json(form);
+      res.json({
+        ...form,
+        googleServiceEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? null,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error al cargar el formulario" });
@@ -307,14 +311,19 @@ export function registerTalentoRoutes(app: Express) {
     }
   });
 
-  app.get("/api/talento/template.csv", requireTalento, async (_req, res) => {
+  app.get("/api/talento/template.csv", requireTalento, async (req, res) => {
     try {
       const form = await storage.getOrCreateDefaultIntegrationForm();
       const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
       const headers = getSheetHeaders(definition);
       const csv = "\uFEFF" + headers.map(csvEscape).join(",") + "\n";
+      const tab =
+        typeof req.query.tab === "string" && req.query.tab.trim()
+          ? req.query.tab
+          : form.spreadsheetTab || "Respuestas";
+      const filename = sheetTabFilename(tab);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", 'attachment; filename="plantilla-integracion-wca.csv"');
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(csv);
     } catch (error) {
       console.error(error);
