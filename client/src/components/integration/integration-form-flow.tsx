@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,14 +226,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         />
       </div>
 
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.div
-          key={section?.id ?? step}
-          initial={{ opacity: 0, x: 24 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -16 }}
-          transition={{ duration: 0.28, ease: "easeOut" }}
-        >
+      <div key={section?.id ?? step} className="animate-in fade-in slide-in-from-right-3 duration-300 fill-mode-both">
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
               <WcaLogo alt="Ecosistema WCA" className="mb-6 h-16 w-16 object-contain" />
@@ -262,8 +255,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
               </div>
             </div>
           )}
-        </motion.div>
-      </AnimatePresence>
+      </div>
 
       {submitError && (
         <p className="mt-6 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -484,24 +476,14 @@ function FieldControl({
                 >
                   <span className="font-medium text-white">Otro</span>
                 </button>
-                <AnimatePresence initial={false}>
-                  {selected.includes("otro") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.28 }}
-                      className="overflow-hidden"
-                    >
-                      <Input
-                        value={otherValue}
-                        onChange={(e) => onOtherChange(e.target.value)}
-                        placeholder="Especifica..."
-                        className={formFieldClass}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {selected.includes("otro") && (
+                  <Input
+                    value={otherValue}
+                    onChange={(e) => onOtherChange(e.target.value)}
+                    placeholder="Especifica..."
+                    className={formFieldClass}
+                  />
+                )}
               </>
             )}
           </div>
