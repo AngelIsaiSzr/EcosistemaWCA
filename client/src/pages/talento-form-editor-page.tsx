@@ -68,7 +68,7 @@ export default function TalentoFormEditorPage() {
   if (isLoading || !user || user.role !== "talento" || formLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <LoadingSpinner size="lg" text="Cargando editor..." />
+        <LoadingSpinner size="lg" text="Cargando..." />
       </div>
     );
   }

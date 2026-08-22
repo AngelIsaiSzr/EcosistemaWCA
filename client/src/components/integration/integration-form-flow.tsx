@@ -42,6 +42,8 @@ const slide = {
 };
 
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
+const controlClass =
+  "h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#87b1e0] focus-visible:shadow-[0_0_0_2px_#5b8fd4]";
 
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
@@ -233,12 +235,12 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       <AnimatePresence mode="wait">
         <motion.div
           key={section?.id ?? step}
-          layout
           variants={slide}
           initial="initial"
           animate="animate"
           exit="exit"
           transition={{ duration: 0.32, ease: "easeOut" }}
+          className="overflow-visible"
         >
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
@@ -252,16 +254,16 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             <div>
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
-              <div className="space-y-7 overflow-hidden">
+              <div className="space-y-7">
                 <AnimatePresence initial={false}>
                   {currentFields.map((field) => (
                     <motion.div
                       key={field.id}
-                      layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.35, ease: "easeOut" }}
+                      className="overflow-visible"
                     >
                       <FieldControl
                         field={field}
@@ -352,14 +354,14 @@ function FieldControl({
         </>
       )}
 
-      <div className="mt-3">
+      <div className="mt-3 overflow-visible p-1">
         {field.type === "short_text" && (
           <Input
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             maxLength={field.maxLength}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={controlClass}
           />
         )}
         {field.type === "email" && (
@@ -368,7 +370,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={controlClass}
           />
         )}
         {field.type === "url" && (
@@ -382,7 +384,7 @@ function FieldControl({
               if (next) onChange(normalizeUrl(next));
             }}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={controlClass}
           />
         )}
         {field.type === "number" && (
@@ -394,7 +396,7 @@ function FieldControl({
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={controlClass}
           />
         )}
         {field.type === "long_text" && (
@@ -402,7 +404,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className="min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={cn(controlClass, "min-h-[140px] h-auto")}
           />
         )}
         {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
@@ -515,7 +517,7 @@ function FieldControl({
                         value={otherValue}
                         onChange={(e) => onOtherChange(e.target.value)}
                         placeholder="Especifica..."
-                        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                        className={controlClass}
                       />
                     </motion.div>
                   )}
@@ -563,7 +565,7 @@ function PhoneField({
   return (
     <div className="flex gap-2">
       <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
-        <SelectTrigger className="h-12 w-[170px] border-white/15 bg-white/10 text-white">
+        <SelectTrigger className={cn(controlClass, "w-[170px]")}>
           <SelectValue>
             <span className="flex items-center gap-2">
               <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
@@ -592,7 +594,7 @@ function PhoneField({
         value={phone.number ?? ""}
         onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
-        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+        className={controlClass}
       />
     </div>
   );
