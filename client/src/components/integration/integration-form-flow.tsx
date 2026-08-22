@@ -35,12 +35,6 @@ interface IntegrationFormFlowProps {
   preview?: boolean;
 }
 
-const slide = {
-  initial: { opacity: 0, x: 28 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -28 },
-};
-
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
 const formFieldClass =
   "h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40 focus-visible:ring-2 focus-visible:ring-[#87b1e0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1220]";
@@ -232,15 +226,13 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         />
       </div>
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={section?.id ?? step}
-          layout
-          variants={slide}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={{ duration: 0.32, ease: "easeOut" }}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -16 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
         >
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
@@ -255,28 +247,18 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
               <div className="space-y-7">
-                <AnimatePresence initial={false}>
-                  {currentFields.map((field) => (
-                    <motion.div
-                      key={field.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.35, ease: "easeOut" }}
-                      className="overflow-visible p-1"
-                    >
-                      <FieldControl
-                        field={field}
-                        value={answers[field.id]}
-                        error={errors[field.id]}
-                        otherValue={otherValues[field.id] ?? ""}
-                        onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
-                        onChange={(value) => setValue(field.id, value)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                {currentFields.map((field) => (
+                  <div key={field.id} className="p-1">
+                    <FieldControl
+                      field={field}
+                      value={answers[field.id]}
+                      error={errors[field.id]}
+                      otherValue={otherValues[field.id] ?? ""}
+                      onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
+                      onChange={(value) => setValue(field.id, value)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
