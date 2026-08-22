@@ -28,8 +28,8 @@ export function FormAtmosphere({
 
       {preset === "aurora" && (
         <>
-          <Glow className="-left-24 top-[-10%] h-[55vh] w-[55vh] bg-[#5b8fd4]/25" />
-          <Glow className="-right-16 bottom-[-8%] h-[50vh] w-[50vh] bg-[#87b1e0]/20" />
+          <Glow className="wca-drift -left-24 top-[-10%] h-[55vh] w-[55vh] bg-[#5b8fd4]/25" />
+          <Glow className="wca-drift -right-16 bottom-[-8%] h-[50vh] w-[50vh] bg-[#87b1e0]/20 [animation-delay:-4s]" />
           <Glow className="left-1/3 top-1/3 h-64 w-64 bg-[#3d6eae]/15" />
           <Grid />
           <WcaLogo
@@ -56,8 +56,8 @@ export function FormAtmosphere({
 
       {preset === "mist" && (
         <>
-          <Glow className="left-[-10%] top-[10%] h-[60vh] w-[60vh] bg-white/10" />
-          <Glow className="right-[-15%] top-[30%] h-[55vh] w-[55vh] bg-[#87b1e0]/20" />
+          <Glow className="wca-drift left-[-10%] top-[10%] h-[60vh] w-[60vh] bg-white/10" />
+          <Glow className="wca-drift right-[-15%] top-[30%] h-[55vh] w-[55vh] bg-[#87b1e0]/20 [animation-delay:-6s]" />
           <div className="absolute inset-0 bg-[#0b1220]/30" />
         </>
       )}
@@ -69,10 +69,18 @@ export function FormAtmosphere({
       {preset === "constellation" && (
         <>
           <div
-            className="absolute inset-0 opacity-70"
+            className="wca-stars absolute inset-0 opacity-70"
             style={{
-              backgroundImage: "radial-gradient(circle, rgba(135,177,224,0.55) 1px, transparent 1.5px)",
+              backgroundImage: "radial-gradient(circle, rgba(135,177,224,0.7) 1px, transparent 1.5px)",
               backgroundSize: "42px 42px",
+            }}
+          />
+          <div
+            className="wca-stars-slow wca-twinkle absolute inset-0"
+            style={{
+              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.85) 1px, transparent 1.6px)",
+              backgroundSize: "64px 64px",
+              backgroundPosition: "18px 10px",
             }}
           />
           <Glow className="left-1/2 top-1/4 h-72 w-72 -translate-x-1/2 bg-[#5b8fd4]/20" />
@@ -81,16 +89,16 @@ export function FormAtmosphere({
 
       {preset === "spotlight" && (
         <>
-          <div className="absolute left-1/2 top-[-20%] h-[70vh] w-[80vw] -translate-x-1/2 rounded-full bg-[#87b1e0]/25 blur-[90px]" />
+          <div className="wca-pulse-glow absolute left-1/2 top-[-20%] h-[70vh] w-[80vw] rounded-full bg-[#87b1e0]/25 blur-[90px]" />
           <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0b1220] to-transparent" />
         </>
       )}
 
       {preset === "ripple" && (
         <>
-          <div className="absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#87b1e0]/20" />
-          <div className="absolute left-1/2 top-1/2 h-[80vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#5b8fd4]/25" />
-          <div className="absolute left-1/2 top-1/2 h-[40vmin] w-[40vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
+          <div className="wca-ripple absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] rounded-full border border-[#87b1e0]/35" />
+          <div className="wca-ripple absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] rounded-full border border-[#5b8fd4]/30 [animation-delay:-2.1s]" />
+          <div className="wca-ripple absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] rounded-full border border-white/20 [animation-delay:-4.2s]" />
         </>
       )}
 
@@ -130,7 +138,7 @@ export function FormAtmosphere({
 }
 
 function Glow({ className }: { className: string }) {
-  return <div className={cn("absolute rounded-full blur-3xl transition-all duration-700", className)} />;
+  return <div className={cn("absolute rounded-full blur-3xl", className)} />;
 }
 
 function Grid({ opacity = 0.12 }: { opacity?: number }) {

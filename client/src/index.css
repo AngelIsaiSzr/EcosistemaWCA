@@ -394,4 +394,43 @@
   .code-line:nth-child(4) { animation-delay: 0.6s; }
   .code-line:nth-child(5) { animation-delay: 0.8s; }
   .code-line:nth-child(6) { animation-delay: 1.0s; }
+
+  @keyframes wca-stars {
+    from { background-position: 0 0; }
+    to { background-position: 160px -220px; }
+  }
+
+  @keyframes wca-twinkle {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
+  }
+
+  @keyframes wca-ripple {
+    0% { transform: translate(-50%, -50%) scale(0.72); opacity: 0.55; }
+    70% { opacity: 0.18; }
+    100% { transform: translate(-50%, -50%) scale(1.28); opacity: 0; }
+  }
+
+  @keyframes wca-drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(4%, -6%); }
+  }
+
+  @keyframes wca-pulse-glow {
+    0%, 100% { opacity: 0.45; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.8; transform: translateX(-50%) scale(1.08); }
+  }
+
+  .wca-stars { animation: wca-stars 70s linear infinite; }
+  .wca-stars-slow { animation: wca-stars 110s linear infinite reverse; }
+  .wca-twinkle { animation: wca-twinkle 4.5s ease-in-out infinite; }
+  .wca-ripple { animation: wca-ripple 6.5s ease-out infinite; }
+  .wca-drift { animation: wca-drift 14s ease-in-out infinite; }
+  .wca-pulse-glow { animation: wca-pulse-glow 8s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wca-stars, .wca-stars-slow, .wca-twinkle, .wca-ripple, .wca-drift, .wca-pulse-glow {
+      animation: none;
+    }
+  }
 }

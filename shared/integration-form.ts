@@ -91,7 +91,6 @@ export interface IntegrationTheme {
 
 export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hint: string }[] = [
   { id: "aurora", label: "Aurora WCA", hint: "Luces azules, retícula y logo suave" },
-  { id: "logo", label: "Marca de agua", hint: "Logo grande al centro, fondo sólido" },
   { id: "midnight", label: "Medianoche", hint: "Azul profundo con brillo inferior" },
   { id: "mist", label: "Niebla", hint: "Velos suaves y poco contraste" },
   { id: "horizon", label: "Horizonte", hint: "Degradado de cielo a marino" },
@@ -101,6 +100,7 @@ export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hin
   { id: "glass", label: "Cristal", hint: "Viñeta y brillo tipo vidrio" },
   { id: "duotone", label: "Duotono", hint: "Dos manchas de color WCA" },
   { id: "minimal", label: "Minimal", hint: "Fondo limpio, casi sin ornamento" },
+  { id: "logo", label: "Marca de agua", hint: "Logo grande al centro, fondo sólido" },
   { id: "custom", label: "Imagen propia", hint: "Sube o pega una URL y recórtala" },
 ];
 

@@ -42,6 +42,8 @@ const slide = {
 };
 
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
+const formFieldClass =
+  "h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40 focus-visible:ring-2 focus-visible:ring-[#87b1e0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1220]";
 
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
@@ -252,7 +254,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             <div>
               <p className="mb-1 text-sm font-medium text-[#87b1e0]">{section?.title}</p>
               {section?.subtitle && <p className="mb-8 text-white/65">{section.subtitle}</p>}
-              <div className="space-y-7 overflow-hidden">
+              <div className="space-y-7">
                 <AnimatePresence initial={false}>
                   {currentFields.map((field) => (
                     <motion.div
@@ -262,6 +264,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.35, ease: "easeOut" }}
+                      className="overflow-visible p-1"
                     >
                       <FieldControl
                         field={field}
@@ -359,7 +362,7 @@ function FieldControl({
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             maxLength={field.maxLength}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={formFieldClass}
           />
         )}
         {field.type === "email" && (
@@ -368,7 +371,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={formFieldClass}
           />
         )}
         {field.type === "url" && (
@@ -382,19 +385,16 @@ function FieldControl({
               if (next) onChange(normalizeUrl(next));
             }}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={formFieldClass}
           />
         )}
         {field.type === "number" && (
-          <Input
-            type="number"
+          <NumberField
+            value={value}
             min={field.min ?? 0}
             max={field.max ?? 100}
-            step={1}
-            value={value === undefined || value === null ? "" : String(value)}
-            onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
-            className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            onChange={onChange}
           />
         )}
         {field.type === "long_text" && (
@@ -402,7 +402,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className="min-h-[140px] border-white/15 bg-white/10 text-white placeholder:text-white/40"
+            className={cn("min-h-[140px]", formFieldClass, "h-auto")}
           />
         )}
         {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
@@ -515,7 +515,7 @@ function FieldControl({
                         value={otherValue}
                         onChange={(e) => onOtherChange(e.target.value)}
                         placeholder="Especifica..."
-                        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                        className={formFieldClass}
                       />
                     </motion.div>
                   )}
@@ -551,6 +551,63 @@ function FieldControl({
   );
 }
 
+function NumberField({
+  value,
+  min,
+  max,
+  placeholder,
+  onChange,
+}: {
+  value: unknown;
+  min: number;
+  max: number;
+  placeholder?: string;
+  onChange: (value: unknown) => void;
+}) {
+  const numeric = typeof value === "number" && !Number.isNaN(value) ? value : null;
+  const bump = (delta: number) => {
+    const base = numeric ?? min;
+    onChange(Math.min(max, Math.max(min, base + delta)));
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        type="number"
+        min={min}
+        max={max}
+        step={1}
+        value={value === undefined || value === null ? "" : String(value)}
+        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+        placeholder={placeholder}
+        className={cn(
+          formFieldClass,
+          "pr-12 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        )}
+      />
+      <div className="absolute right-1.5 top-1.5 flex h-9 w-8 flex-col overflow-hidden rounded-md border border-white/15 bg-white/10">
+        <button
+          type="button"
+          aria-label="Aumentar"
+          onClick={() => bump(1)}
+          className="flex flex-1 items-center justify-center text-white/75 transition hover:bg-white/15 hover:text-white"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <div className="h-px bg-white/10" />
+        <button
+          type="button"
+          aria-label="Disminuir"
+          onClick={() => bump(-1)}
+          className="flex flex-1 items-center justify-center text-white/75 transition hover:bg-white/15 hover:text-white"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PhoneField({
   value,
   onChange,
@@ -561,9 +618,9 @@ function PhoneField({
   const phone = (value as { dial?: string; number?: string }) ?? { dial: "+52", number: "" };
   const selected = PHONE_COUNTRIES.find((c) => c.dial === (phone.dial ?? "+52")) ?? PHONE_COUNTRIES[0];
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 overflow-visible">
       <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
-        <SelectTrigger className="h-12 w-[170px] border-white/15 bg-white/10 text-white">
+        <SelectTrigger className="h-12 w-[158px] shrink-0 border-white/15 bg-white/10 text-white focus:ring-[#87b1e0] focus:ring-offset-2 focus:ring-offset-[#0b1220] [&>span]:line-clamp-none">
           <SelectValue>
             <span className="flex items-center gap-2">
               <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
@@ -571,12 +628,11 @@ function PhoneField({
             </span>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[80] max-h-72 w-[min(90vw,20rem)] min-w-[18rem] max-w-[min(90vw,20rem)]">
           {PHONE_COUNTRIES.map((country) => (
-            <SelectItem key={country.code} value={country.dial}>
-              <span className="flex items-center gap-2">
+            <SelectItem key={country.code} value={country.dial} className="pr-3">
+              <span className="flex items-center gap-2 whitespace-nowrap">
                 <img src={countryFlagUrl(country.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
-                <span>{country.flag}</span>
                 {country.dial} {country.name}
               </span>
             </SelectItem>
@@ -589,7 +645,7 @@ function PhoneField({
         value={phone.number ?? ""}
         onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
-        className="h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40"
+        className={cn("min-w-0 flex-1", formFieldClass)}
       />
     </div>
   );
