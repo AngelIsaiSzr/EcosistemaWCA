@@ -21,10 +21,13 @@ export function FormAtmosphere({
   const attachment = contained ? "scroll" : (theme?.imageAttachment ?? "fixed");
   const repeat = theme?.imageRepeat ?? "no-repeat";
   const layer = contained ? "absolute" : "fixed";
+  const baseColor = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(theme?.backgroundColor?.trim() ?? "")
+    ? theme!.backgroundColor!.trim()
+    : "#0b1220";
 
   return (
     <div className={cn("pointer-events-none inset-0 overflow-hidden transition-all duration-700 ease-out", layer)}>
-      <div className="absolute inset-0 bg-[#0b1220] transition-colors duration-700" />
+      <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: baseColor }} />
 
       {preset === "aurora" && (
         <>
@@ -88,13 +91,7 @@ export function FormAtmosphere({
         </>
       )}
 
-      {preset === "ripple" && (
-        <>
-          <div className="form-anim-ripple absolute left-1/2 top-1/2 h-[40vmin] w-[40vmin] rounded-full border border-white/20" />
-          <div className="form-anim-ripple-delay absolute left-1/2 top-1/2 h-[40vmin] w-[40vmin] rounded-full border border-[#87b1e0]/35" />
-          <div className="form-anim-ripple-delay-2 absolute left-1/2 top-1/2 h-[40vmin] w-[40vmin] rounded-full border border-[#5b8fd4]/30" />
-        </>
-      )}
+      {preset === "ripple" && <SeaWaves />}
 
       {preset === "glass" && (
         <>
@@ -110,8 +107,6 @@ export function FormAtmosphere({
         </>
       )}
 
-      {preset === "minimal" && <div className="absolute inset-0 bg-[#0c1424]" />}
-
       {showImage && (
         <div
           className="absolute inset-0 transition-all duration-700 ease-out"
@@ -126,7 +121,25 @@ export function FormAtmosphere({
         />
       )}
 
-      <div className="absolute inset-0 bg-[#0b1220] transition-opacity duration-700" style={{ opacity: overlay }} />
+      <div className="absolute inset-0 transition-opacity duration-700" style={{ backgroundColor: baseColor, opacity: overlay }} />
+    </div>
+  );
+}
+
+function SeaWaves() {
+  return (
+    <div className="absolute inset-0 flex items-center overflow-hidden">
+      <div className="relative h-[42%] w-full min-h-[180px]">
+        <svg className="form-anim-wave-a absolute inset-y-0 left-0 h-full w-[200%]" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden>
+          <path fill="rgba(61,110,174,0.28)" d="M0,110 C180,170 360,50 540,110 C720,170 900,50 1080,110 C1260,170 1440,70 1620,110 L1620,200 L0,200 Z" />
+        </svg>
+        <svg className="form-anim-wave-b absolute inset-y-0 left-0 h-full w-[200%]" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden>
+          <path fill="rgba(91,143,212,0.22)" d="M0,120 C200,70 400,160 600,120 C800,80 1000,160 1200,120 C1400,80 1600,150 1800,120 L1800,200 L0,200 Z" />
+        </svg>
+        <svg className="form-anim-wave-c absolute inset-y-0 left-0 h-full w-[200%]" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden>
+          <path fill="rgba(135,177,224,0.18)" d="M0,130 C160,180 320,90 480,130 C640,170 800,90 960,130 C1120,170 1280,100 1440,130 L1440,200 L0,200 Z" />
+        </svg>
+      </div>
     </div>
   );
 }

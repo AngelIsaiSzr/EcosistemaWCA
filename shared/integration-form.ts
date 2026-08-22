@@ -80,6 +80,7 @@ export type IntegrationImagePosition =
 
 export interface IntegrationTheme {
   background?: IntegrationBackground;
+  backgroundColor?: string;
   backgroundImage?: string;
   imageFit?: IntegrationImageFit;
   imagePosition?: IntegrationImagePosition;
@@ -96,7 +97,7 @@ export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hin
   { id: "horizon", label: "Horizonte", hint: "Degradado de cielo a marino" },
   { id: "constellation", label: "Constelación", hint: "Puntos de luz tipo estrellas" },
   { id: "spotlight", label: "Foco", hint: "Haz de luz desde arriba" },
-  { id: "ripple", label: "Ondas", hint: "Anillos concéntricos de marca" },
+  { id: "ripple", label: "Ondas", hint: "Olas suaves, como el mar" },
   { id: "glass", label: "Cristal", hint: "Viñeta y brillo tipo vidrio" },
   { id: "duotone", label: "Duotono", hint: "Dos manchas de color WCA" },
   { id: "minimal", label: "Minimal", hint: "Fondo limpio, casi sin ornamento" },
@@ -161,6 +162,7 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
   },
   theme: {
     background: "aurora",
+    backgroundColor: "#0b1220",
     backgroundImage: "/logo-wca.png",
   },
   sections: [

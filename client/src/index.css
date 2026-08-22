@@ -427,14 +427,19 @@
     100% { background-position: 42px -28px, -18px 60px, 28px -20px; }
   }
 
+  @keyframes form-wave-x {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
   .form-anim-twinkle { animation: form-twinkle 4.5s ease-in-out infinite; }
   .form-anim-drift { animation: form-drift 14s ease-in-out infinite; }
   .form-anim-float { animation: form-float 16s ease-in-out infinite; }
   .form-anim-pulse { animation: form-pulse-glow 7s ease-in-out infinite; }
-  .form-anim-ripple { animation: form-ripple 7s ease-out infinite; }
-  .form-anim-ripple-delay { animation: form-ripple 7s ease-out 2.3s infinite; }
-  .form-anim-ripple-delay-2 { animation: form-ripple 7s ease-out 4.6s infinite; }
   .form-anim-stars { animation: form-starfield 48s linear infinite; }
+  .form-anim-wave-a { animation: form-wave-x 14s linear infinite; }
+  .form-anim-wave-b { animation: form-wave-x 20s linear infinite reverse; }
+  .form-anim-wave-c { animation: form-wave-x 26s linear infinite; }
 
   @media (prefers-reduced-motion: reduce) {
     .form-anim-twinkle,
@@ -444,7 +449,10 @@
     .form-anim-ripple,
     .form-anim-ripple-delay,
     .form-anim-ripple-delay-2,
-    .form-anim-stars {
+    .form-anim-stars,
+    .form-anim-wave-a,
+    .form-anim-wave-b,
+    .form-anim-wave-c {
       animation: none;
     }
   }
