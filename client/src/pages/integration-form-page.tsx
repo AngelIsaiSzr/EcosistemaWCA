@@ -16,6 +16,7 @@ export default function IntegrationFormPage() {
     <>
       <Helmet>
         <title>¡Súmate a WCA! | Formulario de Integración</title>
+        <link rel="preload" as="image" href="/logo-wca.png" />
         <meta
           name="description"
           content="Formulario de integración al Ecosistema WCA para personas que desean enseñar, facilitar, liderar y transformar desde la tecnología con propósito."

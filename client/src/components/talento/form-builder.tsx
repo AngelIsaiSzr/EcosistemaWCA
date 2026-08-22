@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -459,24 +459,24 @@ function AppearanceEditor({
         </div>
         <div>
           <Label>Opacidad de la imagen ({theme?.imageOpacity ?? 14}%)</Label>
-          <Input
-            className="mt-1"
-            type="range"
+          <Slider
+            className="mt-4"
             min={0}
             max={80}
-            value={theme?.imageOpacity ?? 14}
-            onChange={(e) => onChange({ imageOpacity: Number(e.target.value) })}
+            step={1}
+            value={[theme?.imageOpacity ?? 14]}
+            onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
           />
         </div>
         <div>
           <Label>Velo oscuro ({theme?.overlayOpacity ?? 0}%)</Label>
-          <Input
-            className="mt-1"
-            type="range"
+          <Slider
+            className="mt-4"
             min={0}
             max={80}
-            value={theme?.overlayOpacity ?? 0}
-            onChange={(e) => onChange({ overlayOpacity: Number(e.target.value) })}
+            step={1}
+            value={[theme?.overlayOpacity ?? 0]}
+            onValueChange={([value]) => onChange({ overlayOpacity: value ?? 0 })}
           />
         </div>
         <p className="text-xs text-muted-foreground md:col-span-2">

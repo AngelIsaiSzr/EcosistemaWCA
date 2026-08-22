@@ -197,7 +197,11 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={cn("relative z-10 mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center", emojiFont)}
+        className={cn(
+          "relative z-10 mx-auto flex max-w-2xl flex-col items-center justify-center px-6 text-center",
+          preview ? "min-h-[640px]" : "min-h-[100dvh]",
+          emojiFont,
+        )}
       >
         {preview && (
           <p className="mb-4 rounded-full bg-amber-400/15 px-4 py-1 text-sm text-amber-200">
@@ -218,13 +222,13 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   }
 
   return (
-    <div className={cn("relative z-10 mx-auto flex w-full max-w-2xl flex-col justify-start px-5 pb-16 pt-14 md:px-8 md:pt-16", emojiFont)}>
+    <div className={cn("relative z-10 mx-auto flex w-full max-w-2xl flex-col px-5 py-8 md:px-8", preview ? "min-h-[640px]" : "min-h-[100dvh]", emojiFont)}>
       {preview && (
-        <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
+        <div className="mb-4 shrink-0 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
           Vista previa de prueba. Al enviar no se guardan datos reales.
         </div>
       )}
-      <div className="mb-8 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="mb-6 h-1.5 shrink-0 overflow-hidden rounded-full bg-white/10">
         <motion.div
           className="h-full rounded-full bg-[#87b1e0]"
           animate={{ width: `${progress}%` }}
@@ -232,6 +236,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         />
       </div>
 
+      <div className={cn("flex flex-1 flex-col", section?.isWelcome && "justify-center")}>
       <AnimatePresence mode="wait">
         <motion.div
           key={section?.id ?? step}
@@ -288,7 +293,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         </p>
       )}
 
-      <div className="mt-10 flex items-center justify-between gap-4">
+      <div className={cn("mt-10 flex items-center gap-4", section?.isWelcome ? "justify-center" : "justify-between")}>
         {step > 0 ? (
           <button
             type="button"
@@ -299,7 +304,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             Atrás
           </button>
         ) : (
-          <span />
+          !section?.isWelcome && <span />
         )}
         <Button
           type="button"
@@ -310,6 +315,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
           {section?.isWelcome ? "Iniciar" : isLast ? (submitting ? "Enviando..." : "Enviar") : "Siguiente"}
           {!isLast && <ChevronRight className="h-4 w-4" />}
         </Button>
+      </div>
       </div>
     </div>
   );

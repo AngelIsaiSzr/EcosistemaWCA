@@ -22,6 +22,7 @@ export default function IntegrationFormBySlugPage({
     <>
       <Helmet>
         <title>Formulario de Integración | Ecosistema WCA</title>
+        <link rel="preload" as="image" href="/logo-wca.png" />
       </Helmet>
       <div className="relative min-h-screen overflow-x-hidden bg-[#0b1220]">
         <FormAtmosphere definition={form?.schema ?? DEFAULT_INTEGRATION_FORM} />

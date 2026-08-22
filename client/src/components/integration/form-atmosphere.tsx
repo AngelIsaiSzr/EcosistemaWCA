@@ -14,7 +14,7 @@ export function FormAtmosphere({
   const customImage = theme?.backgroundImage?.trim() || "";
   const showImage = Boolean(customImage) || preset === "custom";
   const imageSrc = customImage || WCA_LOGO_URL;
-  const opacity = Math.min(100, Math.max(4, theme?.imageOpacity ?? (preset === "custom" ? 28 : 14))) / 100;
+  const opacity = Math.min(100, Math.max(0, theme?.imageOpacity ?? (preset === "custom" ? 28 : 14))) / 100;
   const overlay = Math.min(80, Math.max(0, theme?.overlayOpacity ?? (showImage ? 32 : 0))) / 100;
   const fit = theme?.imageFit ?? "cover";
   const position = theme?.imagePosition ?? "center";
@@ -35,7 +35,7 @@ export function FormAtmosphere({
           <Grid />
           <WcaLogo
             decorative
-            className="absolute left-1/2 top-[42%] h-[min(28vw,220px)] w-[min(28vw,220px)] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.08] transition-all duration-700"
+            className="absolute left-1/2 top-1/2 h-[min(28vw,220px)] w-[min(28vw,220px)] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.08] transition-all duration-700"
           />
         </>
       )}
@@ -43,7 +43,7 @@ export function FormAtmosphere({
       {preset === "logo" && (
         <WcaLogo
           decorative
-          className="absolute left-1/2 top-[42%] h-[min(42vw,340px)] w-[min(42vw,340px)] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.09] transition-all duration-700"
+          className="absolute left-1/2 top-1/2 h-[min(42vw,340px)] w-[min(42vw,340px)] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.09] transition-all duration-700"
         />
       )}
 
