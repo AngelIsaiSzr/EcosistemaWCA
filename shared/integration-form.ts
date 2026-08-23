@@ -163,7 +163,6 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
   theme: {
     background: "aurora",
     backgroundColor: "#0b1220",
-    backgroundImage: "/logo-wca.png",
   },
   sections: [
     {

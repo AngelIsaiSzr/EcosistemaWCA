@@ -484,4 +484,15 @@
     -webkit-appearance: none;
     margin: 0;
   }
+
+  .integration-form-shell {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .integration-form-shell::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none;
+  }
 }

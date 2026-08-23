@@ -12,10 +12,11 @@ export function FormAtmosphere({
   const theme = definition.theme;
   const preset = theme?.background ?? "aurora";
   const customImage = theme?.backgroundImage?.trim() || "";
-  const showImage = Boolean(customImage) || preset === "custom";
-  const imageSrc = customImage || WCA_LOGO_URL;
+  const isLogoPath = customImage === "/logo-wca.png" || customImage === WCA_LOGO_URL;
+  const showImage = Boolean(customImage) && !isLogoPath;
+  const imageSrc = customImage;
   const opacity = Math.min(100, Math.max(0, theme?.imageOpacity ?? (preset === "custom" ? 28 : 14))) / 100;
-  const overlay = Math.min(80, Math.max(0, theme?.overlayOpacity ?? (showImage ? 32 : 0))) / 100;
+  const overlay = Math.min(100, Math.max(0, theme?.overlayOpacity ?? 0)) / 100;
   const fit = theme?.imageFit ?? "cover";
   const position = theme?.imagePosition ?? "center";
   const attachment = contained ? "scroll" : (theme?.imageAttachment ?? "fixed");

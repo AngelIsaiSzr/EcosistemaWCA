@@ -34,6 +34,7 @@ import {
   IntegrationImageRepeat,
   IntegrationSection,
   IntegrationTheme,
+  WCA_LOGO_URL,
   newFieldId,
 } from "@shared/integration-form";
 
@@ -359,6 +360,9 @@ function AppearanceEditor({
   onChange: (patch: Partial<IntegrationTheme>) => void;
 }) {
   const preset = theme?.background ?? "aurora";
+  const imagePath = theme?.backgroundImage?.trim() ?? "";
+  const imageFieldValue =
+    !imagePath || imagePath === "/logo-wca.png" || imagePath === WCA_LOGO_URL ? "" : imagePath;
   return (
     <div className="space-y-5">
       <div>
@@ -406,8 +410,8 @@ function AppearanceEditor({
         </div>
         <Field
           label="URL o ruta de la imagen (opcional)"
-          value={theme?.backgroundImage ?? ""}
-          onChange={(backgroundImage) => onChange({ backgroundImage })}
+          value={imageFieldValue}
+          onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
         />
         <div>
           <Label>Encaje</Label>
@@ -462,7 +466,7 @@ function AppearanceEditor({
           <Slider
             className="mt-4"
             min={0}
-            max={80}
+            max={100}
             step={1}
             value={[theme?.imageOpacity ?? 14]}
             onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
@@ -473,7 +477,7 @@ function AppearanceEditor({
           <Slider
             className="mt-4"
             min={0}
-            max={80}
+            max={100}
             step={1}
             value={[theme?.overlayOpacity ?? 0]}
             onValueChange={([value]) => onChange({ overlayOpacity: value ?? 0 })}

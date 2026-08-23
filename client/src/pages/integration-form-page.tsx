@@ -22,7 +22,7 @@ export default function IntegrationFormPage() {
           content="Formulario de integración al Ecosistema WCA para personas que desean enseñar, facilitar, liderar y transformar desde la tecnología con propósito."
         />
       </Helmet>
-      <div className="relative min-h-screen overflow-x-hidden bg-[#0b1220]">
+      <div className="integration-form-shell relative h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#0b1220]">
         <FormAtmosphere definition={form?.schema ?? DEFAULT_INTEGRATION_FORM} />
         {isLoading && (
           <div className="flex min-h-screen items-center justify-center">
