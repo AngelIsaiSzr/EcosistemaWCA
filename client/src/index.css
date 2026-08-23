@@ -417,27 +417,33 @@
   }
 
   @keyframes form-wave {
-    0% { transform: scale(0.08); opacity: 0.6; }
-    75% { opacity: 0.14; }
+    0% { transform: scale(0.28); opacity: 0; }
+    12% { opacity: 0.42; }
     100% { transform: scale(1); opacity: 0; }
   }
 
-  @keyframes form-starfield {
-    0% { background-position: 0 0, 20px 30px, 8px 12px; }
-    100% { background-position: 42px -28px, -18px 60px, 28px -20px; }
+  @keyframes form-star-twinkle-a {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.95; }
+  }
+
+  @keyframes form-star-twinkle-b {
+    0%, 100% { opacity: 0.22; }
+    40% { opacity: 0.85; }
+    70% { opacity: 0.3; }
   }
 
   .form-wave-ring {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: min(140vmin, 1100px);
-    height: min(140vmin, 1100px);
+    width: min(130vmin, 980px);
+    height: min(130vmin, 980px);
     border-radius: 9999px;
     translate: -50% -50%;
-    transform: scale(0.08);
     transform-origin: center;
-    animation: form-wave 6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite both;
+    opacity: 0;
+    animation: form-wave 9s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
     will-change: transform, opacity;
   }
 
@@ -445,20 +451,26 @@
   .form-anim-drift { animation: form-drift 14s ease-in-out infinite; }
   .form-anim-float { animation: form-float 16s ease-in-out infinite; }
   .form-anim-pulse { animation: form-pulse-glow 7s ease-in-out infinite; }
-  .form-anim-stars { animation: form-starfield 48s linear infinite; }
+  .form-stars-far { animation: form-star-twinkle-a 7s ease-in-out infinite; }
+  .form-stars-near { animation: form-star-twinkle-b 9s ease-in-out 1.4s infinite; }
 
   @media (prefers-reduced-motion: reduce) {
     .form-anim-twinkle,
     .form-anim-drift,
     .form-anim-float,
     .form-anim-pulse,
-    .form-anim-stars,
+    .form-stars-far,
+    .form-stars-near,
     .form-wave-ring {
       animation: none;
     }
     .form-wave-ring {
-      transform: scale(0.45);
-      opacity: 0.25;
+      opacity: 0.2;
+      transform: scale(0.55);
+    }
+    .form-stars-far,
+    .form-stars-near {
+      opacity: 0.7;
     }
   }
 }

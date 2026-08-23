@@ -35,10 +35,10 @@ interface IntegrationFormFlowProps {
   preview?: boolean;
 }
 
-const slide = {
-  initial: { opacity: 0, x: 28 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -28 },
+const fade = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
 };
 
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
@@ -113,7 +113,6 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
 
   const section = sections[step];
   const isLast = step === sections.length - 1;
-  const progress = ((step + 1) / Math.max(sections.length, 1)) * 100;
 
   const currentFields = useMemo(
     () => (section ? visibleFields(section.fields, answers) : []),
@@ -228,24 +227,17 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
           Vista previa de prueba. Al enviar no se guardan datos reales.
         </div>
       )}
-      <div className="mb-6 h-1.5 shrink-0 overflow-hidden rounded-full bg-white/10">
-        <motion.div
-          className="h-full rounded-full bg-[#87b1e0]"
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.35 }}
-        />
-      </div>
 
-      <div className={cn("flex flex-1 flex-col", section?.isWelcome && "justify-center")}>
+      <div className="flex flex-1 flex-col">
       <AnimatePresence mode="wait">
         <motion.div
           key={section?.id ?? step}
-          variants={slide}
+          variants={fade}
           initial="initial"
           animate="animate"
           exit="exit"
-          transition={{ duration: 0.32, ease: "easeOut" }}
-          className="overflow-visible"
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className={cn("flex flex-1 flex-col overflow-visible", section?.isWelcome && "justify-center")}
         >
           {section?.isWelcome ? (
             <div className="flex flex-col items-center text-center">
@@ -254,6 +246,14 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
               <h1 className="font-heading text-4xl font-bold text-white md:text-5xl">{definition.title}</h1>
               <p className="mt-5 max-w-xl text-lg text-white/80">{definition.description}</p>
               <p className="mt-3 max-w-xl text-base text-white/70">{definition.cta}</p>
+              <Button
+                type="button"
+                onClick={goNext}
+                className="mt-10 h-12 rounded-full bg-[#5b8fd4] px-8 text-base font-semibold text-white hover:bg-[#4a7fc4]"
+              >
+                Iniciar
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <div>
@@ -293,7 +293,8 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         </p>
       )}
 
-      <div className={cn("mt-10 flex items-center gap-4", section?.isWelcome ? "justify-center" : "justify-between")}>
+      {!section?.isWelcome && (
+      <div className="mt-10 flex items-center justify-between gap-4">
         {step > 0 ? (
           <button
             type="button"
@@ -304,7 +305,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
             Atrás
           </button>
         ) : (
-          !section?.isWelcome && <span />
+          <span />
         )}
         <Button
           type="button"
@@ -312,10 +313,11 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
           disabled={submitting}
           className="h-12 rounded-full bg-[#5b8fd4] px-8 text-base font-semibold text-white hover:bg-[#4a7fc4]"
         >
-          {section?.isWelcome ? "Iniciar" : isLast ? (submitting ? "Enviando..." : "Enviar") : "Siguiente"}
+          {isLast ? (submitting ? "Enviando..." : "Enviar") : "Siguiente"}
           {!isLast && <ChevronRight className="h-4 w-4" />}
         </Button>
       </div>
+      )}
       </div>
     </div>
   );

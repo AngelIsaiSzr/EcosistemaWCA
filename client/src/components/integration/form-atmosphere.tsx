@@ -75,16 +75,40 @@ export function FormAtmosphere({
 
       {preset === "constellation" && (
         <>
+          <Glow className="form-anim-drift left-[42%] top-[38%] h-80 w-80 bg-[#5b8fd4]/12" />
           <div
-            className="form-anim-stars absolute inset-0 opacity-80"
+            className="form-stars-far absolute inset-0"
             style={{
-              backgroundImage:
-                "radial-gradient(circle, rgba(135,177,224,0.7) 1px, transparent 1.6px), radial-gradient(circle, rgba(91,143,212,0.45) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1.4px)",
-              backgroundSize: "42px 42px, 68px 68px, 28px 28px",
+              backgroundImage: [
+                "radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.7), transparent)",
+                "radial-gradient(1px 1px at 28% 8%, rgba(135,177,224,0.55), transparent)",
+                "radial-gradient(1.5px 1.5px at 47% 24%, rgba(255,255,255,0.8), transparent)",
+                "radial-gradient(1px 1px at 71% 14%, rgba(135,177,224,0.5), transparent)",
+                "radial-gradient(1px 1px at 88% 30%, rgba(255,255,255,0.45), transparent)",
+                "radial-gradient(1px 1px at 18% 54%, rgba(135,177,224,0.4), transparent)",
+                "radial-gradient(1.5px 1.5px at 63% 49%, rgba(255,255,255,0.7), transparent)",
+                "radial-gradient(1px 1px at 91% 62%, rgba(135,177,224,0.45), transparent)",
+                "radial-gradient(1px 1px at 8% 82%, rgba(255,255,255,0.4), transparent)",
+                "radial-gradient(1px 1px at 79% 86%, rgba(135,177,224,0.5), transparent)",
+              ].join(","),
+              backgroundRepeat: "no-repeat",
             }}
           />
-          <div className="form-anim-twinkle absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(135,177,224,0.18),transparent_45%)]" />
-          <Glow className="form-anim-drift left-[38%] top-1/4 h-72 w-72 bg-[#5b8fd4]/20" />
+          <div
+            className="form-stars-near absolute inset-0"
+            style={{
+              backgroundImage: [
+                "radial-gradient(2px 2px at 22% 34%, rgba(255,255,255,0.85), transparent)",
+                "radial-gradient(1.5px 1.5px at 56% 16%, rgba(135,177,224,0.8), transparent)",
+                "radial-gradient(2px 2px at 84% 44%, rgba(255,255,255,0.7), transparent)",
+                "radial-gradient(1.5px 1.5px at 14% 72%, rgba(135,177,224,0.65), transparent)",
+                "radial-gradient(2.5px 2.5px at 49% 61%, rgba(255,255,255,0.9), transparent)",
+                "radial-gradient(1.5px 1.5px at 74% 74%, rgba(135,177,224,0.6), transparent)",
+                "radial-gradient(2px 2px at 36% 90%, rgba(255,255,255,0.55), transparent)",
+              ].join(","),
+              backgroundRepeat: "no-repeat",
+            }}
+          />
         </>
       )}
 
@@ -97,13 +121,14 @@ export function FormAtmosphere({
 
       {preset === "ripple" && (
         <div className="absolute inset-0 overflow-hidden">
-          {[0, 1, 2, 3, 4, 5].map((index) => (
+          <div className="absolute left-1/2 top-1/2 h-[18vmin] w-[18vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#87b1e0]/10 blur-2xl" />
+          {[0, 1, 2].map((index) => (
             <div
               key={index}
-              className="form-wave-ring border-[1.5px]"
+              className="form-wave-ring border"
               style={{
-                animationDelay: `${index * 1}s`,
-                borderColor: index % 2 === 0 ? "rgba(135,177,224,0.45)" : "rgba(91,143,212,0.32)",
+                animationDelay: `${index * 3}s`,
+                borderColor: "rgba(135,177,224,0.35)",
               }}
             />
           ))}
