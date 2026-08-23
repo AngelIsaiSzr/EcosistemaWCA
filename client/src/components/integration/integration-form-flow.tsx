@@ -404,7 +404,7 @@ function FieldControl({
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
-            className={controlClass}
+            className={cn(controlClass, "integration-number-input")}
           />
         )}
         {field.type === "long_text" && (

@@ -473,4 +473,15 @@
       opacity: 0.7;
     }
   }
+
+  .integration-number-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .integration-number-input::-webkit-outer-spin-button,
+  .integration-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
