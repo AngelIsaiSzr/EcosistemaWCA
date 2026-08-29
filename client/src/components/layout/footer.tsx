@@ -58,11 +58,11 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-heading font-semibold mb-6">Recursos</h3>
             <ul className="space-y-4">
-              <li><a href="https://drive.google.com/file/d/1OkukNqN_7wmUU87TpI1jMkoPfpOT2fdQ/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue">Historia, Origen y Propósito</a></li>
-              <li><a href="https://youtube.com/playlist?list=PLv1UrQWkBmdladnWqAqN8boVGfhH4BUNq&si=SoH0nOup6Bat2pK9" className="text-muted hover-accent-blue">Tutoriales</a></li>
+              <li><a href="" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue">Historia, Origen y Propósito</a></li>
+              <li><a href="" className="text-muted hover-accent-blue">Tutoriales</a></li>
               <li><a href="/merch" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue">Merch Oficial</a></li>
-              <li><a href="#" className="text-muted hover-accent-blue">Documentación</a></li>
-              <li><a href="#" className="text-muted hover-accent-blue">Blog y Comunidad</a></li>
+              <li><a href="" className="text-muted hover-accent-blue">Documentación</a></li>
+              <li><a href="" className="text-muted hover-accent-blue">Blog y Comunidad</a></li>
             </ul>
           </div>
         </div>

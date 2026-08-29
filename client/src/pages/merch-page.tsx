@@ -9,20 +9,20 @@ import { Badge } from "@/components/ui/badge";
 const products = [
   {
     id: 1,
-    name: "Playera Ecosistema WCA",
+    name: "Playera del Ecosistema WCA",
     price: 300.00,
-    image: "https://i.ibb.co/Q7VZgWQs/playera1-soj6qu.png",
+    image: "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
     category: "Ropa",
     description: "Viste el cambio. Con esta playera, no solo llevas nuestro logo, sino nuestro compromiso con la educación accesible para todos.",
     inStock: true
   },
   {
     id: 2,
-    name: "Sudadera de la Comunidad",
-    price: 350.00,
-    image: "https://i.ibb.co/CxD10rL/sudadera1-ysuzwc.png",
+    name: "Hoodie de la Comunidad WCA",
+    price: 450.00,
+    image: "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
     category: "Ropa",
-    description: "Perfecta para largas sesiones de código. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",
+    description: "Perfecta para largas sesiones de trabajo. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",
     inStock: false
   }
 ];

@@ -11,20 +11,20 @@ import { ShoppingCart, Star } from "lucide-react";
 const products = [
   {
     id: 1,
-    name: "Playera Ecosistema WCA",
-    price: 250.00,
-    image: "https://i.ibb.co/Q7VZgWQs/playera1-soj6qu.png",
+    name: "Playera del Ecosistema WCA",
+    price: 300.00,
+    image: "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
     gallery: [
-        "https://i.ibb.co/Q7VZgWQs/playera1-soj6qu.png",
-        "https://i.ibb.co/VPjLYxB/playera2-qkbnua.png",
-        "https://i.ibb.co/JRVppW6N/playera3-gbcwvj.png"
+        "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
+        "https://i.ibb.co/mrVmvk53/playera2-a8n9kq.png",
+        "https://i.ibb.co/C38QsZtt/playera3-jvwcbg.png"
     ],
     category: "Ropa",
     description: "Viste el cambio. Con esta playera, no solo llevas nuestro logo, sino nuestro compromiso con la educación accesible para todos.",
     longDescription: "Más que una prenda, es un símbolo de nuestro objetivo y compromiso. Cada compra apoya nuestra misión de combatir el analfabetismo digital y ofrecer educación tecnológica accesible en todo el mundo. Fabricada con materiales de alta calidad para que la lleves con orgullo.",
     inStock: true,
     sizes: ["CH", "M", "G", "XG"],
-    colors: ["Negro", "Gris"],
+    colors: ["Blanco", "Negro"],
     rating: 5,
     reviews: 2,
     features: [
@@ -35,20 +35,20 @@ const products = [
   },
   {
     id: 2,
-    name: "Sudadera de la Comunidad",
-    price: 300.00,
-    image: "https://i.ibb.co/CxD10rL/sudadera1-ysuzwc.png",
+    name: "Hoodie de la Comunidad WCA",
+    price: 450.00,
+    image: "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
     gallery: [
-        "https://i.ibb.co/CxD10rL/sudadera1-ysuzwc.png",
-        "https://i.ibb.co/YTwynZTJ/sudadera2-nlrpx1.png",
-        "https://i.ibb.co/4nG6Lkwd/sudadera3-hemyoj.png"
+        "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
+        "https://i.ibb.co/rKszt1Cc/hoodie2-nlrpx1.png",
+        "https://i.ibb.co/JjmxW289/hoodie3-hemyoj.png"
     ],
     category: "Ropa",
-    description: "Perfecta para largas sesiones de código. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",
+    description: "Perfecta para largas sesiones de trabajo. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",
     longDescription: "Diseñada para la comodidad y la concentración. Esta sudadera es tu compañera ideal para esas noches de proyecto, recordándote que eres parte de una comunidad que aprende y crece junta. Sus materiales resistentes aseguran que te acompañará en muchos desafíos.",
     inStock: false,
     sizes: ["CH", "M", "G", "XG"],
-    colors: ["Negro", "Gris", "Azul"],
+    colors: ["Blanco", "Negro", "Azul"],
     rating: 5,
     reviews: 1,
     features: [
