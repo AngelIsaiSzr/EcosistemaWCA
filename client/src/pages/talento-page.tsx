@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Download,
@@ -44,12 +44,12 @@ function asDefinition(schema: unknown): IntegrationFormDefinition {
   return (schema as IntegrationFormDefinition) ?? DEFAULT_INTEGRATION_FORM;
 }
 
-const COL_WIDTHS_KEY = "talento-responses-col-widths";
+const COL_WIDTHS_KEY_PREFIX = "talento-responses-col-widths";
 const DEFAULT_COL_WIDTH = 180;
 
-function loadColWidths(): Record<string, number> {
+function loadColWidths(formSlug: string): Record<string, number> {
   try {
-    const raw = localStorage.getItem(COL_WIDTHS_KEY);
+    const raw = localStorage.getItem(`${COL_WIDTHS_KEY_PREFIX}:${formSlug}`);
     return raw ? (JSON.parse(raw) as Record<string, number>) : {};
   } catch {
     return {};
@@ -309,26 +309,38 @@ function ResizableHead({
   );
 }
 
-export default function TalentoPage() {
+export default function TalentoPage({
+  params,
+}: {
+  params?: Record<string | number, string | undefined>;
+}) {
+  const formSlug = params?.slug || "integracion";
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [tab, setTab] = useState("responses");
-  const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => loadColWidths(formSlug));
 
-  const setColWidth = useCallback((id: string, width: number) => {
-    setColWidths((prev) => {
-      const next = { ...prev, [id]: width };
-      try {
-        localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
+  useEffect(() => {
+    setColWidths(loadColWidths(formSlug));
+  }, [formSlug]);
+
+  const setColWidth = useCallback(
+    (id: string, width: number) => {
+      setColWidths((prev) => {
+        const next = { ...prev, [id]: width };
+        try {
+          localStorage.setItem(`${COL_WIDTHS_KEY_PREFIX}:${formSlug}`, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [formSlug],
+  );
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "talento")) {
@@ -342,19 +354,29 @@ export default function TalentoPage() {
   }, [user, isLoading, navigate, toast]);
 
   const { data: form, isLoading: formLoading } = useQuery<IntegrationForm & { googleServiceEmail?: string | null }>({
-    queryKey: ["/api/talento/form"],
-    enabled: user?.role === "talento",
+    queryKey: ["/api/talento/forms", formSlug],
+    queryFn: async () => {
+      const res = await fetch(`/api/talento/forms/${encodeURIComponent(formSlug)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("No se pudo cargar el formulario");
+      return res.json();
+    },
+    enabled: user?.role === "talento" && !!formSlug,
   });
 
   const { data: responses = [], refetch, isFetching } = useQuery<IntegrationResponse[]>({
-    queryKey: ["/api/talento/responses", search],
+    queryKey: ["/api/talento/forms", formSlug, "responses", search],
     queryFn: async () => {
       const qs = search.trim() ? `?q=${encodeURIComponent(search.trim())}` : "";
-      const res = await fetch(`/api/talento/responses${qs}`, { credentials: "include" });
+      const res = await fetch(
+        `/api/talento/forms/${encodeURIComponent(formSlug)}/responses${qs}`,
+        { credentials: "include" },
+      );
       if (!res.ok) throw new Error("No se pudieron cargar las respuestas");
       return res.json();
     },
-    enabled: user?.role === "talento",
+    enabled: user?.role === "talento" && !!formSlug,
   });
 
   const definition = asDefinition(form?.schema);
@@ -377,12 +399,19 @@ export default function TalentoPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const res = await apiRequest("PATCH", "/api/talento/form", payload);
+      const res = await apiRequest(
+        "PATCH",
+        `/api/talento/forms/${encodeURIComponent(formSlug)}`,
+        payload,
+      );
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/talento/form"] });
+    onSuccess: (updated: IntegrationForm) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
       toast({ title: "Cambios guardados" });
+      if (updated?.slug && updated.slug !== formSlug) {
+        navigate(`/talento/${updated.slug}`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
@@ -393,6 +422,17 @@ export default function TalentoPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <LoadingSpinner size="lg" text="Cargando..." />
+      </div>
+    );
+  }
+
+  if (!formLoading && !form) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Formulario no encontrado.</p>
+        <Button variant="outline" onClick={() => navigate("/talento")}>
+          Volver a formularios
+        </Button>
       </div>
     );
   }
@@ -425,14 +465,23 @@ export default function TalentoPage() {
         <main className="container mx-auto px-4 pb-16 pt-24">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Inicio › Respuestas</p>
-              <h1 className="mt-1 font-heading text-4xl font-bold">{form?.title || "¡Súmate a WCA!"}</h1>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/talento" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                {form?.title || "Formulario"}
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">{form?.title || "Formulario"}</h1>
               <p className="mt-2 text-muted-foreground">
-                Panel de Dirección de Talento y Bienestar. Reclutamiento, integración y postulaciones.
+                Respuestas, vista previa y conexión con Google Sheets de este formulario.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-[#5b8fd4] hover:bg-[#4a7fc4]" onClick={() => navigate("/talento/editar")}>
+              <Button
+                className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                onClick={() => navigate(`/talento/${formSlug}/editar`)}
+              >
                 <Pencil className="h-4 w-4" />
                 Editar formulario
               </Button>
@@ -469,7 +518,7 @@ export default function TalentoPage() {
                     <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
                   </Button>
                   <Button variant="outline" asChild>
-                    <a href="/api/talento/export.csv">
+                    <a href={`/api/talento/forms/${encodeURIComponent(formSlug)}/export.csv`}>
                       <Download className="h-4 w-4" />
                       Exportar
                     </a>
@@ -553,7 +602,7 @@ export default function TalentoPage() {
                                 }
                                 onSaved={() => {
                                   void queryClient.invalidateQueries({
-                                    queryKey: ["/api/talento/responses"],
+                                    queryKey: ["/api/talento/forms", formSlug, "responses"],
                                   });
                                 }}
                               />
@@ -632,7 +681,7 @@ export default function TalentoPage() {
                     Vincular hoja
                   </Button>
                   <Button variant="outline" asChild>
-                    <a href={`/api/talento/template.csv?tab=${encodeURIComponent(spreadsheetTab || "Respuestas")}`}>
+                    <a href={`/api/talento/forms/${encodeURIComponent(formSlug)}/template.csv?tab=${encodeURIComponent(spreadsheetTab || "Respuestas")}`}>
                       <Download className="h-4 w-4" />
                       Descargar {sheetTabFilename(spreadsheetTab)}
                     </a>

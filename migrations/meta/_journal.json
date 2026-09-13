@@ -43,6 +43,13 @@
       "when": 1755880000000,
       "tag": "0005_talento_integration",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1757740000000,
+      "tag": "0006_talento_multi_forms",
+      "breakpoints": true
     }
   ]
 }

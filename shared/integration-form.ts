@@ -122,6 +122,48 @@ export const WCA_LOGO_FALLBACK =
 
 export const DEFAULT_INTEGRATION_SLUG = "integracion";
 
+export function createBlankIntegrationForm(title = "Formulario sin título"): IntegrationFormDefinition {
+  return {
+    version: 1,
+    title,
+    subtitle: "",
+    description: "Completa este formulario. Tus respuestas nos ayudan a conocerte mejor.",
+    cta: "Comenzar",
+    ending: {
+      title: "¡Gracias por tu respuesta!",
+      message: "Recibimos tu información. El equipo de Talento y Bienestar te contactará si es necesario.",
+    },
+    theme: {
+      background: "aurora",
+      backgroundColor: "#0b1220",
+    },
+    sections: [
+      {
+        id: "welcome",
+        title,
+        subtitle: "Bienvenida",
+        isWelcome: true,
+        fields: [],
+      },
+      {
+        id: "datos",
+        title: "Tus datos",
+        subtitle: "Empecemos por lo esencial.",
+        fields: [
+          {
+            id: "email",
+            type: "email",
+            label: "Correo electrónico",
+            placeholder: "nombre@correo.com",
+            required: true,
+            unique: true,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export const PHONE_COUNTRIES: { code: string; dial: string; name: string; flag: string }[] = [
   { code: "MX", dial: "+52", name: "México", flag: "🇲🇽" },
   { code: "US", dial: "+1", name: "EE.UU. / Canadá", flag: "🇺🇸" },

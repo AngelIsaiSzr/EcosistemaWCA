@@ -45,10 +45,24 @@ const updateSchema = async () => {
         spreadsheet_id TEXT,
         spreadsheet_tab TEXT DEFAULT 'Respuestas',
         is_published BOOLEAN NOT NULL DEFAULT true,
+        pinned_at TIMESTAMP,
+        view_count INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       `,
+    );
+
+    await runQuery(
+      client,
+      "columna pinned_at",
+      `ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS pinned_at TIMESTAMP;`,
+    );
+
+    await runQuery(
+      client,
+      "columna view_count",
+      `ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0;`,
     );
 
     await runQuery(

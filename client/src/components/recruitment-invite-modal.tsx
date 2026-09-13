@@ -201,7 +201,7 @@ export function RecruitmentInviteModal() {
               </h2>
 
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
-                En el Ecosistema WCA buscamos personas con vocación, visión y liderazgo que quieran cambiar el mundo 💙 
+                En el Ecosistema WCA buscamos personas con vocación, visión y liderazgo que quieran cambiar el mundo. 💙 
                 <br />
                 Educación + Tecnología + Humanidad.
               </p>

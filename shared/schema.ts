@@ -105,6 +105,8 @@ export const integrationForms = pgTable("integration_forms", {
   spreadsheetId: text("spreadsheet_id"),
   spreadsheetTab: text("spreadsheet_tab").default("Respuestas"),
   isPublished: boolean("is_published").notNull().default(true),
+  pinnedAt: timestamp("pinned_at"),
+  viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

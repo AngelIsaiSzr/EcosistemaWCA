@@ -85,8 +85,13 @@ export interface IStorage {
   getLiveCourseRegistrationsByUserIdAndCourseId(userId: number, courseId: number): Promise<LiveCourseRegistration[]>;
 
   getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm>;
+  listIntegrationForms(): Promise<Array<IntegrationForm & { responseCount: number }>>;
+  createIntegrationForm(data: InsertIntegrationForm): Promise<IntegrationForm>;
+  getIntegrationFormById(id: number): Promise<IntegrationForm | undefined>;
   getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined>;
   updateIntegrationForm(id: number, data: Partial<InsertIntegrationForm>): Promise<IntegrationForm | undefined>;
+  deleteIntegrationForm(id: number): Promise<boolean>;
+  incrementIntegrationFormViews(id: number): Promise<void>;
   getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]>;
   getIntegrationResponseByEmail(formId: number, email: string): Promise<IntegrationResponse | undefined>;
   getIntegrationResponseById(id: number): Promise<IntegrationResponse | undefined>;
@@ -508,7 +513,9 @@ export class MemStorage implements IStorage {
   }
 
   async getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm> {
-    const existing = Array.from(this.integrationForms.values())[0];
+    const existing = Array.from(this.integrationForms.values()).find(
+      (form) => form.slug === DEFAULT_INTEGRATION_SLUG,
+    );
     if (existing) return existing;
     const id = this.currentIntegrationFormIds++;
     const form: IntegrationForm = {
@@ -519,11 +526,50 @@ export class MemStorage implements IStorage {
       spreadsheetId: null,
       spreadsheetTab: "Respuestas",
       isPublished: true,
+      pinnedAt: null,
+      viewCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     this.integrationForms.set(id, form);
     return form;
+  }
+
+  async listIntegrationForms(): Promise<Array<IntegrationForm & { responseCount: number }>> {
+    const forms = Array.from(this.integrationForms.values());
+    forms.sort((a, b) => {
+      const ap = a.pinnedAt?.getTime() ?? 0;
+      const bp = b.pinnedAt?.getTime() ?? 0;
+      if (ap !== bp) return bp - ap;
+      return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0);
+    });
+    return forms.map((form) => ({
+      ...form,
+      responseCount: Array.from(this.integrationResponses.values()).filter((r) => r.formId === form.id).length,
+    }));
+  }
+
+  async createIntegrationForm(data: InsertIntegrationForm): Promise<IntegrationForm> {
+    const id = this.currentIntegrationFormIds++;
+    const form: IntegrationForm = {
+      id,
+      title: data.title,
+      slug: data.slug,
+      schema: data.schema,
+      spreadsheetId: data.spreadsheetId ?? null,
+      spreadsheetTab: data.spreadsheetTab ?? "Respuestas",
+      isPublished: data.isPublished ?? true,
+      pinnedAt: data.pinnedAt ?? null,
+      viewCount: data.viewCount ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.integrationForms.set(id, form);
+    return form;
+  }
+
+  async getIntegrationFormById(id: number): Promise<IntegrationForm | undefined> {
+    return this.integrationForms.get(id);
   }
 
   async getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined> {
@@ -536,6 +582,21 @@ export class MemStorage implements IStorage {
     const updated: IntegrationForm = { ...form, ...data, updatedAt: new Date() };
     this.integrationForms.set(id, updated);
     return updated;
+  }
+
+  async deleteIntegrationForm(id: number): Promise<boolean> {
+    const form = this.integrationForms.get(id);
+    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG) return false;
+    Array.from(this.integrationResponses.entries()).forEach(([rid, response]) => {
+      if (response.formId === id) this.integrationResponses.delete(rid);
+    });
+    return this.integrationForms.delete(id);
+  }
+
+  async incrementIntegrationFormViews(id: number): Promise<void> {
+    const form = this.integrationForms.get(id);
+    if (!form) return;
+    this.integrationForms.set(id, { ...form, viewCount: (form.viewCount ?? 0) + 1 });
   }
 
   async getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]> {
@@ -915,7 +976,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm> {
-    const [existing] = await db.select().from(integrationForms).limit(1);
+    const [existing] = await db
+      .select()
+      .from(integrationForms)
+      .where(eq(integrationForms.slug, DEFAULT_INTEGRATION_SLUG))
+      .limit(1);
     if (existing) {
       const current = existing.schema;
       const synced = syncOfficialCopy(current);
@@ -935,8 +1000,48 @@ export class DatabaseStorage implements IStorage {
       schema: DEFAULT_INTEGRATION_FORM,
       isPublished: true,
       spreadsheetTab: "Respuestas",
+      viewCount: 0,
     }).returning();
     return created;
+  }
+
+  async listIntegrationForms(): Promise<Array<IntegrationForm & { responseCount: number }>> {
+    const forms = await db
+      .select()
+      .from(integrationForms)
+      .orderBy(sql`${integrationForms.pinnedAt} DESC NULLS LAST`, desc(integrationForms.createdAt));
+
+    if (forms.length === 0) return [];
+
+    const counts = await db
+      .select({
+        formId: integrationResponses.formId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(integrationResponses)
+      .groupBy(integrationResponses.formId);
+
+    const countMap = new Map(counts.map((row) => [row.formId, Number(row.count)]));
+    return forms.map((form) => ({
+      ...form,
+      responseCount: countMap.get(form.id) ?? 0,
+    }));
+  }
+
+  async createIntegrationForm(data: InsertIntegrationForm): Promise<IntegrationForm> {
+    const [created] = await db.insert(integrationForms).values({
+      ...data,
+      spreadsheetTab: data.spreadsheetTab ?? "Respuestas",
+      isPublished: data.isPublished ?? true,
+      viewCount: data.viewCount ?? 0,
+    }).returning();
+    if (!created) throw new Error("Failed to create integration form");
+    return created;
+  }
+
+  async getIntegrationFormById(id: number): Promise<IntegrationForm | undefined> {
+    const [form] = await db.select().from(integrationForms).where(eq(integrationForms.id, id));
+    return form;
   }
 
   async getIntegrationFormBySlug(slug: string): Promise<IntegrationForm | undefined> {
@@ -951,6 +1056,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(integrationForms.id, id))
       .returning();
     return form;
+  }
+
+  async deleteIntegrationForm(id: number): Promise<boolean> {
+    const form = await this.getIntegrationFormById(id);
+    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG) return false;
+    await db.delete(integrationForms).where(eq(integrationForms.id, id));
+    return true;
+  }
+
+  async incrementIntegrationFormViews(id: number): Promise<void> {
+    await db
+      .update(integrationForms)
+      .set({ viewCount: sql`COALESCE(${integrationForms.viewCount}, 0) + 1` })
+      .where(eq(integrationForms.id, id));
   }
 
   async getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]> {

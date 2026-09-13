@@ -8,6 +8,7 @@ import {
   IntegrationFormDefinition,
   PHONE_COUNTRIES,
   buildSheetRow,
+  createBlankIntegrationForm,
   extractSpreadsheetId,
   formatAnswerForGoogleSheet,
   getAllFields,
@@ -54,6 +55,11 @@ const updateFormSchema = z.object({
   spreadsheetId: z.string().nullable().optional(),
   spreadsheetTab: z.string().optional(),
   isPublished: z.boolean().optional(),
+  pinned: z.boolean().optional(),
+});
+
+const createFormSchema = z.object({
+  title: z.string().min(1).optional(),
 });
 
 function validateAnswers(definition: IntegrationFormDefinition, answers: Record<string, unknown>) {
@@ -135,9 +141,90 @@ async function ensureTalentoAccount() {
   console.log("Created talento user: talento@ecosistemawca.com");
 }
 
+async function resolveFormBySlugParam(slugParam: string) {
+  const raw = decodeURIComponent(slugParam || "").trim();
+  if (!raw || raw === DEFAULT_INTEGRATION_SLUG) {
+    return storage.getOrCreateDefaultIntegrationForm();
+  }
+  return (await storage.getIntegrationFormBySlug(raw)) ?? undefined;
+}
+
+async function uniqueFormSlug(baseTitle: string) {
+  const base = slugify(baseTitle) || `formulario-${Date.now().toString(36)}`;
+  let candidate = base;
+  let n = 1;
+  while (await storage.getIntegrationFormBySlug(candidate)) {
+    n += 1;
+    candidate = `${base}-${n}`;
+  }
+  return candidate;
+}
+
+async function applyFormPatch(formId: number, currentSlug: string, body: unknown) {
+  const parsed = updateFormSchema.safeParse(body);
+  if (!parsed.success) {
+    return { error: { status: 400 as const, message: "Datos inválidos" } };
+  }
+
+  const patch: Record<string, unknown> = { ...parsed.data };
+  delete patch.pinned;
+
+  if (typeof parsed.data.pinned === "boolean") {
+    patch.pinnedAt = parsed.data.pinned ? new Date() : null;
+  }
+
+  if (typeof parsed.data.slug === "string") {
+    if (currentSlug === DEFAULT_INTEGRATION_SLUG) {
+      delete patch.slug;
+    } else {
+      patch.slug = slugify(parsed.data.slug) || currentSlug;
+      if (patch.slug === DEFAULT_INTEGRATION_SLUG) {
+        return { error: { status: 400 as const, message: "Ese enlace está reservado" } };
+      }
+      if (patch.slug !== currentSlug) {
+        const taken = await storage.getIntegrationFormBySlug(String(patch.slug));
+        if (taken) {
+          return { error: { status: 400 as const, message: "Ese enlace ya está en uso" } };
+        }
+      }
+    }
+  }
+
+  if (typeof parsed.data.spreadsheetId === "string") {
+    const extracted = extractSpreadsheetId(parsed.data.spreadsheetId);
+    if (!extracted) {
+      return { error: { status: 400 as const, message: "El ID o URL de Google Sheets no es válido" } };
+    }
+    patch.spreadsheetId = extracted;
+  }
+
+  if (parsed.data.schema) {
+    const nextSchema = parsed.data.schema as IntegrationFormDefinition;
+    if (!nextSchema.sections || !Array.isArray(nextSchema.sections)) {
+      return { error: { status: 400 as const, message: "El JSON del formulario no es válido" } };
+    }
+    patch.schema = nextSchema;
+    if (!parsed.data.title && nextSchema.title) {
+      patch.title = nextSchema.title;
+    }
+  }
+
+  const updated = await storage.updateIntegrationForm(formId, patch);
+  return { updated };
+}
+
+function publicFormPayload(form: Awaited<ReturnType<typeof storage.getOrCreateDefaultIntegrationForm>>) {
+  return {
+    title: form.title,
+    slug: form.slug,
+    schema: form.schema ?? DEFAULT_INTEGRATION_FORM,
+  };
+}
+
 export function registerTalentoRoutes(app: Express) {
   ensureIntegrationTables()
     .then(() => ensureTalentoAccount())
+    .then(() => storage.getOrCreateDefaultIntegrationForm())
     .catch((error) => {
       console.error("No se pudo inicializar Talento y Bienestar:", error);
     });
@@ -149,11 +236,8 @@ export function registerTalentoRoutes(app: Express) {
       if (!form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
       }
-      res.json({
-        title: form.title,
-        slug: form.slug,
-        schema: form.schema ?? DEFAULT_INTEGRATION_FORM,
-      });
+      void storage.incrementIntegrationFormViews(form.id);
+      res.json(publicFormPayload(form));
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error al cargar el formulario" });
@@ -163,15 +247,12 @@ export function registerTalentoRoutes(app: Express) {
   app.get("/api/integration/public/:slug", async (req, res) => {
     try {
       await ensureIntegrationTables();
-      const form = await storage.getIntegrationFormBySlug(req.params.slug);
+      const form = await resolveFormBySlugParam(req.params.slug);
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
       }
-      res.json({
-        title: form.title,
-        slug: form.slug,
-        schema: form.schema ?? DEFAULT_INTEGRATION_FORM,
-      });
+      void storage.incrementIntegrationFormViews(form.id);
+      res.json(publicFormPayload(form));
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error al cargar el formulario" });
@@ -181,7 +262,7 @@ export function registerTalentoRoutes(app: Express) {
   app.post("/api/integration/public/:slug/submit", async (req, res) => {
     try {
       await ensureIntegrationTables();
-      const form = await storage.getIntegrationFormBySlug(req.params.slug);
+      const form = await resolveFormBySlugParam(req.params.slug);
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
       }
@@ -207,6 +288,12 @@ export function registerTalentoRoutes(app: Express) {
       }
 
       const email = String(answers.email ?? "").trim().toLowerCase();
+      if (!isValidEmail(email)) {
+        return res.status(400).json({
+          message: "El formulario necesita un correo válido",
+          errors: { email: "Ingresa un correo válido" },
+        });
+      }
       const existing = await storage.getIntegrationResponseByEmail(form.id, email);
       if (existing) {
         return res.status(409).json({
@@ -242,6 +329,157 @@ export function registerTalentoRoutes(app: Express) {
     }
   });
 
+  app.get("/api/talento/forms", requireTalento, async (_req, res) => {
+    try {
+      await ensureIntegrationTables();
+      await storage.getOrCreateDefaultIntegrationForm();
+      const forms = await storage.listIntegrationForms();
+      res.json(forms);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error al cargar los formularios" });
+    }
+  });
+
+  app.post("/api/talento/forms", requireTalento, async (req, res) => {
+    try {
+      await ensureIntegrationTables();
+      const parsed = createFormSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos inválidos" });
+      }
+      const title = parsed.data.title?.trim() || "Formulario sin título";
+      const slug = await uniqueFormSlug(title);
+      const schema = createBlankIntegrationForm(title);
+      const created = await storage.createIntegrationForm({
+        title,
+        slug,
+        schema,
+        isPublished: true,
+        spreadsheetTab: "Respuestas",
+        spreadsheetId: null,
+        pinnedAt: null,
+        viewCount: 0,
+      });
+      res.status(201).json(created);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo crear el formulario" });
+    }
+  });
+
+  app.get("/api/talento/forms/:slug", requireTalento, async (req, res) => {
+    try {
+      await ensureIntegrationTables();
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      res.json({
+        ...form,
+        googleServiceEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? null,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error al cargar el formulario" });
+    }
+  });
+
+  app.patch("/api/talento/forms/:slug", requireTalento, async (req, res) => {
+    try {
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      const result = await applyFormPatch(form.id, form.slug, req.body);
+      if ("error" in result && result.error) {
+        return res.status(result.error.status).json({ message: result.error.message });
+      }
+      res.json(result.updated);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo guardar el formulario" });
+    }
+  });
+
+  app.delete("/api/talento/forms/:slug", requireTalento, async (req, res) => {
+    try {
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      if (form.slug === DEFAULT_INTEGRATION_SLUG) {
+        return res.status(400).json({ message: "El formulario de integración no se puede eliminar" });
+      }
+      const ok = await storage.deleteIntegrationForm(form.id);
+      if (!ok) return res.status(400).json({ message: "No se pudo eliminar" });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo eliminar el formulario" });
+    }
+  });
+
+  app.get("/api/talento/forms/:slug/responses", requireTalento, async (req, res) => {
+    try {
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      const search = typeof req.query.q === "string" ? req.query.q : undefined;
+      const responses = await storage.getIntegrationResponses(form.id, search);
+      res.json(responses);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error al cargar las respuestas" });
+    }
+  });
+
+  app.get("/api/talento/forms/:slug/template.csv", requireTalento, async (req, res) => {
+    try {
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
+      const headers = getSheetHeaders(definition);
+      const csv = "\uFEFF" + headers.map(csvEscape).join(",") + "\n";
+      const tab =
+        typeof req.query.tab === "string" && req.query.tab.trim()
+          ? req.query.tab
+          : form.spreadsheetTab || "Respuestas";
+      const filename = sheetTabFilename(tab);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(csv);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo generar la plantilla" });
+    }
+  });
+
+  app.get("/api/talento/forms/:slug/export.csv", requireTalento, async (req, res) => {
+    try {
+      const form = await resolveFormBySlugParam(req.params.slug);
+      if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
+      const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
+      const headers = getSheetHeaders(definition);
+      const responses = await storage.getIntegrationResponses(form.id);
+      const lines = [
+        headers.map(csvEscape).join(","),
+        ...responses.map((item) => {
+          const submittedAt = item.submittedAt ?? new Date();
+          const row = buildSheetRow(
+            definition,
+            item.answers as Record<string, unknown>,
+            submittedAt,
+            `WCA-INT-${item.id}`,
+          );
+          return row.map(csvEscape).join(",");
+        }),
+      ];
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="respuestas-${form.slug}.csv"`,
+      );
+      res.send("\uFEFF" + lines.join("\n"));
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo exportar" });
+    }
+  });
+
   app.get("/api/talento/form", requireTalento, async (_req, res) => {
     try {
       await ensureIntegrationTables();
@@ -259,41 +497,11 @@ export function registerTalentoRoutes(app: Express) {
   app.patch("/api/talento/form", requireTalento, async (req, res) => {
     try {
       const form = await storage.getOrCreateDefaultIntegrationForm();
-      const parsed = updateFormSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Datos inválidos" });
+      const result = await applyFormPatch(form.id, form.slug, req.body);
+      if ("error" in result && result.error) {
+        return res.status(result.error.status).json({ message: result.error.message });
       }
-
-      const patch: Record<string, unknown> = { ...parsed.data };
-      if (typeof parsed.data.slug === "string") {
-        patch.slug = slugify(parsed.data.slug) || DEFAULT_INTEGRATION_SLUG;
-        if (patch.slug !== form.slug) {
-          const taken = await storage.getIntegrationFormBySlug(String(patch.slug));
-          if (taken) {
-            return res.status(400).json({ message: "Ese enlace ya está en uso" });
-          }
-        }
-      }
-      if (typeof parsed.data.spreadsheetId === "string") {
-        const extracted = extractSpreadsheetId(parsed.data.spreadsheetId);
-        if (!extracted) {
-          return res.status(400).json({ message: "El ID o URL de Google Sheets no es válido" });
-        }
-        patch.spreadsheetId = extracted;
-      }
-      if (parsed.data.schema) {
-        const nextSchema = parsed.data.schema as IntegrationFormDefinition;
-        if (!nextSchema.sections || !Array.isArray(nextSchema.sections)) {
-          return res.status(400).json({ message: "El JSON del formulario no es válido" });
-        }
-        patch.schema = nextSchema;
-        if (!parsed.data.title && nextSchema.title) {
-          patch.title = nextSchema.title;
-        }
-      }
-
-      const updated = await storage.updateIntegrationForm(form.id, patch);
-      res.json(updated);
+      res.json(result.updated);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "No se pudo guardar el formulario" });
@@ -324,10 +532,14 @@ export function registerTalentoRoutes(app: Express) {
         return res.status(400).json({ message: "Falta el campo a editar" });
       }
 
-      const form = await storage.getOrCreateDefaultIntegrationForm();
       const existing = await storage.getIntegrationResponseById(responseId);
-      if (!existing || existing.formId !== form.id) {
+      if (!existing) {
         return res.status(404).json({ message: "Respuesta no encontrada" });
+      }
+
+      const form = await storage.getIntegrationFormById(existing.formId);
+      if (!form) {
+        return res.status(404).json({ message: "Formulario no encontrado" });
       }
 
       const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
@@ -393,14 +605,13 @@ export function registerTalentoRoutes(app: Express) {
       if (form.spreadsheetId) {
         try {
           const fieldIndex = fields.findIndex((item) => item.id === fieldId);
-          // Columnas: 0 Fecha, 1 ID, 2... campos
           const columnIndex = fieldIndex + 2;
           await updateIntegrationCellInSheet(
             form.spreadsheetId,
             form.spreadsheetTab || "Respuestas",
             `WCA-INT-${responseId}`,
             columnIndex,
-            formatAnswerForGoogleSheet(field, answers[fieldId]),
+            formatAnswerForGoogleSheet(field, (answers as Record<string, unknown>)[fieldId]),
           );
           sheetUpdated = true;
         } catch (sheetError) {
@@ -425,9 +636,8 @@ export function registerTalentoRoutes(app: Express) {
         typeof req.query.tab === "string" && req.query.tab.trim()
           ? req.query.tab
           : form.spreadsheetTab || "Respuestas";
-      const filename = sheetTabFilename(tab);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${sheetTabFilename(tab)}"`);
       res.send(csv);
     } catch (error) {
       console.error(error);

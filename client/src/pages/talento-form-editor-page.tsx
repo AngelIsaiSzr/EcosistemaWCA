@@ -13,21 +13,38 @@ import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
 import { IntegrationFormBuilder } from "@/components/talento/form-builder";
-import { DEFAULT_INTEGRATION_FORM, IntegrationFormDefinition } from "@shared/integration-form";
+import {
+  DEFAULT_INTEGRATION_FORM,
+  DEFAULT_INTEGRATION_SLUG,
+  IntegrationFormDefinition,
+} from "@shared/integration-form";
 import { IntegrationForm } from "@shared/schema";
 
-export default function TalentoFormEditorPage() {
+export default function TalentoFormEditorPage({
+  params,
+}: {
+  params?: Record<string | number, string | undefined>;
+}) {
+  const formSlug = params?.slug || DEFAULT_INTEGRATION_SLUG;
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("integracion");
+  const [slug, setSlug] = useState(formSlug);
   const [published, setPublished] = useState(true);
   const [definition, setDefinition] = useState<IntegrationFormDefinition>(DEFAULT_INTEGRATION_FORM);
+  const isOfficial = formSlug === DEFAULT_INTEGRATION_SLUG;
 
-  const { data: form, isLoading: formLoading } = useQuery<IntegrationForm>({
-    queryKey: ["/api/talento/form"],
-    enabled: user?.role === "talento",
+  const { data: form, isLoading: formLoading, isError } = useQuery<IntegrationForm>({
+    queryKey: ["/api/talento/forms", formSlug],
+    queryFn: async () => {
+      const res = await fetch(`/api/talento/forms/${encodeURIComponent(formSlug)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("No se pudo cargar el formulario");
+      return res.json();
+    },
+    enabled: user?.role === "talento" && !!formSlug,
   });
 
   useEffect(() => {
@@ -46,19 +63,21 @@ export default function TalentoFormEditorPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("PATCH", "/api/talento/form", {
+      const res = await apiRequest("PATCH", `/api/talento/forms/${encodeURIComponent(formSlug)}`, {
         title,
-        slug,
+        slug: isOfficial ? DEFAULT_INTEGRATION_SLUG : slug,
         isPublished: published,
         schema: { ...definition, title: definition.title || title },
       });
-      return res.json();
+      return res.json() as Promise<IntegrationForm>;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/talento/form"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/talento/responses"] });
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
       queryClient.invalidateQueries({ queryKey: ["/api/integration/public"] });
       toast({ title: "Formulario guardado" });
+      if (updated?.slug && updated.slug !== formSlug) {
+        navigate(`/talento/${updated.slug}/editar`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
@@ -73,17 +92,31 @@ export default function TalentoFormEditorPage() {
     );
   }
 
+  if (isError || !form) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Formulario no encontrado.</p>
+        <Button asChild variant="outline">
+          <Link href="/talento">Volver</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <Helmet>
-        <title>Editar formulario | Talento y Bienestar</title>
+        <title>Editar · {form.title} | Talento y Bienestar</title>
       </Helmet>
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <Link href="/talento" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                href={`/talento/${formSlug}`}
+                className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
                 <ArrowLeft className="h-4 w-4" />
                 Volver al panel
               </Link>
@@ -92,7 +125,11 @@ export default function TalentoFormEditorPage() {
                 Arrastra preguntas entre secciones, edita textos y configura la apariencia. Al guardar, la tabla de respuestas y la plantilla CSV siguen el nuevo orden.
               </p>
             </div>
-            <Button className="bg-[#5b8fd4] hover:bg-[#4a7fc4]" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+            >
               <Save className="h-4 w-4" />
               {saveMutation.isPending ? "Guardando..." : "Guardar cambios"}
             </Button>
@@ -101,14 +138,27 @@ export default function TalentoFormEditorPage() {
           <div className="mb-6 grid gap-4 rounded-2xl border bg-card p-5 md:grid-cols-3">
             <div>
               <Label>Título público</Label>
-              <Input className="mt-1" value={title} onChange={(e) => { setTitle(e.target.value); setDefinition((prev) => ({ ...prev, title: e.target.value })); }} />
+              <Input
+                className="mt-1"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setDefinition((prev) => ({ ...prev, title: e.target.value }));
+                }}
+              />
             </div>
             <div>
               <Label>Enlace (slug)</Label>
-              <Input className="mt-1" value={slug} onChange={(e) => setSlug(e.target.value)} />
+              <Input
+                className="mt-1"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                disabled={isOfficial}
+              />
               <p className="mt-1 text-xs text-muted-foreground">
                 {typeof window !== "undefined" ? window.location.origin : ""}
-                {!slug || slug === "integracion" ? "/integracion" : `/f/${slug}`}
+                {!slug || slug === DEFAULT_INTEGRATION_SLUG ? "/integracion" : `/f/${slug}`}
+                {isOfficial ? " · enlace fijo de integración" : ""}
               </p>
             </div>
             <label className="flex items-center justify-between rounded-xl border px-4">
