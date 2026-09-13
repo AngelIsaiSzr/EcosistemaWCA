@@ -151,31 +151,34 @@ export function IntegrationFormBuilder({
   };
 
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="space-y-3 rounded-2xl border bg-card p-4 xl:sticky xl:top-24">
+    <div className="grid w-full min-w-0 max-w-full items-start gap-4 overflow-x-hidden sm:gap-6 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+      <aside className="min-w-0 max-w-full space-y-3 overflow-hidden rounded-2xl border bg-card p-3 sm:p-4 xl:sticky xl:top-24">
         <NavButton active={selection.kind === "settings"} onClick={() => setSelection({ kind: "settings" })}>
-          <Settings2 className="h-4 w-4" />
-          Configuración y apariencia
+          <Settings2 className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">Configuración y apariencia</span>
         </NavButton>
         <NavButton active={selection.kind === "welcome"} onClick={() => setSelection({ kind: "welcome" })}>
-          <Sparkles className="h-4 w-4" />
-          Pantalla de bienvenida
+          <Sparkles className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">Pantalla de bienvenida</span>
         </NavButton>
         <NavButton active={selection.kind === "ending"} onClick={() => setSelection({ kind: "ending" })}>
-          <Flag className="h-4 w-4" />
-          Pantalla final
+          <Flag className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">Pantalla final</span>
         </NavButton>
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between gap-2 pt-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Secciones</p>
-          <Button size="sm" variant="ghost" onClick={addSection}>
+          <Button size="sm" variant="ghost" className="shrink-0" onClick={addSection}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           {value.sections.map((section, sectionIndex) => (
             <div
               key={section.id}
-              className={cn("rounded-xl border", dropHint === `section-${sectionIndex}` && "border-[#5b8fd4] bg-[#5b8fd4]/10")}
+              className={cn(
+                "min-w-0 overflow-hidden rounded-xl border",
+                dropHint === `section-${sectionIndex}` && "border-[#5b8fd4] bg-[#5b8fd4]/10",
+              )}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDropHint(`section-${sectionIndex}`);
@@ -185,28 +188,28 @@ export function IntegrationFormBuilder({
                 applyDrop({ sectionIndex, fieldIndex: section.fields.length });
               }}
             >
-              <div className="flex items-center gap-1 p-1">
-                <button type="button" className="p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex - 1) })}>
+              <div className="flex min-w-0 items-center gap-0.5 p-1">
+                <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex - 1) })}>
                   <ChevronUp className="h-4 w-4" />
                 </button>
-                <button type="button" className="p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex + 1) })}>
+                <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex + 1) })}>
                   <ChevronDown className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelection({ kind: "section", sectionIndex })}
                   className={cn(
-                    "flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm font-medium",
+                    "min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm font-medium",
                     selection.kind === "section" && selection.sectionIndex === sectionIndex && "bg-[#5b8fd4]/15 text-[#5b8fd4]",
                   )}
                 >
                   {section.title || "Sin título"}
                 </button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => addField(sectionIndex)}>
+                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => addField(sectionIndex)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="space-y-1 px-2 pb-2">
+              <div className="min-w-0 space-y-1 px-2 pb-2">
                 {section.fields.map((field, fieldIndex) => (
                   <div
                     key={field.id}
@@ -227,7 +230,7 @@ export function IntegrationFormBuilder({
                       applyDrop({ sectionIndex, fieldIndex });
                     }}
                     className={cn(
-                      "flex cursor-grab items-center gap-1 active:cursor-grabbing",
+                      "flex min-w-0 cursor-grab items-center gap-1 active:cursor-grabbing",
                       dropHint === `field-${sectionIndex}-${fieldIndex}` && "rounded-lg ring-1 ring-[#5b8fd4]",
                     )}
                   >
@@ -236,7 +239,7 @@ export function IntegrationFormBuilder({
                       type="button"
                       onClick={() => setSelection({ kind: "field", sectionIndex, fieldIndex })}
                       className={cn(
-                        "flex-1 truncate rounded-lg px-2 py-1 text-left text-xs",
+                        "min-w-0 flex-1 truncate rounded-lg px-2 py-1 text-left text-xs",
                         selection.kind === "field" &&
                           selection.sectionIndex === sectionIndex &&
                           selection.fieldIndex === fieldIndex &&
@@ -245,10 +248,10 @@ export function IntegrationFormBuilder({
                     >
                       {field.label}
                     </button>
-                    <button type="button" className="p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex - 1) })}>
+                    <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex - 1) })}>
                       <ChevronUp className="h-3 w-3" />
                     </button>
-                    <button type="button" className="p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex + 1) })}>
+                    <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex + 1) })}>
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </div>
@@ -262,7 +265,7 @@ export function IntegrationFormBuilder({
         </div>
       </aside>
 
-      <section className="h-fit rounded-2xl border bg-card p-5">
+      <section className="h-fit min-w-0 max-w-full overflow-hidden rounded-2xl border bg-card p-4 sm:p-5">
         {selection.kind === "settings" && (
           <AppearanceEditor theme={value.theme} onChange={updateTheme} />
         )}
@@ -367,77 +370,82 @@ function AppearanceEditor({
     !imagePath || imagePath === "/logo-wca.png" || imagePath === WCA_LOGO_URL ? "" : imagePath;
 
   return (
-    <div className="space-y-5">
-      <div>
+    <div className="min-w-0 max-w-full space-y-5 overflow-hidden">
+      <div className="min-w-0">
         <h2 className="font-heading text-xl font-semibold">Apariencia</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 break-words text-sm text-muted-foreground">
           Elige un estilo de marca WCA. El color base siempre se puede ajustar; las opciones de imagen
           solo aparecen con «Imagen propia».
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {APPEARANCE_PRESETS.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => onChange({ background: item.id })}
             className={cn(
-              "rounded-xl border p-3 text-left transition",
+              "min-w-0 rounded-xl border p-3 text-left transition",
               preset === item.id ? "border-[#5b8fd4] bg-[#5b8fd4]/10" : "hover:bg-muted",
             )}
           >
             <p className="text-sm font-medium">{item.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
+            <p className="mt-1 break-words text-xs text-muted-foreground">{item.hint}</p>
           </button>
         ))}
       </div>
 
-      <div className={cn("grid gap-4 rounded-xl border p-4", isCustom ? "md:grid-cols-2" : "md:grid-cols-2")}>
-        <div>
+      <div className={cn("grid min-w-0 gap-4 overflow-hidden rounded-xl border p-3 sm:p-4", "md:grid-cols-2")}>
+        <div className="min-w-0">
           <Label>Color de fondo</Label>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex min-w-0 items-center gap-2">
             <input
               type="color"
               aria-label="Color de fondo"
-              className="h-10 w-12 cursor-pointer rounded-md border bg-transparent p-0.5"
+              className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
               value={/^#[0-9a-fA-F]{6}$/.test(theme?.backgroundColor ?? "") ? theme!.backgroundColor! : "#0b1220"}
               onChange={(e) => onChange({ backgroundColor: e.target.value })}
             />
             <Input
+              className="min-w-0 flex-1"
               value={theme?.backgroundColor ?? "#0b1220"}
               onChange={(e) => onChange({ backgroundColor: e.target.value })}
               placeholder="#0b1220"
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 break-words text-xs text-muted-foreground">
             Color base del formulario. Luces y efectos del tema se mantienen encima.
           </p>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <Label>Velo oscuro ({theme?.overlayOpacity ?? 0}%)</Label>
           <Slider
-            className="mt-4"
+            className="mt-4 w-full max-w-full"
             min={0}
             max={100}
             step={1}
             value={[theme?.overlayOpacity ?? 0]}
             onValueChange={([value]) => onChange({ overlayOpacity: value ?? 0 })}
           />
-          <p className="mt-1 text-xs text-muted-foreground">Oscurece un poco el fondo para mejorar el contraste del texto.</p>
+          <p className="mt-1 break-words text-xs text-muted-foreground">
+            Oscurece un poco el fondo para mejorar el contraste del texto.
+          </p>
         </div>
 
         {isCustom && (
           <>
-            <Field
-              label="URL o ruta de la imagen"
-              value={imageFieldValue}
-              onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
-            />
-            <div>
+            <div className="min-w-0">
+              <Field
+                label="URL o ruta de la imagen"
+                value={imageFieldValue}
+                onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
+              />
+            </div>
+            <div className="min-w-0">
               <Label>Encaje</Label>
               <Select value={theme?.imageFit ?? "cover"} onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cover">Cubrir (cover)</SelectItem>
                   <SelectItem value="contain">Contener (contain)</SelectItem>
@@ -445,10 +453,10 @@ function AppearanceEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>Posición</Label>
               <Select value={theme?.imagePosition ?? "center"} onValueChange={(imagePosition) => onChange({ imagePosition: imagePosition as IntegrationImagePosition })}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="center">Centro</SelectItem>
                   <SelectItem value="top">Arriba</SelectItem>
@@ -462,30 +470,30 @@ function AppearanceEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>Anclaje</Label>
               <Select value={theme?.imageAttachment ?? "fixed"} onValueChange={(imageAttachment) => onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fixed">Fijo (no se mueve al hacer scroll)</SelectItem>
                   <SelectItem value="scroll">Se mueve con el contenido</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>Repetición</Label>
               <Select value={theme?.imageRepeat ?? "no-repeat"} onValueChange={(imageRepeat) => onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="no-repeat">Sin repetir</SelectItem>
                   <SelectItem value="repeat">Repetir</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>Opacidad de la imagen ({theme?.imageOpacity ?? 28}%)</Label>
               <Slider
-                className="mt-4"
+                className="mt-4 w-full max-w-full"
                 min={0}
                 max={100}
                 step={1}
@@ -493,7 +501,7 @@ function AppearanceEditor({
                 onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
               />
             </div>
-            <p className="text-xs text-muted-foreground md:col-span-2">
+            <p className="break-words text-xs text-muted-foreground md:col-span-2">
               Sube el archivo a <code>client/public/</code> (por ejemplo <code>/fondo-integracion.jpg</code>) o pega una URL https.
             </p>
           </>
@@ -505,18 +513,18 @@ function AppearanceEditor({
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <div>
+    <div className="min-w-0">
       <Label>{label}</Label>
-      <Input className="mt-1" value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input className="mt-1 min-w-0 max-w-full" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
 
 function Area({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <div>
+    <div className="min-w-0">
       <Label>{label}</Label>
-      <Textarea className="mt-1 min-h-[90px]" value={value} onChange={(e) => onChange(e.target.value)} />
+      <Textarea className="mt-1 min-h-[90px] min-w-0 max-w-full" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
@@ -533,11 +541,11 @@ function SectionEditor({
   onAddField: () => void;
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
+    <div className="grid min-w-0 gap-4 md:grid-cols-2">
+      <div className="min-w-0 space-y-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-heading text-xl font-semibold">Sección</h2>
-          <Button variant="outline" onClick={onDelete}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
             Eliminar
           </Button>
@@ -545,15 +553,15 @@ function SectionEditor({
         <Field label="Título de la sección" value={section.title} onChange={(title) => onChange({ title })} />
         <Field label="Subtítulo" value={section.subtitle ?? ""} onChange={(subtitle) => onChange({ subtitle })} />
       </div>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-          <div>
+      <div className="min-w-0 space-y-4">
+        <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+          <div className="min-w-0">
             <p className="text-sm font-medium">Pantalla de bienvenida</p>
-            <p className="text-xs text-muted-foreground">Sin preguntas; solo título e Iniciar.</p>
+            <p className="break-words text-xs text-muted-foreground">Sin preguntas; solo título e Iniciar.</p>
           </div>
           <Switch checked={Boolean(section.isWelcome)} onCheckedChange={(isWelcome) => onChange({ isWelcome })} />
         </div>
-        <Button onClick={onAddField}>
+        <Button className="w-full sm:w-auto" onClick={onAddField}>
           <Plus className="h-4 w-4" />
           Agregar pregunta
         </Button>
@@ -581,12 +589,12 @@ function FieldEditor({
 }) {
   const isChoice = field.type === "single_choice" || field.type === "multiple_choice";
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="min-w-0 max-w-full space-y-4 overflow-hidden">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="font-heading text-xl font-semibold">Pregunta</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select value={String(sectionIndex)} onValueChange={(next) => onMove(Number(next))}>
-            <SelectTrigger className="h-9 w-[220px]">
+            <SelectTrigger className="h-9 w-full min-w-0 sm:w-[220px]">
               <SelectValue placeholder="Mover a sección" />
             </SelectTrigger>
             <SelectContent>
@@ -597,14 +605,14 @@ function FieldEditor({
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={onDelete}>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
             Eliminar
           </Button>
         </div>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <Field label="Texto de la pregunta" value={field.label} onChange={(label) => onChange({ label })} />
           <div>
@@ -694,8 +702,9 @@ function FieldEditor({
             </Button>
           </div>
           {(field.options ?? []).map((option, index) => (
-            <div key={option.value} className="grid gap-2 rounded-xl border p-3 md:grid-cols-[1fr_120px_auto]">
+            <div key={option.value} className="grid min-w-0 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_120px_auto]">
               <Input
+                className="min-w-0"
                 value={option.label}
                 onChange={(e) => {
                   const options = (field.options ?? []).map((item, i) => (i === index ? { ...item, label: e.target.value } : item));

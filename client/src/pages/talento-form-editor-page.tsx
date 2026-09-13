@@ -108,11 +108,11 @@ export default function TalentoFormEditorPage({
       <Helmet>
         <title>Editar · {form.title} | Talento y Bienestar</title>
       </Helmet>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen overflow-x-hidden bg-background">
         <Navbar />
-        <main className="container mx-auto px-4 pb-16 pt-24">
+        <main className="container mx-auto max-w-full px-4 pb-16 pt-24">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <Link
                 href={`/talento/${formSlug}`}
                 className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -120,13 +120,13 @@ export default function TalentoFormEditorPage({
                 <ArrowLeft className="h-4 w-4" />
                 Volver al panel
               </Link>
-              <h1 className="font-heading text-3xl font-bold">Editar formulario</h1>
-              <p className="mt-1 text-muted-foreground">
+              <h1 className="font-heading text-2xl font-bold sm:text-3xl">Editar formulario</h1>
+              <p className="mt-1 break-words text-sm text-muted-foreground sm:text-base">
                 Arrastra preguntas entre secciones, edita textos y configura la apariencia. Al guardar, la tabla de respuestas y la plantilla CSV siguen el nuevo orden.
               </p>
             </div>
             <Button
-              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+              className="w-full shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4] sm:w-auto"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
             >
@@ -135,11 +135,11 @@ export default function TalentoFormEditorPage({
             </Button>
           </div>
 
-          <div className="mb-6 grid gap-4 rounded-2xl border bg-card p-5 md:grid-cols-3">
-            <div>
+          <div className="mb-6 grid min-w-0 gap-4 rounded-2xl border bg-card p-4 sm:p-5 md:grid-cols-3">
+            <div className="min-w-0">
               <Label>Título público</Label>
               <Input
-                className="mt-1"
+                className="mt-1 min-w-0"
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
@@ -147,22 +147,22 @@ export default function TalentoFormEditorPage({
                 }}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>Enlace (slug)</Label>
               <Input
-                className="mt-1"
+                className="mt-1 min-w-0"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 disabled={isOfficial}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 break-all text-xs text-muted-foreground">
                 {typeof window !== "undefined" ? window.location.origin : ""}
                 {!slug || slug === DEFAULT_INTEGRATION_SLUG ? "/integracion" : `/f/${slug}`}
                 {isOfficial ? " · enlace fijo de integración" : ""}
               </p>
             </div>
-            <label className="flex items-center justify-between rounded-xl border px-4">
-              <div>
+            <label className="flex min-w-0 items-center justify-between gap-3 rounded-xl border px-3 py-3 sm:px-4">
+              <div className="min-w-0">
                 <p className="text-sm font-medium">Publicado</p>
                 <p className="text-xs text-muted-foreground">Si se apaga, el enlace deja de funcionar.</p>
               </div>
@@ -170,7 +170,9 @@ export default function TalentoFormEditorPage({
             </label>
           </div>
 
-          <IntegrationFormBuilder value={definition} onChange={setDefinition} />
+          <div className="min-w-0 max-w-full">
+            <IntegrationFormBuilder value={definition} onChange={setDefinition} />
+          </div>
         </main>
       </div>
     </>
