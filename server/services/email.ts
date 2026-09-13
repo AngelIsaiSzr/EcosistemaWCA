@@ -9,6 +9,15 @@ export interface EmailData {
   name: string;
 }
 
+export interface TransactionalEmailData {
+  to: string | string[];
+  subject: string;
+  text: string;
+  html?: string;
+  replyTo?: string;
+  fromName?: string;
+}
+
 // Configuración del transportador de correo
 if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
   console.error('Error: Las credenciales de correo no están configuradas correctamente');
@@ -16,7 +25,6 @@ if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
   console.error('SMTP_PASS:', process.env.SMTP_PASS ? 'Configurado' : 'No configurado');
 }
 
-// Log de la configuración (sin mostrar la contraseña)
 console.log('Configuración SMTP:', {
   user: process.env.SMTP_USER,
   pass: process.env.SMTP_PASS ? '****' : 'No configurado',
@@ -32,33 +40,58 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  debug: true, // Habilitar logs de debug
-  logger: true // Habilitar logs del transportador
+  debug: true,
+  logger: true
 });
 
-// Verificar la conexión
 transporter.verify(function (err: Error | null, success: true) {
   if (err) {
     console.error('Error al verificar el transportador de correo:', err);
     const error = err as Error & { code?: string };
     if (error.code === 'EAUTH') {
-      console.error('Error de autenticación. Verifica que las credenciales SMTP_USER y SMTP_PASS estén configuradas correctamente en las variables de entorno.');
-      console.error('SMTP_USER:', process.env.SMTP_USER);
-      console.error('SMTP_PASS:', process.env.SMTP_PASS ? '****' : 'No configurado');
+      console.error('Error de autenticación. Verifica SMTP_USER y SMTP_PASS.');
     }
   } else {
     console.log('Servidor listo para enviar correos');
   }
 });
 
+const defaultFrom = () =>
+  `"Ecosistema WCA" <${process.env.SMTP_USER || 'contacto@ecosistemawca.com'}>`;
+
+export async function sendTransactionalEmail(data: TransactionalEmailData): Promise<void> {
+  try {
+    const to = Array.isArray(data.to) ? data.to.join(', ') : data.to;
+    const mailOptions = {
+      from: data.fromName
+        ? `"${data.fromName}" <${process.env.SMTP_USER || 'contacto@ecosistemawca.com'}>`
+        : defaultFrom(),
+      to,
+      replyTo: data.replyTo,
+      subject: data.subject,
+      text: data.text,
+      html: data.html ?? data.text.replace(/\n/g, '<br>'),
+    };
+
+    console.log('Enviando correo transaccional a:', to, '|', data.subject);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Correo enviado:', info.response);
+  } catch (error) {
+    console.error('Error al enviar correo transaccional:', error);
+    throw new Error('No se pudo enviar el correo electrónico');
+  }
+}
+
 export async function sendEmail(data: EmailData): Promise<void> {
   try {
     const mailOptions = {
-      from: `"Ecosistema WCA" <${process.env.SMTP_USER || 'contacto@ecosistemawca.com'}>`,
+      from: defaultFrom(),
       to: data.to,
       replyTo: data.from,
       subject: data.subject,
-      text: `
+      text: data.html
+        ? data.text
+        : `
 Nuevo mensaje de contacto:
 Nombre: ${data.name}
 Email: ${data.from}
@@ -75,24 +108,10 @@ ${data.text}
     };
 
     console.log('Intentando enviar correo a:', data.to);
-    console.log('Configuración del correo:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject
-    });
-
     const info = await transporter.sendMail(mailOptions);
     console.log('Correo enviado:', info.response);
   } catch (error) {
     console.error('Error al enviar el correo:', error);
-    if (error instanceof Error) {
-      console.error('Detalles del error:', {
-        message: error.message,
-        stack: error.stack,
-        code: (error as any).code,
-        response: (error as any).response
-      });
-    }
     throw new Error('No se pudo enviar el correo electrónico');
   }
-} 
+}

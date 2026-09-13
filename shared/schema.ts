@@ -185,6 +185,42 @@ export const liveCourseRegistrations = pgTable("live_course_registrations", {
   registeredAt: timestamp("registered_at").defaultNow(),
 });
 
+/** Configuración de recordatorios semanales a directores. */
+export const emailAutomationSettings = pgTable("email_automation_settings", {
+  id: serial("id").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
+  startDate: text("start_date").notNull().default("2026-09-14"),
+  /** Hora local America/Mexico_City (0-23) para el envío semanal. */
+  sendHour: integer("send_hour").notNull().default(9),
+  /** 1 = lunes … 7 = domingo (ISO). */
+  sendWeekday: integer("send_weekday").notNull().default(1),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailWeekTemplates = pgTable("email_week_templates", {
+  id: serial("id").primaryKey(),
+  weekIndex: integer("week_index").notNull().unique(),
+  label: text("label").notNull(),
+  subject: text("subject").notNull(),
+  bodyText: text("body_text").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailAutomationLogs = pgTable("email_automation_logs", {
+  id: serial("id").primaryKey(),
+  kind: text("kind").notNull(), // weekly | test | integration
+  weekIndex: integer("week_index"),
+  templateId: integer("template_id"),
+  recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
+  subject: text("subject").notNull().default(""),
+  status: text("status").notNull(), // sent | error
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -260,6 +296,16 @@ export const insertIntegrationResponseSchema = createInsertSchema(integrationRes
   submittedAt: true,
 });
 
+export const insertEmailAutomationSettingsSchema = createInsertSchema(emailAutomationSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertEmailWeekTemplateSchema = createInsertSchema(emailWeekTemplates).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types for insertion
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
@@ -275,6 +321,8 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertLiveCourseRegistration = z.infer<typeof insertLiveCourseRegistrationSchema>;
 export type InsertIntegrationForm = z.infer<typeof insertIntegrationFormSchema>;
 export type InsertIntegrationResponse = z.infer<typeof insertIntegrationResponseSchema>;
+export type InsertEmailAutomationSettings = z.infer<typeof insertEmailAutomationSettingsSchema>;
+export type InsertEmailWeekTemplate = z.infer<typeof insertEmailWeekTemplateSchema>;
 
 // Types for selection
 export type User = typeof users.$inferSelect;
@@ -291,3 +339,6 @@ export type Contact = typeof contacts.$inferSelect;
 export type LiveCourseRegistration = typeof liveCourseRegistrations.$inferSelect;
 export type IntegrationForm = typeof integrationForms.$inferSelect;
 export type IntegrationResponse = typeof integrationResponses.$inferSelect;
+export type EmailAutomationSettings = typeof emailAutomationSettings.$inferSelect;
+export type EmailWeekTemplate = typeof emailWeekTemplates.$inferSelect;
+export type EmailAutomationLog = typeof emailAutomationLogs.$inferSelect;

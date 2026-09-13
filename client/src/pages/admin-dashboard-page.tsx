@@ -6,6 +6,7 @@ import {
   CreditCard,
   Flag,
   Handshake,
+  Mail,
   MessageSquareQuote,
   Users,
 } from "lucide-react";
@@ -117,6 +118,14 @@ export default function AdminDashboardPage() {
       icon: CreditCard,
       count: cards?.length ?? null,
       countLabel: "tarjetas",
+    },
+    {
+      id: "correos",
+      title: "Automatización de correos",
+      description:
+        "Recordatorios semanales a directores, plantillas editables y correos de prueba.",
+      href: "/admin/correos",
+      icon: Mail,
     },
   ];
 

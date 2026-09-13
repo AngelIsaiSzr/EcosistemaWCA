@@ -11,6 +11,7 @@ import {
   createBlankIntegrationForm,
   extractSpreadsheetId,
   formatAnswerForGoogleSheet,
+  formatAnswerForSheet,
   getAllFields,
   getSheetHeaders,
   isFieldVisible,
@@ -23,6 +24,8 @@ import {
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet, updateIntegrationCellInSheet } from "./services/google-sheets";
 import { ensureIntegrationTables } from "./db/ensure-integration-tables";
+import { sendTransactionalEmail } from "./services/email";
+import { DIRECTOR_EMAIL_CONTACT } from "@shared/director-emails";
 
 const TALENTO_ROLE = "talento";
 
@@ -306,6 +309,48 @@ export function registerTalentoRoutes(app: Express) {
         email,
         answers,
       });
+
+      try {
+        const fields = getAllFields(definition);
+        const rows = fields
+          .map((field) => {
+            const value = formatAnswerForSheet(field, answers[field.id]);
+            if (value === "" || value == null) return null;
+            return { label: field.label, value: String(value) };
+          })
+          .filter((x): x is { label: string; value: string } => x !== null);
+
+        const textLines = [
+          `Nueva respuesta en el formulario de integración: ${form.title}`,
+          `ID: ${response.id}`,
+          `Correo: ${email}`,
+          ``,
+          ...rows.map((r) => `${r.label}: ${r.value}`),
+        ].join("\n");
+
+        const htmlRows = rows
+          .map(
+            (r) =>
+              `<tr><td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;vertical-align:top;">${r.label}</td><td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;">${r.value.replace(/</g, "&lt;")}</td></tr>`,
+          )
+          .join("");
+
+        await sendTransactionalEmail({
+          to: DIRECTOR_EMAIL_CONTACT,
+          replyTo: email,
+          subject: `Nueva postulación · ${form.title}`,
+          text: textLines,
+          html: `
+            <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;max-width:640px;">
+              <h2 style="margin:0 0 8px;">Nueva postulación</h2>
+              <p style="margin:0 0 16px;color:#6b7280;">Formulario: <strong>${form.title}</strong> · ID ${response.id}</p>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;">${htmlRows}</table>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Error al notificar postulación por correo:", emailError);
+      }
 
       if (form.spreadsheetId) {
         try {

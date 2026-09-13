@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: Omit<SelectUser, "password">) => {
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Inicio de Sesión Exitoso",
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: Omit<SelectUser, "password">) => {
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registro Exitoso",
@@ -119,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Cierre de Sesión Exitoso",

@@ -21,6 +21,7 @@ import AdminAlliesPage from "@/pages/admin-allies-page";
 import AdminCountriesPage from "@/pages/admin-countries-page";
 import AdminCardsPage from "@/pages/admin-cards-page";
 import AdminCardEditorPage from "@/pages/admin-card-editor-page";
+import AdminEmailAutomationPage from "@/pages/admin-email-automation-page";
 import MyCardPage from "@/pages/my-card-page";
 import CardPublicPage from "@/pages/card-public-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
@@ -75,6 +76,7 @@ function Router() {
         <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
         <RoleProtectedRoute path="/admin/tarjetas/:id/editar" component={AdminCardEditorPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/tarjetas" component={AdminCardsPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/correos" component={AdminEmailAutomationPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
