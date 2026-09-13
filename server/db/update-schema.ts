@@ -88,6 +88,12 @@ const updateSchema = async () => {
       `,
     );
 
+    await runQuery(
+      client,
+      "columna teams.role_color",
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS role_color TEXT NOT NULL DEFAULT 'blue';`,
+    );
+
     console.log("✅ Esquema actualizado");
   } catch (err) {
     console.error("❌ Error al actualizar el esquema:", err);

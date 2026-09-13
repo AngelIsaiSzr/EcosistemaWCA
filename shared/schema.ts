@@ -76,6 +76,7 @@ export const teams = pgTable("teams", {
   github: text("github"),
   twitter: text("twitter"),
   instagram: text("instagram"),
+  roleColor: text("role_color").notNull().default("blue"),
   order: integer("order").notNull(),
 });
 

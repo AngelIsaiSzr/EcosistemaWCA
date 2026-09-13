@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
     {
       id: "equipo",
       title: "Equipo",
-      description: "Gestiona los perfiles del equipo que aparecen en el sitio.",
+      description: "Gestiona los perfiles completos del equipo que aparecen en el sitio.",
       href: "/admin/equipo",
       icon: Users,
       count: team?.length ?? null,
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
     {
       id: "tarjetas",
       title: "Tarjetas de presentación",
-      description: "Genera y administra tarjetas digitales del equipo WCA.",
+      description: "Genera y administra tarjetas de presentación digitales del equipo WCA.",
       icon: CreditCard,
       disabled: true,
     },

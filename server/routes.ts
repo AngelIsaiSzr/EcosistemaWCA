@@ -6,6 +6,7 @@ import { insertContactSchema, insertLiveCourseRegistrationSchema, User } from "@
 import { sendEmail, EmailData } from "./services/email";
 import { saveRegistrationToSheet } from './services/google-sheets';
 import { registerTalentoRoutes } from "./routes-talento";
+import { ensureTeamColumns } from "./db/ensure-team-columns";
 
 const ADMIN_EMAIL = "admin@ecosistemawca.com";
 const ADMIN_PASSWORD = "EcosistemaWCA@0";
@@ -251,6 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team members routes
   app.get("/api/team", async (req, res) => {
     try {
+      await ensureTeamColumns();
       const team = await storage.getAllTeamMembers();
       res.json(team);
     } catch (error) {
@@ -517,6 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
+      await ensureTeamColumns();
       const teamMember = await storage.createTeamMember(req.body);
       res.status(201).json(teamMember);
     } catch (error) {
@@ -530,6 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
       
+      await ensureTeamColumns();
       const teamId = parseInt(req.params.id);
       const updatedTeamMember = await storage.updateTeamMember(teamId, req.body);
       

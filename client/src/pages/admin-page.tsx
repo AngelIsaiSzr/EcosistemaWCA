@@ -56,7 +56,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Trash2, Pencil, ArrowLeft } from "lucide-react";
+import {
+  DEFAULT_TEAM_ROLE_COLOR,
+  TEAM_ROLE_COLORS,
+  isTeamRoleColorId,
+} from "@shared/team-colors";
+import { ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ArrowLeft } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -160,10 +165,8 @@ const teamFormSchema = insertTeamSchema.extend({
   role: z.string().min(3, "El cargo es requerido"),
   bio: z.string().min(10, "La biografía es requerida"),
   image: z.string().min(5, "La URL de la imagen es requerida"),
-  order: z.number({
-    required_error: "El orden es requerido",
-    invalid_type_error: "El orden debe ser un número"
-  }).min(1, "El orden debe ser mayor a 0"),
+  roleColor: z.string().default(DEFAULT_TEAM_ROLE_COLOR),
+  order: z.number().optional(),
   linkedIn: z.string().optional(),
   github: z.string().optional(),
   twitter: z.string().optional(),
@@ -219,7 +222,7 @@ const ADMIN_SECTIONS = {
   equipo: {
     tab: "team",
     title: "Equipo",
-    description: "Gestiona los perfiles del equipo que aparecen en el sitio.",
+    description: "Gestiona los perfiles completos del equipo que aparecen en el sitio.",
   },
   testimonios: {
     tab: "testimonials",
@@ -527,6 +530,7 @@ export default function AdminPage({
     github: "",
     twitter: "",
     instagram: "",
+    roleColor: DEFAULT_TEAM_ROLE_COLOR,
     order: 1,
   };
 
@@ -535,6 +539,8 @@ export default function AdminPage({
     resolver: zodResolver(teamFormSchema),
     defaultValues: emptyTeamValues,
   });
+  const watchedTeamImage = teamForm.watch("image");
+  const watchedRoleColor = teamForm.watch("roleColor");
 
   // Update form with team member data when editing
   useEffect(() => {
@@ -548,6 +554,9 @@ export default function AdminPage({
         github: editingTeam.github || "",
         twitter: editingTeam.twitter || "",
         instagram: editingTeam.instagram || "",
+        roleColor: isTeamRoleColorId(editingTeam.roleColor)
+          ? editingTeam.roleColor
+          : DEFAULT_TEAM_ROLE_COLOR,
         order: editingTeam.order,
       });
     }
@@ -577,7 +586,7 @@ export default function AdminPage({
 
   // Update team member mutation
   const updateTeamMemberMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: TeamFormValues }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<TeamFormValues> }) => {
       const res = await apiRequest("PATCH", `/api/team/${id}`, data);
       return res.json();
     },
@@ -599,12 +608,53 @@ export default function AdminPage({
     },
   });
 
+  const reorderTeamMutation = useMutation({
+    mutationFn: async (updates: { id: number; order: number }[]) => {
+      await Promise.all(
+        updates.map((item) => apiRequest("PATCH", `/api/team/${item.id}`, { order: item.order })),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "No se pudo reordenar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onTeamSubmit = (data: TeamFormValues) => {
+    const roleColor = isTeamRoleColorId(data.roleColor)
+      ? data.roleColor
+      : DEFAULT_TEAM_ROLE_COLOR;
     if (editingTeam) {
-      updateTeamMemberMutation.mutate({ id: editingTeam.id, data });
-    } else {
-      createTeamMemberMutation.mutate(data);
+      updateTeamMemberMutation.mutate({
+        id: editingTeam.id,
+        data: { ...data, roleColor, order: editingTeam.order },
+      });
+      return;
     }
+    const nextOrder =
+      teamMembers && teamMembers.length > 0
+        ? Math.max(...teamMembers.map((m) => m.order)) + 1
+        : 1;
+    createTeamMemberMutation.mutate({ ...data, roleColor, order: nextOrder });
+  };
+
+  const moveTeamMember = (index: number, direction: -1 | 1) => {
+    if (!teamMembers?.length) return;
+    const sorted = [...teamMembers].sort((a, b) => a.order - b.order);
+    const target = index + direction;
+    if (target < 0 || target >= sorted.length) return;
+    const a = sorted[index];
+    const b = sorted[target];
+    reorderTeamMutation.mutate([
+      { id: a.id, order: b.order },
+      { id: b.id, order: a.order },
+    ]);
   };
 
   const cancelEditingTeam = () => {
@@ -2322,7 +2372,7 @@ export default function AdminPage({
 
           {/* Team Tab */}
           <TabsContent value="team">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
               <div>
                 <Card>
                   <CardHeader>
@@ -2330,41 +2380,93 @@ export default function AdminPage({
                     <CardDescription>
                       {editingTeam
                         ? `Actualizando a: ${editingTeam.name}`
-                        : "Agrega un nuevo miembro al equipo."}
+                        : "Agrega miembros sin límite práctico. Con más de 4, en el sitio se muestra un carrusel infinito."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Form {...teamForm}>
                       <form onSubmit={teamForm.handleSubmit(onTeamSubmit)} className="space-y-4">
-                        <FormField
-                          control={teamForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nombre</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Nombre completo"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <div className="grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+                          <div className="flex justify-center sm:justify-start">
+                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border bg-muted text-xs text-muted-foreground">
+                              {watchedTeamImage ? (
+                                <img src={watchedTeamImage} alt="Vista previa" className="h-full w-full object-cover" />
+                              ) : (
+                                "Foto"
+                              )}
+                            </div>
+                          </div>
+                          <div className="min-w-0 space-y-4">
+                            <FormField
+                              control={teamForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Nombre</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Nombre completo" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={teamForm.control}
+                              name="role"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Cargo</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Ej: CEO & Fundador" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
 
                         <FormField
                           control={teamForm.control}
-                          name="role"
+                          name="roleColor"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Cargo</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Ej: CEO & Fundador"
-                                  {...field}
-                                />
-                              </FormControl>
+                              <FormLabel>Color del cargo</FormLabel>
+                              <FormDescription>
+                                Vista previa:{" "}
+                                <span
+                                  className={
+                                    TEAM_ROLE_COLORS.find((c) => c.id === (field.value || watchedRoleColor))
+                                      ?.textClass ?? "accent-blue"
+                                  }
+                                >
+                                  {teamForm.watch("role") || "Cargo de ejemplo"}
+                                </span>
+                              </FormDescription>
+                              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                                {TEAM_ROLE_COLORS.map((color) => {
+                                  const selected = (field.value || DEFAULT_TEAM_ROLE_COLOR) === color.id;
+                                  return (
+                                    <button
+                                      key={color.id}
+                                      type="button"
+                                      onClick={() => field.onChange(color.id)}
+                                      className={`rounded-xl border p-2 text-left transition ${
+                                        selected
+                                          ? "border-[#5b8fd4] bg-[#5b8fd4]/10 ring-1 ring-[#5b8fd4]/40"
+                                          : "hover:bg-muted"
+                                      }`}
+                                      title={color.hint}
+                                    >
+                                      <span
+                                        className="mb-1.5 block h-4 w-full rounded-md"
+                                        style={{ backgroundColor: `hsl(var(${color.swatchVar}))` }}
+                                      />
+                                      <span className="block text-[11px] font-medium leading-tight">{color.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -2377,11 +2479,7 @@ export default function AdminPage({
                             <FormItem>
                               <FormLabel>Biografía</FormLabel>
                               <FormControl>
-                                <Textarea
-                                  placeholder="Breve biografía"
-                                  {...field}
-                                  rows={3}
-                                />
+                                <Textarea placeholder="Breve biografía" {...field} rows={3} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -2395,44 +2493,14 @@ export default function AdminPage({
                             <FormItem>
                               <FormLabel>URL de la imagen</FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder="https://example.com/image.jpg"
-                                  {...field}
-                                />
+                                <Input placeholder="https://example.com/image.jpg" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
 
-                        <FormField
-                          control={teamForm.control}
-                          name="order"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Orden</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="Ej: 1"
-                                  {...field}
-                                  value={field.value || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const numValue = value === '' ? null : Number(value);
-                                    field.onChange(numValue);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Determina el orden de aparición (menor número = aparece antes)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <FormField
                             control={teamForm.control}
                             name="linkedIn"
@@ -2440,17 +2508,12 @@ export default function AdminPage({
                               <FormItem>
                                 <FormLabel>LinkedIn</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    placeholder="URL de LinkedIn"
-                                    {...field}
-                                    value={field.value || ''}
-                                  />
+                                  <Input placeholder="URL de LinkedIn" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={teamForm.control}
                             name="github"
@@ -2458,19 +2521,12 @@ export default function AdminPage({
                               <FormItem>
                                 <FormLabel>GitHub</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    placeholder="URL de GitHub"
-                                    {...field}
-                                    value={field.value || ''}
-                                  />
+                                  <Input placeholder="URL de GitHub" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={teamForm.control}
                             name="twitter"
@@ -2478,17 +2534,12 @@ export default function AdminPage({
                               <FormItem>
                                 <FormLabel>Twitter</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    placeholder="URL de Twitter"
-                                    {...field}
-                                    value={field.value || ''}
-                                  />
+                                  <Input placeholder="URL de Twitter" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={teamForm.control}
                             name="instagram"
@@ -2496,11 +2547,7 @@ export default function AdminPage({
                               <FormItem>
                                 <FormLabel>Instagram</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    placeholder="URL de Instagram"
-                                    {...field}
-                                    value={field.value || ''}
-                                  />
+                                  <Input placeholder="URL de Instagram" {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -2510,15 +2557,11 @@ export default function AdminPage({
 
                         <div className="flex justify-end space-x-4 pt-4">
                           {editingTeam && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={cancelEditingTeam}
-                            >
+                            <Button type="button" variant="outline" onClick={cancelEditingTeam}>
                               Cancelar
                             </Button>
                           )}
-                          <Button type="submit">
+                          <Button type="submit" className="bg-[#5b8fd4] hover:bg-[#4a7fc4]">
                             {createTeamMemberMutation.isPending || updateTeamMemberMutation.isPending ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : null}
@@ -2532,77 +2575,80 @@ export default function AdminPage({
               </div>
 
               <div>
-                <h3 className="text-xl font-medium mb-4">Miembros del equipo</h3>
+                <div className="mb-4 flex items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-medium">Miembros del equipo</h3>
+                    <p className="text-sm text-muted-foreground">Usa las flechas para cambiar el orden.</p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{teamMembers?.length ?? 0} miembros</span>
+                </div>
 
                 {teamMembers && teamMembers.length > 0 ? (
-                  <div className="space-y-4">
-                    {teamMembers.map((member) => (
-                      <Card key={member.id}>
-                        <div className="flex items-start p-4">
-                          <div className="flex-shrink-0 mr-4">
-                            <img
-                              src={member.image}
-                              alt={member.name}
-                              className="w-16 h-16 rounded-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between">
-                              <div>
-                                <h4 className="font-medium">{member.name}</h4>
-                                <p className="text-sm text-muted-foreground">{member.role}</p>
-                              </div>
-                              <div className="flex space-x-2">
+                  <div className="space-y-3">
+                    {[...teamMembers]
+                      .sort((a, b) => a.order - b.order)
+                      .map((member, index, list) => {
+                        const colorMeta =
+                          TEAM_ROLE_COLORS.find((c) => c.id === member.roleColor) ??
+                          TEAM_ROLE_COLORS.find((c) => c.id === DEFAULT_TEAM_ROLE_COLOR)!;
+                        return (
+                          <Card key={member.id} className="overflow-hidden">
+                            <div className="flex items-stretch gap-2 p-3 sm:p-4">
+                              <div className="flex flex-col justify-center gap-1">
                                 <Button
-                                  size="sm"
+                                  type="button"
+                                  size="icon"
                                   variant="ghost"
-                                  onClick={() => setEditingTeam(member)}
+                                  className="h-8 w-8"
+                                  disabled={index === 0 || reorderTeamMutation.isPending}
+                                  onClick={() => moveTeamMember(index, -1)}
+                                  aria-label="Subir"
                                 >
-                                  <Pencil className="h-4 w-4 mr-1" />
-                                  Editar
+                                  <ChevronUp className="h-4 w-4" />
                                 </Button>
-
                                 <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => setTeamToDelete(member.id)}
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  disabled={index === list.length - 1 || reorderTeamMutation.isPending}
+                                  onClick={() => moveTeamMember(index, 1)}
+                                  aria-label="Bajar"
                                 >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Eliminar
+                                  <ChevronDown className="h-4 w-4" />
                                 </Button>
                               </div>
+                              <img
+                                src={member.image}
+                                alt={member.name}
+                                className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h4 className="truncate font-medium">{member.name}</h4>
+                                    <p className={`${colorMeta.textClass} text-sm font-medium`}>{member.role}</p>
+                                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{member.bio}</p>
+                                  </div>
+                                  <div className="flex shrink-0 gap-1">
+                                    <Button size="sm" variant="ghost" onClick={() => setEditingTeam(member)}>
+                                      <Pencil className="mr-1 h-4 w-4" />
+                                      Editar
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setTeamToDelete(member.id)}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-sm mt-2 line-clamp-2">{member.bio}</p>
-                            <div className="flex mt-2 space-x-2">
-                              {member.linkedIn && (
-                                <a href={member.linkedIn} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                                  LinkedIn
-                                </a>
-                              )}
-                              {member.github && (
-                                <a href={member.github} target="_blank" rel="noopener noreferrer" className="text-gray-800 dark:text-gray-300 hover:text-black dark:hover:text-white">
-                                  GitHub
-                                </a>
-                              )}
-                              {member.twitter && (
-                                <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                                  Twitter
-                                </a>
-                              )}
-                              {member.instagram && (
-                                <a href={member.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-800 dark:text-gray-300 hover:text-black dark:hover:text-white">
-                                  Instagram
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                          </Card>
+                        );
+                      })}
                   </div>
                 ) : (
-                  <div className="text-center py-10">
-                    <p className="text-muted-foreground">No hay miembros en el equipo.</p>
+                  <div className="rounded-xl border border-dashed py-12 text-center text-muted-foreground">
+                    Aún no hay miembros. Agrega el primero con el formulario.
                   </div>
                 )}
               </div>
@@ -2610,6 +2656,7 @@ export default function AdminPage({
           </TabsContent>
 
           {/* Testimonials Tab */}
+
           <TabsContent value="testimonials">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>

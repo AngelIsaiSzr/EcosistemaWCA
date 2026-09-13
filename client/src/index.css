@@ -28,9 +28,13 @@
 
   /* Ecosistema WCA Custom Colors */
   --accent-blue: 215 49.4% 65.9%;
+  --accent-blue-strong: 215 70% 52%;
+  --accent-blue-dark: 215 55% 38%;
   --accent-yellow: 50 100% 50%;
   --accent-red: 355 100% 60%;
+  --accent-red-soft: 355 70% 72%;
   --accent-green: 135 89% 25%;
+  --accent-green-soft: 142 45% 48%;
   --accent-purple: 270 100% 60%;
   --accent-cyan: 206 64.2% 75.9%;
   --primary-900: 0 0% 98%;
@@ -68,9 +72,13 @@
 
   /* Ecosistema WCA Custom Colors */
   --accent-blue: 215 49.4% 65.9%;
+  --accent-blue-strong: 215 70% 52%;
+  --accent-blue-dark: 215 55% 38%;
   --accent-yellow: 50 100% 50%;
   --accent-red: 355 100% 60%;
+  --accent-red-soft: 355 70% 72%;
   --accent-green: 135 89% 25%;
+  --accent-green-soft: 142 45% 48%;
   --accent-purple: 270 100% 60%;
   --accent-cyan: 206 64.2% 75.9%;
   --primary-900: 0 0% 3%;
@@ -127,8 +135,20 @@
     @apply text-[hsl(var(--accent-red))];
   }
 
+  .accent-red-soft {
+    @apply text-[hsl(var(--accent-red-soft))];
+  }
+
   .accent-blue {
     @apply text-[hsl(var(--accent-blue))];
+  }
+
+  .accent-blue-strong {
+    @apply text-[hsl(var(--accent-blue-strong))];
+  }
+
+  .accent-blue-dark {
+    @apply text-[hsl(var(--accent-blue-dark))];
   }
 
   .accent-yellow {
@@ -137,6 +157,10 @@
 
   .accent-green {
     @apply text-[hsl(var(--accent-green))];
+  }
+
+  .accent-green-soft {
+    @apply text-[hsl(var(--accent-green-soft))];
   }
 
   .accent-purple {

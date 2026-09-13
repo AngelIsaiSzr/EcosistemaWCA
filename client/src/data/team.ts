@@ -10,7 +10,8 @@ export const initialTeam: InsertTeam[] = [
     linkedIn: "https://www.linkedin.com/in/angelisaiszr/",
     github: "https://github.com/AngelIsaiSzr",
     instagram: "https://www.instagram.com/angel_szr1/",
-    order: 1
+    order: 1,
+    roleColor: "blue-strong",
   },
   {
     name: "Yamileth Martínez",
@@ -19,7 +20,8 @@ export const initialTeam: InsertTeam[] = [
     image: "https://i.ibb.co/8Lpz1QrK/team1-ct12l5.png",
     twitter: "https://x.com/LuisaLeoni70262",
     instagram: "https://www.instagram.com/liam_el_sol/",
-    order: 2
+    order: 2,
+    roleColor: "red",
   },
   {
     name: "Victoria García",
@@ -28,7 +30,8 @@ export const initialTeam: InsertTeam[] = [
     image: "https://i.ibb.co/qYF6rpKm/team3-ongwvm.jpg",
     linkedIn: "https://www.linkedin.com/in/",
     instagram: "https://www.instagram.com/",
-    order: 3
+    order: 3,
+    roleColor: "yellow",
   },
   {
     name: "Enrique López",
@@ -38,7 +41,8 @@ export const initialTeam: InsertTeam[] = [
     linkedIn: "https://www.linkedin.com/in/",
     github: "https://github.com/",
     instagram: "https://www.instagram.com/",
-    order: 4
+    order: 4,
+    roleColor: "purple",
   },
 ];
 

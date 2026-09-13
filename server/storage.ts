@@ -416,7 +416,8 @@ export class MemStorage implements IStorage {
       linkedIn: insertTeam.linkedIn || null,
       github: insertTeam.github || null,
       twitter: insertTeam.twitter || null,
-      instagram: insertTeam.instagram || null
+      instagram: insertTeam.instagram || null,
+      roleColor: insertTeam.roleColor || "blue",
     };
     this.teams.set(id, team);
     return team;

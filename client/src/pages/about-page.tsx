@@ -1,10 +1,33 @@
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import TeamSection from "@/components/home/team-section";
 import { SITE_URL } from "@/utils/titles";
 
+const ABOUT_IMAGES = [
+  "https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg",
+  "https://i.ibb.co/rKPSpHYq/about2-rxuu0v.jpg",
+] as const;
+
+const aboutImageCache = new Map<string, HTMLImageElement>();
+
+function preloadAboutImages() {
+  if (typeof window === "undefined") return;
+  for (const src of ABOUT_IMAGES) {
+    if (aboutImageCache.has(src)) continue;
+    const image = new Image();
+    image.src = src;
+    aboutImageCache.set(src, image);
+    void image.decode?.().catch(() => undefined);
+  }
+}
+
 export default function AboutPage() {
+  useEffect(() => {
+    preloadAboutImages();
+  }, []);
+
   return (
     <>
       <Helmet>
@@ -15,6 +38,9 @@ export default function AboutPage() {
         />
         <link rel="canonical" href={`${SITE_URL}/about`} />
         <meta property="og:url" content={`${SITE_URL}/about`} />
+        {ABOUT_IMAGES.map((src) => (
+          <link key={src} rel="preload" as="image" href={src} />
+        ))}
       </Helmet>
       
       <div className="flex flex-col min-h-screen">
@@ -84,9 +110,12 @@ export default function AboutPage() {
                 
                 <div className="w-full md:w-1/2 order-1 md:order-2">
                   <img 
-                    src="https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg" 
+                    src={ABOUT_IMAGES[0]} 
                     alt="Misión de Ecosistema WCA" 
                     className="rounded-xl shadow-lg"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
                   />
                 </div>
               </div>
@@ -99,9 +128,11 @@ export default function AboutPage() {
               <div className="flex flex-col md:flex-row items-center gap-12">
                 <div className="w-full md:w-1/2">
                   <img 
-                    src="https://i.ibb.co/rKPSpHYq/about2-rxuu0v.jpg" 
+                    src={ABOUT_IMAGES[1]}
                     alt="Evolución del Ecosistema WCA" 
                     className="rounded-xl shadow-lg"
+                    loading="eager"
+                    decoding="async"
                   />
                 </div>
                 

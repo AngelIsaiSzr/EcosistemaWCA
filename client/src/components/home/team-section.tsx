@@ -1,133 +1,225 @@
-import { useQuery } from '@tanstack/react-query';
-import { Team } from '@shared/schema';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Team } from "@shared/schema";
+import { getTeamRoleTextClass } from "@shared/team-colors";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function TeamMemberCard({
+  member,
+  className,
+}: {
+  member: Team;
+  className?: string;
+}) {
+  return (
+    <div className={cn("overflow-hidden rounded-xl bg-primary-700", className)}>
+      <img
+        src={member.image}
+        alt={`${member.name} - ${member.role}`}
+        className="aspect-square w-full object-cover object-center"
+        loading="lazy"
+        decoding="async"
+      />
+      <div className="p-6">
+        <h3 className="mb-1 font-heading text-xl font-semibold">{member.name}</h3>
+        <p className={`${getTeamRoleTextClass(member.roleColor)} mb-3 text-sm font-medium`}>
+          {member.role}
+        </p>
+        <p className="mb-4 text-sm text-muted">{member.bio}</p>
+        <div className="flex space-x-3">
+          {member.linkedIn && (
+            <a
+              href={member.linkedIn}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted transition-colors hover:text-[hsl(var(--accent-blue-strong))]"
+              aria-label="Sígueme en LinkedIn"
+            >
+              <i className="fab fa-linkedin-in" />
+            </a>
+          )}
+          {member.github && (
+            <a
+              href={member.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted transition-colors hover:text-accent-blue"
+              aria-label="Sígueme en GitHub"
+            >
+              <i className="fab fa-github" />
+            </a>
+          )}
+          {member.twitter && (
+            <a
+              href={member.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted transition-colors hover:text-accent-blue"
+              aria-label="Sígueme en Twitter"
+            >
+              <i className="fab fa-twitter" />
+            </a>
+          )}
+          {member.instagram && (
+            <a
+              href={member.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted transition-colors hover:text-accent-red"
+              aria-label="Sígueme en Instagram"
+            >
+              <i className="fab fa-instagram" />
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamCarousel({ members }: { members: Team[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [copies, setCopies] = useState(3);
+  const [duration, setDuration] = useState(40);
+
+  const sorted = useMemo(
+    () => [...members].sort((a, b) => a.order - b.order),
+    [members],
+  );
+
+  useEffect(() => {
+    const update = () => {
+      if (!containerRef.current) return;
+      const width = containerRef.current.offsetWidth;
+      const cardWidth = 300 + 24;
+      const needed = Math.max(2, Math.ceil((width * 2) / (sorted.length * cardWidth)));
+      setCopies(needed);
+      setDuration(Math.max(28, sorted.length * needed * 4));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [sorted.length]);
+
+  const loop = useMemo(() => {
+    const list: Team[] = [];
+    for (let i = 0; i < copies; i++) list.push(...sorted);
+    return list;
+  }, [copies, sorted]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="group/carousel relative overflow-hidden py-2"
+      onMouseEnter={(e) => {
+        const track = e.currentTarget.querySelector<HTMLElement>("[data-team-track]");
+        if (track) track.style.animationPlayState = "paused";
+      }}
+      onMouseLeave={(e) => {
+        const track = e.currentTarget.querySelector<HTMLElement>("[data-team-track]");
+        if (track) track.style.animationPlayState = "running";
+      }}
+    >
+      <div
+        data-team-track
+        className="flex w-max gap-6 will-change-transform"
+        style={{
+          animation: `team-marquee ${duration}s linear infinite`,
+        }}
+      >
+        {loop.map((member, index) => (
+          <div key={`${member.id}-${index}`} className="w-[300px] shrink-0">
+            <TeamMemberCard member={member} />
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes team-marquee {
+          from { transform: translateX(0); }
+          to { transform: translateX(-${100 / copies}%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 export default function TeamSection() {
   const { data: team, isLoading, error } = useQuery<Team[]>({
-    queryKey: ['/api/team'],
+    queryKey: ["/api/team"],
   });
 
+  const members = useMemo(
+    () => (team ? [...team].sort((a, b) => a.order - b.order) : []),
+    [team],
+  );
+  const useCarousel = members.length > 4;
+
   return (
-    <section id="equipo" className="py-20 bg-primary-800">
+    <section id="equipo" className="bg-primary-800 py-20">
       <div className="container mx-auto px-4">
-        <motion.div 
-          className="text-center mb-16"
+        <motion.div
+          className="mb-16 text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">Nuestro Equipo</h2>
-          <p className="text-muted max-w-2xl mx-auto">Conoce a los profesionales apasionados que hacen posible al Ecosistema WCA.</p>
+          <h2 className="mb-4 font-heading text-3xl font-bold md:text-4xl">Nuestro Equipo</h2>
+          <p className="mx-auto max-w-2xl text-muted">
+            Conoce a los profesionales apasionados que hacen posible al Ecosistema WCA.
+          </p>
         </motion.div>
-        
+
         {isLoading ? (
-          <div className="flex justify-center items-center py-20">
+          <div className="flex items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-accent-blue" />
           </div>
         ) : error ? (
-          <div className="text-center py-16">
-            <h3 className="text-xl font-heading font-semibold mb-2">Error al cargar el equipo</h3>
-            <p className="text-muted">Lo sentimos, ha ocurrido un error al cargar información del equipo. Inténtalo de nuevo más tarde.</p>
+          <div className="py-16 text-center">
+            <h3 className="mb-2 font-heading text-xl font-semibold">Error al cargar el equipo</h3>
+            <p className="text-muted">
+              Lo sentimos, ha ocurrido un error al cargar información del equipo. Inténtalo de nuevo
+              más tarde.
+            </p>
           </div>
-        ) : team && team.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {team.map((member, index) => (
-              <motion.div 
-                key={member.id}
-                className="bg-primary-700 rounded-xl overflow-hidden"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 0.9 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <img 
-                  src={member.image} 
-                  alt={`${member.name} - ${member.role}`} 
-                  className="w-full aspect-square object-cover object-center"
-                />
-                <div className="p-6">
-                  <h3 className="text-xl font-heading font-semibold mb-1">{member.name}</h3>
-                  <p className={`${getRoleColor(member.role)} font-medium text-sm mb-3`}>{member.role}</p>
-                  <p className="text-muted text-sm mb-4">{member.bio}</p>
-                  <div className="flex space-x-3">
-                    {member.linkedIn && (
-                      <a 
-                        href={member.linkedIn} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-muted hover:text-accent-blue transition-colors"
-                        aria-label="Sigueme en LinkedIn"
-                      >
-                        <i className="fab fa-linkedin-in"></i>
-                      </a>
-                    )}
-                    {member.github && (
-                      <a 
-                        href={member.github} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-muted hover:text-accent-blue transition-colors"
-                        aria-label="Sigueme en GitHub"
-                      >
-                        <i className="fab fa-github"></i>
-                      </a>
-                    )}
-                    {member.twitter && (
-                      <a 
-                        href={member.twitter} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-muted hover:text-accent-blue transition-colors"
-                        aria-label="Sigueme en Twitter"
-                      >
-                        <i className="fab fa-twitter"></i>
-                      </a>
-                    )}
-                    {member.instagram && (
-                      <a 
-                        href={member.instagram} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-muted hover:text-accent-red transition-colors"
-                        aria-label="Sigueme en Instagram"
-                      >
-                        <i className="fab fa-instagram"></i>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+        ) : members.length > 0 ? (
+          useCarousel ? (
+            <div className="-mx-4 sm:mx-0">
+              <TeamCarousel members={members} />
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "grid gap-8",
+                members.length === 1 && "mx-auto max-w-sm grid-cols-1",
+                members.length === 2 && "mx-auto max-w-3xl grid-cols-1 md:grid-cols-2",
+                members.length === 3 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+                members.length >= 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+              )}
+            >
+              {members.map((member, index) => (
+                <motion.div
+                  key={member.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 0.97 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.08 }}
+                >
+                  <TeamMemberCard member={member} />
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="text-center py-16">
-            <h3 className="text-xl font-heading font-semibold mb-2">Equipo no disponible</h3>
+          <div className="py-16 text-center">
+            <h3 className="mb-2 font-heading text-xl font-semibold">Equipo no disponible</h3>
             <p className="text-muted">La información del equipo estará disponible próximamente.</p>
           </div>
         )}
       </div>
     </section>
   );
-}
-
-// Función auxiliar para obtener el color de texto apropiado según el rol
-function getRoleColor(role: string): string {
-  const roleMap: { [key: string]: string } = {
-    'CEO & Fundador': 'accent-blue',
-    'COO & CoFundadora': 'accent-red',
-    'CMO': 'accent-yellow',
-    'CIO': 'accent-blue',
-    'CFO': 'accent-red',
-    'CTO': 'accent-blue',
-    'CSO': 'accent-yellow',
-    'Técnico de Soporte Educativo': 'accent-blue',
-    'Instructor Principal': 'accent-blue',
-    'Instructor': 'accent-red',
-    'Desarrollador': 'accent-yellow'
-  };
-  
-  return roleMap[role] || 'accent-blue';
 }

@@ -50,6 +50,13 @@
       "when": 1757740000000,
       "tag": "0006_talento_multi_forms",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1757750000000,
+      "tag": "0007_team_role_color",
+      "breakpoints": true
     }
   ]
 }
