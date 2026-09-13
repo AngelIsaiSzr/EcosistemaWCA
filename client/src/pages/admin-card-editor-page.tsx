@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
 import { CardPreview } from "@/components/cards/card-preview";
+import { FaIconPicker } from "@/components/cards/fa-icon-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
+import type { CardSocialKey } from "@shared/card-directions";
 
 type UserBasic = { id: number; name: string; email: string };
 
@@ -445,6 +447,26 @@ export function PresentationCardEditor({
 
               <section className="rounded-2xl border bg-card p-5 space-y-4">
                 <h2 className="font-heading text-lg font-semibold">Redes fijas</h2>
+                <div className="space-y-2">
+                  <Label>Mostrar por defecto como</Label>
+                  <Select
+                    value={state.theme.socialDisplayDefault || "circle"}
+                    onValueChange={(v) =>
+                      updateField("theme", {
+                        ...state.theme,
+                        socialDisplayDefault: v as "circle" | "button",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="circle">Círculos (iconos)</SelectItem>
+                      <SelectItem value="button">Botones Linktree</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
@@ -458,16 +480,43 @@ export function PresentationCardEditor({
                       ["email", "Email"],
                       ["website", "Sitio web"],
                     ] as const
-                  ).map(([key, label]) => (
-                    <div key={key} className="space-y-1.5">
-                      <Label>{label}</Label>
-                      <Input
-                        value={state[key]}
-                        onChange={(e) => updateField(key, e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                  ))}
+                  ).map(([key, label]) => {
+                    const socialKey = key as CardSocialKey;
+                    const mode =
+                      state.theme.socialDisplay?.[socialKey] ??
+                      state.theme.socialDisplayDefault ??
+                      "circle";
+                    return (
+                      <div key={key} className="space-y-1.5 rounded-xl border p-3">
+                        <Label>{label}</Label>
+                        <Input
+                          value={state[key]}
+                          onChange={(e) => updateField(key, e.target.value)}
+                          placeholder="https://..."
+                        />
+                        <Select
+                          value={mode}
+                          onValueChange={(v) =>
+                            updateField("theme", {
+                              ...state.theme,
+                              socialDisplay: {
+                                ...(state.theme.socialDisplay ?? {}),
+                                [socialKey]: v as "circle" | "button",
+                              },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="circle">Círculo</SelectItem>
+                            <SelectItem value="button">Botón Linktree</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
@@ -551,15 +600,14 @@ export function PresentationCardEditor({
                           }}
                           placeholder="https://..."
                         />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            value={link.icon || ""}
-                            onChange={(e) => {
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <FaIconPicker
+                            value={link.icon}
+                            onChange={(icon) => {
                               const next = [...state.links];
-                              next[index] = { ...link, icon: e.target.value || undefined };
+                              next[index] = { ...link, icon };
                               updateField("links", next);
                             }}
-                            placeholder="Icono FA (ej. fas fa-link)"
                           />
                           <Select
                             value={link.style || "solid"}

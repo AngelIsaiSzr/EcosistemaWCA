@@ -1,7 +1,9 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import type { PresentationCard } from "@shared/schema";
 import {
   getCardDirectionMeta,
+  type CardSocialKey,
   type PresentationCardLink,
   type PresentationCardTheme,
 } from "@shared/card-directions";
@@ -38,7 +40,7 @@ function resolveAccent(card: CardPreviewData): string {
 }
 
 const SOCIALS: Array<{
-  key: keyof CardPreviewData;
+  key: CardSocialKey;
   label: string;
   href: (v: string) => string;
   icon: string;
@@ -57,9 +59,49 @@ const SOCIALS: Array<{
     icon: "fab fa-whatsapp",
     color: "#25D366",
   },
-  { key: "email", label: "Email", href: (v) => (v.startsWith("mailto:") ? v : `mailto:${v}`), icon: "fas fa-envelope", color: "#5b8fd4" },
-  { key: "website", label: "Web", href: (v) => v, icon: "fas fa-globe", color: "#5b8fd4" },
+  {
+    key: "email",
+    label: "Email",
+    href: (v) => (v.startsWith("mailto:") ? v : `mailto:${v}`),
+    icon: "fas fa-envelope",
+    color: "#5b8fd4",
+  },
+  { key: "website", label: "Sitio web", href: (v) => v, icon: "fas fa-globe", color: "#5b8fd4" },
 ];
+
+function socialMode(
+  theme: PresentationCardTheme,
+  key: CardSocialKey,
+): "circle" | "button" {
+  return theme.socialDisplay?.[key] ?? theme.socialDisplayDefault ?? "circle";
+}
+
+function buttonStyles(
+  accent: string,
+  buttonRadius: string,
+  style: PresentationCardLink["style"],
+): CSSProperties {
+  if (style === "outline") {
+    return {
+      borderRadius: buttonRadius,
+      border: `1.5px solid ${accent}`,
+      color: accent,
+      background: "transparent",
+    };
+  }
+  if (style === "soft") {
+    return {
+      borderRadius: buttonRadius,
+      background: `${accent}28`,
+      color: "#fff",
+    };
+  }
+  return {
+    borderRadius: buttonRadius,
+    background: accent,
+    color: "#0b1220",
+  };
+}
 
 export function CardPreview({
   card,
@@ -78,10 +120,13 @@ export function CardPreview({
   const links = [...(card.links ?? [])]
     .filter((l) => l.enabled !== false)
     .sort((a, b) => a.order - b.order);
-  const socials = SOCIALS.filter((s) => {
+
+  const activeSocials = SOCIALS.filter((s) => {
     const val = card[s.key];
     return typeof val === "string" && val.trim().length > 0;
   });
+  const circleSocials = activeSocials.filter((s) => socialMode(theme, s.key) === "circle");
+  const buttonSocials = activeSocials.filter((s) => socialMode(theme, s.key) === "button");
 
   const bg =
     theme.backgroundStyle === "solid"
@@ -93,13 +138,18 @@ export function CardPreview({
   return (
     <div
       className={cn(
-        "relative overflow-hidden text-white",
-        compact ? "min-h-[560px] rounded-[2rem]" : "min-h-screen",
+        "relative flex overflow-hidden text-white",
+        compact ? "min-h-[560px] items-center justify-center rounded-[2rem]" : "min-h-screen items-center justify-center",
         className,
       )}
       style={{ background: bg }}
     >
-      <div className={cn("mx-auto flex w-full max-w-md flex-col items-center px-5", compact ? "py-8" : "py-12")}>
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-md flex-col items-center px-5",
+          compact ? "py-8" : "py-12",
+        )}
+      >
         {theme.showBrand !== false && (
           <div className="mb-6 flex items-center gap-2 opacity-80">
             <img
@@ -127,7 +177,9 @@ export function CardPreview({
           )}
         </div>
 
-        <h1 className="text-center font-heading text-2xl font-bold leading-tight">{card.name || "Nombre"}</h1>
+        <h1 className="text-center font-heading text-2xl font-bold leading-tight">
+          {card.name || "Nombre"}
+        </h1>
         <p className="mt-1 text-center text-sm font-medium" style={{ color: accent }}>
           {card.roleTitle || "Cargo"}
         </p>
@@ -142,9 +194,9 @@ export function CardPreview({
           <p className="mt-4 text-center text-sm leading-relaxed text-white/75">{card.bio}</p>
         ) : null}
 
-        {socials.length > 0 && (
+        {circleSocials.length > 0 && (
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            {socials.map((s) => {
+            {circleSocials.map((s) => {
               const value = String(card[s.key]);
               return (
                 <a
@@ -164,6 +216,23 @@ export function CardPreview({
         )}
 
         <div className="mt-6 flex w-full flex-col gap-3">
+          {buttonSocials.map((s) => {
+            const value = String(card[s.key]);
+            return (
+              <a
+                key={s.key}
+                href={s.href(value)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
+                style={buttonStyles(accent, buttonRadius, "solid")}
+              >
+                <i className={s.icon} style={{ color: s.key === "github" ? "#0b1220" : undefined }} />
+                {s.label}
+              </a>
+            );
+          })}
+
           {links.map((link) => (
             <a
               key={link.id}
@@ -171,26 +240,7 @@ export function CardPreview({
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
-              style={
-                link.style === "outline"
-                  ? {
-                      borderRadius: buttonRadius,
-                      border: `1.5px solid ${accent}`,
-                      color: accent,
-                      background: "transparent",
-                    }
-                  : link.style === "soft"
-                    ? {
-                        borderRadius: buttonRadius,
-                        background: `${accent}28`,
-                        color: "#fff",
-                      }
-                    : {
-                        borderRadius: buttonRadius,
-                        background: accent,
-                        color: "#0b1220",
-                      }
-              }
+              style={buttonStyles(accent, buttonRadius, link.style)}
             >
               {link.icon ? <i className={link.icon} /> : null}
               {link.title}

@@ -146,10 +146,96 @@ export type PresentationCardTheme = {
   backgroundStyle?: "solid" | "gradient" | "mesh";
   buttonStyle?: "rounded" | "pill" | "square";
   showBrand?: boolean;
+  /** Cómo mostrar redes fijas por defecto */
+  socialDisplayDefault?: "circle" | "button";
+  /** Override por red: circle = iconos, button = estilo Linktree */
+  socialDisplay?: Partial<
+    Record<
+      | "linkedIn"
+      | "instagram"
+      | "twitter"
+      | "github"
+      | "youtube"
+      | "tiktok"
+      | "whatsapp"
+      | "email"
+      | "website",
+      "circle" | "button"
+    >
+  >;
 };
 
 export const DEFAULT_CARD_THEME: PresentationCardTheme = {
   backgroundStyle: "gradient",
   buttonStyle: "rounded",
   showBrand: true,
+  socialDisplayDefault: "circle",
 };
+
+export const CARD_SOCIAL_KEYS = [
+  "linkedIn",
+  "instagram",
+  "twitter",
+  "github",
+  "youtube",
+  "tiktok",
+  "whatsapp",
+  "email",
+  "website",
+] as const;
+
+export type CardSocialKey = (typeof CARD_SOCIAL_KEYS)[number];
+
+export const CARD_FA_ICONS: { className: string; label: string }[] = [
+  { className: "fas fa-link", label: "Enlace" },
+  { className: "fas fa-globe", label: "Web" },
+  { className: "fas fa-envelope", label: "Email" },
+  { className: "fas fa-phone", label: "Teléfono" },
+  { className: "fas fa-calendar", label: "Calendario" },
+  { className: "fas fa-map-marker-alt", label: "Ubicación" },
+  { className: "fas fa-book", label: "Libro" },
+  { className: "fas fa-graduation-cap", label: "Educación" },
+  { className: "fas fa-briefcase", label: "Trabajo" },
+  { className: "fas fa-user", label: "Usuario" },
+  { className: "fas fa-users", label: "Equipo" },
+  { className: "fas fa-heart", label: "Corazón" },
+  { className: "fas fa-star", label: "Estrella" },
+  { className: "fas fa-bolt", label: "Rayo" },
+  { className: "fas fa-rocket", label: "Cohete" },
+  { className: "fas fa-lightbulb", label: "Idea" },
+  { className: "fas fa-code", label: "Código" },
+  { className: "fas fa-laptop-code", label: "Laptop" },
+  { className: "fas fa-camera", label: "Cámara" },
+  { className: "fas fa-video", label: "Video" },
+  { className: "fas fa-music", label: "Música" },
+  { className: "fas fa-podcast", label: "Podcast" },
+  { className: "fas fa-newspaper", label: "Noticia" },
+  { className: "fas fa-file-alt", label: "Documento" },
+  { className: "fas fa-download", label: "Descarga" },
+  { className: "fas fa-share-alt", label: "Compartir" },
+  { className: "fas fa-comments", label: "Chat" },
+  { className: "fas fa-hand-holding-heart", label: "Apoyo" },
+  { className: "fas fa-handshake", label: "Alianza" },
+  { className: "fas fa-trophy", label: "Trofeo" },
+  { className: "fas fa-chart-line", label: "Crecimiento" },
+  { className: "fas fa-store", label: "Tienda" },
+  { className: "fas fa-shopping-bag", label: "Compras" },
+  { className: "fas fa-ticket-alt", label: "Ticket" },
+  { className: "fas fa-qrcode", label: "QR" },
+  { className: "fab fa-linkedin-in", label: "LinkedIn" },
+  { className: "fab fa-instagram", label: "Instagram" },
+  { className: "fab fa-twitter", label: "Twitter" },
+  { className: "fab fa-x-twitter", label: "X" },
+  { className: "fab fa-github", label: "GitHub" },
+  { className: "fab fa-youtube", label: "YouTube" },
+  { className: "fab fa-tiktok", label: "TikTok" },
+  { className: "fab fa-whatsapp", label: "WhatsApp" },
+  { className: "fab fa-facebook-f", label: "Facebook" },
+  { className: "fab fa-discord", label: "Discord" },
+  { className: "fab fa-telegram", label: "Telegram" },
+  { className: "fab fa-spotify", label: "Spotify" },
+  { className: "fab fa-behance", label: "Behance" },
+  { className: "fab fa-dribbble", label: "Dribbble" },
+  { className: "fab fa-medium", label: "Medium" },
+];
+
