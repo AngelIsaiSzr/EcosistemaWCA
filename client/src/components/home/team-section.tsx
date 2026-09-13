@@ -89,9 +89,10 @@ function TeamMemberCard({
 
 function TeamCarousel({ members }: { members: Team[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const [copies, setCopies] = useState(3);
   const [duration, setDuration] = useState(40);
-  const [cardWidth, setCardWidth] = useState(280);
+  const [cardWidth, setCardWidth] = useState(320);
 
   const sorted = useMemo(
     () => [...members].sort((a, b) => a.order - b.order),
@@ -100,19 +101,24 @@ function TeamCarousel({ members }: { members: Team[] }) {
 
   useEffect(() => {
     const update = () => {
-      if (!containerRef.current) return;
-      const width = containerRef.current.offsetWidth;
-      // Ancho tipo grid de 4 dentro del container, pero el carrusel es full-bleed.
-      const contentWidth = Math.min(width, 1280) - 32;
+      if (!containerRef.current || !measureRef.current) return;
+      const viewportWidth = containerRef.current.offsetWidth;
+      // Mismo ancho útil que el grid de 4 dentro de `.container mx-auto px-4`
+      const measureEl = measureRef.current;
+      const styles = getComputedStyle(measureEl);
+      const contentWidth =
+        measureEl.clientWidth -
+        parseFloat(styles.paddingLeft) -
+        parseFloat(styles.paddingRight);
       const visible = contentWidth < 640 ? 1 : contentWidth < 1024 ? 2 : 4;
       const nextCardWidth = Math.max(
-        260,
+        280,
         Math.floor((contentWidth - CARD_GAP_PX * (visible - 1)) / visible),
       );
       setCardWidth(nextCardWidth);
 
       const stride = nextCardWidth + CARD_GAP_PX;
-      const needed = Math.max(2, Math.ceil((width * 2) / (sorted.length * stride)));
+      const needed = Math.max(2, Math.ceil((viewportWidth * 2) / (sorted.length * stride)));
       setCopies(needed);
       setDuration(Math.max(32, sorted.length * needed * 4.5));
     };
@@ -129,6 +135,12 @@ function TeamCarousel({ members }: { members: Team[] }) {
 
   return (
     <div ref={containerRef} className="relative w-full overflow-hidden border-y-0 py-2">
+      {/* Guía invisible: mismo ancho que el container del grid de 4 */}
+      <div
+        ref={measureRef}
+        className="pointer-events-none absolute left-1/2 top-0 h-0 w-full -translate-x-1/2 container mx-auto px-4 opacity-0"
+        aria-hidden
+      />
       <div
         data-team-track
         className="flex w-max will-change-transform"
