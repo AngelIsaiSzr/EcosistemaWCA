@@ -328,7 +328,7 @@ export default function ProfilePage() {
   };
 
   const completion = useMemo(() => {
-    if (!user) return { percent: 0; items: [] as { label: string; done: boolean; weight: number }[] };
+    if (!user) return { percent: 0, items: [] as { label: string; done: boolean; weight: number }[] };
     const items = [
       { label: "Cuenta creada", done: true, weight: 20 },
       { label: "Foto de perfil", done: !!(imagePreview || user.profileImage), weight: 20 },
