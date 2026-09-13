@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,9 +24,12 @@ import {
   Check,
   X,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import type { PresentationCard } from "@shared/schema";
+import { PresentationCardEditor } from "@/pages/admin-card-editor-page";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,7 +93,7 @@ interface EnrollmentWithProgram {
   };
 }
 
-type SectionId = "perfil" | "programas" | "seguridad" | "cuenta";
+type SectionId = "perfil" | "tarjeta" | "programas" | "seguridad" | "cuenta";
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth();
@@ -114,6 +118,18 @@ export default function ProfilePage() {
     queryKey: ["/api/enrollments"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: Boolean(user),
+  });
+
+  const { data: myCard } = useQuery<PresentationCard | null>({
+    queryKey: ["/api/cards/mine"],
+    enabled: Boolean(user),
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch("/api/cards/mine", { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("No se pudo cargar la tarjeta");
+      return res.json();
+    },
   });
 
   const unenrollMutation = useMutation({
@@ -237,29 +253,37 @@ export default function ProfilePage() {
     updateProfileMutation.mutate(data);
   };
 
-  const onPasswordSubmit = async (data: PasswordFormValues) => {
-    try {
+  const updatePasswordMutation = useMutation({
+    mutationFn: async (data: PasswordFormValues) => {
       const res = await apiRequest("PATCH", "/api/user/password", {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
-      if (res.ok) {
-        toast({
-          title: "Contraseña actualizada",
-          description: "Tu contraseña ha sido actualizada exitosamente.",
-        });
-        passwordForm.reset();
-      } else {
-        const errorData = await res.json();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({
+          message: "Error al actualizar la contraseña",
+        }));
         throw new Error(errorData.message || "Error al actualizar la contraseña");
       }
-    } catch (error) {
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contraseña actualizada",
+        description: "Tu contraseña ha sido actualizada exitosamente.",
+      });
+      passwordForm.reset();
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Ocurrió un error",
+        description: error.message,
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const onPasswordSubmit = (data: PasswordFormValues) => {
+    updatePasswordMutation.mutate(data);
   };
 
   const deleteAccountMutation = useMutation({
@@ -344,6 +368,12 @@ export default function ProfilePage() {
     return { percent, items };
   }, [user, imagePreview, enrollments]);
 
+  useEffect(() => {
+    if (section === "tarjeta" && !myCard) {
+      setSection("perfil");
+    }
+  }, [section, myCard]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -356,6 +386,7 @@ export default function ProfilePage() {
 
   const navItems: { id: SectionId; label: string; icon: typeof User; hidden?: boolean }[] = [
     { id: "perfil", label: "Editar perfil", icon: User },
+    { id: "tarjeta", label: "Mi tarjeta", icon: CreditCard, hidden: !myCard },
     { id: "programas", label: "Mis programas", icon: LayoutGrid },
     { id: "seguridad", label: "Contraseña", icon: Lock, hidden: isOfficialAccount },
     { id: "cuenta", label: "Cuenta", icon: Shield },
@@ -411,7 +442,14 @@ export default function ProfilePage() {
             </Button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
+          <div
+            className={cn(
+              "grid gap-6",
+              section === "tarjeta"
+                ? "lg:grid-cols-[220px_minmax(0,1fr)]"
+                : "lg:grid-cols-[220px_minmax(0,1fr)_260px]",
+            )}
+          >
             {/* Side nav */}
             <aside className="h-fit rounded-2xl border bg-card/60 p-3 lg:sticky lg:top-24">
               <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -456,7 +494,13 @@ export default function ProfilePage() {
             </aside>
 
             {/* Main */}
-            <div className="min-w-0 space-y-5">
+            <div className="min-w-0 space-y-5 lg:col-span-1 xl:col-auto">
+              {section === "tarjeta" && myCard ? (
+                <div className="rounded-2xl border bg-card p-4 md:p-6 lg:col-span-full">
+                  <PresentationCardEditor mode="owner" embedded />
+                </div>
+              ) : null}
+
               {section === "perfil" && (
                 <>
                   <section className="rounded-2xl border bg-card p-5 md:p-6">
@@ -712,7 +756,7 @@ export default function ProfilePage() {
                             <img
                               src={enrollment.program.image}
                               alt={enrollment.program.title}
-                              className="h-36 w-full object-cover md:h-auto md:w-40"
+                              className="h-40 w-full object-cover md:h-auto md:w-56 md:min-h-[9.5rem] lg:w-64"
                             />
                             <div className="flex flex-1 flex-col p-4">
                               <div className="flex items-start justify-between gap-2">
@@ -788,56 +832,69 @@ export default function ProfilePage() {
 
               {section === "seguridad" && !isOfficialAccount && (
                 <section className="rounded-2xl border bg-card p-5 md:p-6">
-                  <h2 className="font-heading text-lg font-semibold">Contraseña</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Cambia tu contraseña de acceso.
-                  </p>
+                  <div className="mb-4">
+                    <h2 className="font-heading text-lg font-semibold">Contraseña</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Cambia tu contraseña de acceso.
+                    </p>
+                  </div>
                   <form
                     onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
-                    className="mt-5 max-w-md space-y-4"
+                    className="space-y-4"
                   >
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Contraseña actual</Label>
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        {...passwordForm.register("currentPassword")}
-                      />
-                      {passwordForm.formState.errors.currentPassword && (
-                        <p className="text-sm text-destructive">
-                          {passwordForm.formState.errors.currentPassword.message}
-                        </p>
-                      )}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="currentPassword">Contraseña actual</Label>
+                        <PasswordInput
+                          id="currentPassword"
+                          autoComplete="current-password"
+                          {...passwordForm.register("currentPassword")}
+                        />
+                        {passwordForm.formState.errors.currentPassword && (
+                          <p className="text-sm text-destructive">
+                            {passwordForm.formState.errors.currentPassword.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword">Nueva contraseña</Label>
+                        <PasswordInput
+                          id="newPassword"
+                          autoComplete="new-password"
+                          {...passwordForm.register("newPassword")}
+                        />
+                        {passwordForm.formState.errors.newPassword && (
+                          <p className="text-sm text-destructive">
+                            {passwordForm.formState.errors.newPassword.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirmar nueva</Label>
+                        <PasswordInput
+                          id="confirmPassword"
+                          autoComplete="new-password"
+                          {...passwordForm.register("confirmPassword")}
+                        />
+                        {passwordForm.formState.errors.confirmPassword && (
+                          <p className="text-sm text-destructive">
+                            {passwordForm.formState.errors.confirmPassword.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">Nueva contraseña</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        {...passwordForm.register("newPassword")}
-                      />
-                      {passwordForm.formState.errors.newPassword && (
-                        <p className="text-sm text-destructive">
-                          {passwordForm.formState.errors.newPassword.message}
-                        </p>
-                      )}
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                        disabled={updatePasswordMutation.isPending}
+                      >
+                        {updatePasswordMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Actualizar contraseña
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirmar nueva</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        {...passwordForm.register("confirmPassword")}
-                      />
-                      {passwordForm.formState.errors.confirmPassword && (
-                        <p className="text-sm text-destructive">
-                          {passwordForm.formState.errors.confirmPassword.message}
-                        </p>
-                      )}
-                    </div>
-                    <Button type="submit" className="bg-[#5b8fd4] hover:bg-[#4a7fc4]">
-                      Actualizar contraseña
-                    </Button>
                   </form>
                 </section>
               )}
@@ -895,6 +952,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Completion panel */}
+            {section !== "tarjeta" && (
             <aside className="h-fit rounded-2xl border bg-card/60 p-5 lg:sticky lg:top-24">
               <h3 className="font-heading text-sm font-semibold">Completitud del perfil</h3>
               <div className="relative mx-auto my-6 flex h-28 w-28 items-center justify-center">
@@ -947,6 +1005,7 @@ export default function ProfilePage() {
                 ))}
               </ul>
             </aside>
+            )}
           </div>
         </main>
       </div>

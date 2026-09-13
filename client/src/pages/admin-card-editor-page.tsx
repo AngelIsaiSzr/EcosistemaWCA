@@ -90,9 +90,11 @@ function cardToState(card: PresentationCard): EditorState {
 export function PresentationCardEditor({
   cardId,
   mode,
+  embedded = false,
 }: {
   cardId?: number;
   mode: "admin" | "owner";
+  embedded?: boolean;
 }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -228,34 +230,43 @@ export function PresentationCardEditor({
 
   return (
     <>
-      <Helmet>
-        <title>
-          {mode === "admin" ? `Editar · ${state.name}` : "Mi tarjeta"} | Ecosistema WCA
-        </title>
-      </Helmet>
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 pb-16 pt-24">
+      {!embedded && (
+        <Helmet>
+          <title>
+            {mode === "admin" ? `Editar · ${state.name}` : "Mi tarjeta"} | Ecosistema WCA
+          </title>
+        </Helmet>
+      )}
+      <div className={cn(!embedded && "min-h-screen bg-background")}>
+        {!embedded && <Navbar />}
+        <div className={cn(!embedded ? "container mx-auto px-4 pb-16 pt-24" : "space-y-4")}>
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">
-                {mode === "admin" ? (
-                  <>
-                    <Link href="/admin" className="hover:text-foreground">
-                      Inicio
-                    </Link>
-                    {" › "}
-                    <Link href="/admin/tarjetas" className="hover:text-foreground">
-                      Tarjetas
-                    </Link>
-                    {" › "}
-                    Editar
-                  </>
-                ) : (
-                  "Mi tarjeta digital"
+              {!embedded && (
+                <p className="text-sm text-muted-foreground">
+                  {mode === "admin" ? (
+                    <>
+                      <Link href="/admin" className="hover:text-foreground">
+                        Inicio
+                      </Link>
+                      {" › "}
+                      <Link href="/admin/tarjetas" className="hover:text-foreground">
+                        Tarjetas
+                      </Link>
+                      {" › "}
+                      Editar
+                    </>
+                  ) : (
+                    "Mi tarjeta digital"
+                  )}
+                </p>
+              )}
+              <h1
+                className={cn(
+                  "font-heading font-bold",
+                  embedded ? "text-xl md:text-2xl" : "mt-1 text-3xl md:text-4xl",
                 )}
-              </p>
-              <h1 className="mt-1 font-heading text-3xl font-bold md:text-4xl">
+              >
                 {mode === "admin" ? "Editar tarjeta" : "Mi tarjeta"}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -286,7 +297,7 @@ export function PresentationCardEditor({
           </div>
 
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-visible">
               <section className="rounded-2xl border bg-card p-5 space-y-4">
                 <h2 className="font-heading text-lg font-semibold">Perfil</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -520,7 +531,7 @@ export function PresentationCardEditor({
                 </div>
               </section>
 
-              <section className="rounded-2xl border bg-card p-5 space-y-4">
+              <section className="rounded-2xl border bg-card p-5 space-y-4 overflow-visible">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-heading text-lg font-semibold">Botones Linktree</h2>
                   <Button type="button" variant="outline" size="sm" onClick={addLink}>
@@ -535,7 +546,7 @@ export function PresentationCardEditor({
                 ) : (
                   <div className="space-y-3">
                     {state.links.map((link, index) => (
-                      <div key={link.id} className="rounded-xl border p-3 space-y-2">
+                      <div key={link.id} className="relative z-0 space-y-2 overflow-visible rounded-xl border p-3 focus-within:z-30">
                         <div className="flex items-center gap-1">
                           <Button
                             type="button"
@@ -691,7 +702,7 @@ export function PresentationCardEditor({
               </div>
             </aside>
           </div>
-        </main>
+        </div>
       </div>
     </>
   );
