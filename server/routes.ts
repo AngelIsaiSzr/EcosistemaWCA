@@ -6,6 +6,7 @@ import { insertContactSchema, insertLiveCourseRegistrationSchema, User } from "@
 import { sendEmail, EmailData } from "./services/email";
 import { saveRegistrationToSheet } from './services/google-sheets';
 import { registerTalentoRoutes } from "./routes-talento";
+import { registerCardRoutes } from "./routes-cards";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
 
@@ -64,6 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
   registerTalentoRoutes(app);
+  registerCardRoutes(app);
   ensureAdminAccount().catch((error) => {
     console.error("No se pudo asegurar la cuenta admin:", error);
   });

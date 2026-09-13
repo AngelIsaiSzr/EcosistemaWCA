@@ -8,14 +8,17 @@ import {
   InsertTestimonial, Testimonial,
   InsertAlly, Ally,
   InsertCountry, Country,
+  InsertPresentationCard, PresentationCard,
   InsertContact, Contact,
   InsertLiveCourseRegistration, LiveCourseRegistration,
   InsertIntegrationForm, IntegrationForm,
   InsertIntegrationResponse, IntegrationResponse,
-  users, courses, enrollments, modules, sections, teams, testimonials, allies, countries, contacts, liveCourseRegistrations,
+  users, courses, enrollments, modules, sections, teams, testimonials, allies, countries, presentationCards, contacts, liveCourseRegistrations,
   integrationForms, integrationResponses
 } from "@shared/schema";
 import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
+import { DEFAULT_CARD_THEME } from "@shared/card-directions";
+import type { PresentationCardLink, PresentationCardTheme } from "@shared/card-directions";
 import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, syncOfficialCopy } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -91,6 +94,17 @@ export interface IStorage {
   updateCountry(id: number, country: Partial<InsertCountry>): Promise<Country | undefined>;
   deleteCountry(id: number): Promise<boolean>;
 
+  // Presentation cards
+  getAllPresentationCards(): Promise<PresentationCard[]>;
+  getPresentationCard(id: number): Promise<PresentationCard | undefined>;
+  getPresentationCardBySlug(slug: string): Promise<PresentationCard | undefined>;
+  getPresentationCardByUserId(userId: number): Promise<PresentationCard | undefined>;
+  createPresentationCard(card: InsertPresentationCard): Promise<PresentationCard>;
+  updatePresentationCard(id: number, card: Partial<InsertPresentationCard>): Promise<PresentationCard | undefined>;
+  deletePresentationCard(id: number): Promise<boolean>;
+  incrementPresentationCardViews(id: number): Promise<void>;
+  getUsersBasic(): Promise<Array<{ id: number; name: string; email: string }>>;
+
   // Contacts
   createContact(contact: InsertContact): Promise<Contact>;
   getAllContacts(): Promise<Contact[]>;
@@ -130,6 +144,7 @@ export class MemStorage implements IStorage {
   private testimonials: Map<number, Testimonial>;
   private allies: Map<number, Ally>;
   private countries: Map<number, Country>;
+  private presentationCards: Map<number, PresentationCard>;
   private contacts: Map<number, Contact>;
   private liveCourseRegistrations: Map<number, LiveCourseRegistration>;
   private integrationForms: Map<number, IntegrationForm>;
@@ -144,6 +159,7 @@ export class MemStorage implements IStorage {
   private currentTestimonialIds: number;
   private currentAllyIds: number;
   private currentCountryIds: number;
+  private currentPresentationCardIds: number;
   private currentContactIds: number;
   private currentLiveCourseRegistrationIds: number;
   private currentIntegrationFormIds: number;
@@ -161,6 +177,7 @@ export class MemStorage implements IStorage {
     this.testimonials = new Map();
     this.allies = new Map();
     this.countries = new Map();
+    this.presentationCards = new Map();
     this.contacts = new Map();
     this.liveCourseRegistrations = new Map();
     this.integrationForms = new Map();
@@ -175,6 +192,7 @@ export class MemStorage implements IStorage {
     this.currentTestimonialIds = 1;
     this.currentAllyIds = 1;
     this.currentCountryIds = 1;
+    this.currentPresentationCardIds = 1;
     this.currentContactIds = 1;
     this.currentLiveCourseRegistrationIds = 1;
     this.currentIntegrationFormIds = 1;
@@ -580,6 +598,92 @@ export class MemStorage implements IStorage {
   async deleteCountry(id: number): Promise<boolean> {
     if (!this.countries.has(id)) return false;
     return this.countries.delete(id);
+  }
+
+  // Presentation cards
+  async getAllPresentationCards(): Promise<PresentationCard[]> {
+    return Array.from(this.presentationCards.values()).sort((a, b) => a.order - b.order);
+  }
+
+  async getPresentationCard(id: number): Promise<PresentationCard | undefined> {
+    return this.presentationCards.get(id);
+  }
+
+  async getPresentationCardBySlug(slug: string): Promise<PresentationCard | undefined> {
+    return Array.from(this.presentationCards.values()).find((c) => c.slug === slug);
+  }
+
+  async getPresentationCardByUserId(userId: number): Promise<PresentationCard | undefined> {
+    return Array.from(this.presentationCards.values()).find((c) => c.assignedUserId === userId);
+  }
+
+  async createPresentationCard(insertCard: InsertPresentationCard): Promise<PresentationCard> {
+    const id = this.currentPresentationCardIds++;
+    const card: PresentationCard = {
+      id,
+      name: insertCard.name,
+      roleTitle: insertCard.roleTitle,
+      bio: insertCard.bio ?? "",
+      image: insertCard.image ?? "",
+      slug: insertCard.slug,
+      direction: insertCard.direction ?? "direccion-sede",
+      theme: (insertCard.theme as PresentationCardTheme) ?? { ...DEFAULT_CARD_THEME },
+      linkedIn: insertCard.linkedIn ?? null,
+      instagram: insertCard.instagram ?? null,
+      twitter: insertCard.twitter ?? null,
+      github: insertCard.github ?? null,
+      youtube: insertCard.youtube ?? null,
+      tiktok: insertCard.tiktok ?? null,
+      whatsapp: insertCard.whatsapp ?? null,
+      email: insertCard.email ?? null,
+      website: insertCard.website ?? null,
+      links: (insertCard.links as PresentationCardLink[]) ?? [],
+      assignedUserId: insertCard.assignedUserId ?? null,
+      isPublished: insertCard.isPublished ?? false,
+      pinnedAt: insertCard.pinnedAt ?? null,
+      viewCount: 0,
+      order: insertCard.order ?? 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.presentationCards.set(id, card);
+    return card;
+  }
+
+  async updatePresentationCard(
+    id: number,
+    cardUpdate: Partial<InsertPresentationCard>,
+  ): Promise<PresentationCard | undefined> {
+    const card = this.presentationCards.get(id);
+    if (!card) return undefined;
+    const updated: PresentationCard = {
+      ...card,
+      ...cardUpdate,
+      theme: (cardUpdate.theme as PresentationCardTheme | undefined) ?? card.theme,
+      links: (cardUpdate.links as PresentationCardLink[] | undefined) ?? card.links,
+      updatedAt: new Date(),
+    };
+    this.presentationCards.set(id, updated);
+    return updated;
+  }
+
+  async deletePresentationCard(id: number): Promise<boolean> {
+    if (!this.presentationCards.has(id)) return false;
+    return this.presentationCards.delete(id);
+  }
+
+  async incrementPresentationCardViews(id: number): Promise<void> {
+    const card = this.presentationCards.get(id);
+    if (!card) return;
+    this.presentationCards.set(id, { ...card, viewCount: card.viewCount + 1 });
+  }
+
+  async getUsersBasic(): Promise<Array<{ id: number; name: string; email: string }>> {
+    return Array.from(this.users.values()).map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+    }));
   }
 
   // Contacts
@@ -1106,6 +1210,86 @@ export class DatabaseStorage implements IStorage {
   async deleteCountry(id: number): Promise<boolean> {
     const result = await db.delete(countries).where(eq(countries.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Presentation cards
+  async getAllPresentationCards(): Promise<PresentationCard[]> {
+    return await db.select().from(presentationCards).orderBy(asc(presentationCards.order));
+  }
+
+  async getPresentationCard(id: number): Promise<PresentationCard | undefined> {
+    const [card] = await db
+      .select()
+      .from(presentationCards)
+      .where(eq(presentationCards.id, id))
+      .limit(1);
+    return card;
+  }
+
+  async getPresentationCardBySlug(slug: string): Promise<PresentationCard | undefined> {
+    const [card] = await db
+      .select()
+      .from(presentationCards)
+      .where(eq(presentationCards.slug, slug))
+      .limit(1);
+    return card;
+  }
+
+  async getPresentationCardByUserId(userId: number): Promise<PresentationCard | undefined> {
+    const [card] = await db
+      .select()
+      .from(presentationCards)
+      .where(eq(presentationCards.assignedUserId, userId))
+      .limit(1);
+    return card;
+  }
+
+  async createPresentationCard(insertCard: InsertPresentationCard): Promise<PresentationCard> {
+    const [card] = await db
+      .insert(presentationCards)
+      .values({
+        ...insertCard,
+        theme: insertCard.theme ?? { ...DEFAULT_CARD_THEME },
+        links: insertCard.links ?? [],
+        updatedAt: new Date(),
+      })
+      .returning();
+    return card;
+  }
+
+  async updatePresentationCard(
+    id: number,
+    cardUpdate: Partial<InsertPresentationCard>,
+  ): Promise<PresentationCard | undefined> {
+    const [card] = await db
+      .update(presentationCards)
+      .set({ ...cardUpdate, updatedAt: new Date() })
+      .where(eq(presentationCards.id, id))
+      .returning();
+    return card;
+  }
+
+  async deletePresentationCard(id: number): Promise<boolean> {
+    const result = await db
+      .delete(presentationCards)
+      .where(eq(presentationCards.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async incrementPresentationCardViews(id: number): Promise<void> {
+    await db
+      .update(presentationCards)
+      .set({ viewCount: sql`${presentationCards.viewCount} + 1` })
+      .where(eq(presentationCards.id, id));
+  }
+
+  async getUsersBasic(): Promise<Array<{ id: number; name: string; email: string }>> {
+    const rows = await db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .orderBy(asc(users.name));
+    return rows;
   }
 
   // Contacts

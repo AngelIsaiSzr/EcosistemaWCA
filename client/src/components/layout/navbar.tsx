@@ -8,9 +8,11 @@ import {
   SheetClose
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, X, LogOut, User, HeartHandshake } from 'lucide-react';
+import { Menu, X, LogOut, User, HeartHandshake, CreditCard } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserAvatar } from './user-avatar';
+import { useQuery } from '@tanstack/react-query';
+import type { PresentationCard } from '@shared/schema';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +26,17 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const { data: myCard } = useQuery<PresentationCard | null>({
+    queryKey: ["/api/cards/mine"],
+    enabled: !!user,
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch("/api/cards/mine", { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to load card");
+      return res.json();
+    },
+  });
 
   // Handle scroll event to change navbar appearance
   useEffect(() => {
@@ -103,6 +116,14 @@ export default function Navbar() {
                         <span>Perfil</span>
                       </DropdownMenuItem>
                     </Link>
+                    {myCard && (
+                      <Link href="/mi-tarjeta">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          <span>Mi tarjeta</span>
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
                     {user.role === 'admin' && (
                       <Link href="/admin">
                         <DropdownMenuItem className="cursor-pointer">
@@ -233,6 +254,17 @@ export default function Navbar() {
                             </Button>
                           </Link>
                         </SheetClose>
+
+                        {myCard && (
+                          <SheetClose asChild>
+                            <Link href="/mi-tarjeta">
+                              <Button variant="outline" className="w-full justify-start">
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Mi tarjeta
+                              </Button>
+                            </Link>
+                          </SheetClose>
+                        )}
 
                         {user.role === 'admin' && (
                           <SheetClose asChild>

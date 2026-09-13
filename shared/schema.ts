@@ -2,6 +2,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uniqueIndex 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { IntegrationFormDefinition } from "./integration-form";
+import type { PresentationCardLink, PresentationCardTheme } from "./card-directions";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -105,6 +106,36 @@ export const countries = pgTable("countries", {
   order: integer("order").notNull(),
 });
 
+export const presentationCards = pgTable("presentation_cards", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  roleTitle: text("role_title").notNull(),
+  bio: text("bio").notNull().default(""),
+  image: text("image").notNull().default(""),
+  slug: text("slug").notNull().unique(),
+  direction: text("direction").notNull().default("direccion-sede"),
+  theme: jsonb("theme").$type<PresentationCardTheme>().notNull().default({}),
+  linkedIn: text("linked_in"),
+  instagram: text("instagram"),
+  twitter: text("twitter"),
+  github: text("github"),
+  youtube: text("youtube"),
+  tiktok: text("tiktok"),
+  whatsapp: text("whatsapp"),
+  email: text("email"),
+  website: text("website"),
+  links: jsonb("links").$type<PresentationCardLink[]>().notNull().default([]),
+  assignedUserId: integer("assigned_user_id").references(() => users.id, { onDelete: "set null" }),
+  isPublished: boolean("is_published").notNull().default(false),
+  pinnedAt: timestamp("pinned_at"),
+  viewCount: integer("view_count").notNull().default(0),
+  order: integer("order").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("presentation_cards_assigned_user_unique").on(table.assignedUserId),
+]);
+
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -194,6 +225,13 @@ export const insertCountrySchema = createInsertSchema(countries).omit({
   id: true,
 });
 
+export const insertPresentationCardSchema = createInsertSchema(presentationCards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+});
+
 export const insertContactSchema = z.object({
   name: z.string().min(1, {
     message: "El nombre es requerido"
@@ -232,6 +270,7 @@ export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type InsertAlly = z.infer<typeof insertAllySchema>;
 export type InsertCountry = z.infer<typeof insertCountrySchema>;
+export type InsertPresentationCard = z.infer<typeof insertPresentationCardSchema>;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertLiveCourseRegistration = z.infer<typeof insertLiveCourseRegistrationSchema>;
 export type InsertIntegrationForm = z.infer<typeof insertIntegrationFormSchema>;
@@ -247,6 +286,7 @@ export type Team = typeof teams.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Ally = typeof allies.$inferSelect;
 export type Country = typeof countries.$inferSelect;
+export type PresentationCard = typeof presentationCards.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
 export type LiveCourseRegistration = typeof liveCourseRegistrations.$inferSelect;
 export type IntegrationForm = typeof integrationForms.$inferSelect;

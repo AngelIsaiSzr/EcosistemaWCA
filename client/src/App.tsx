@@ -19,6 +19,10 @@ import AdminDashboardPage from "@/pages/admin-dashboard-page";
 import AdminPage from "@/pages/admin-page";
 import AdminAlliesPage from "@/pages/admin-allies-page";
 import AdminCountriesPage from "@/pages/admin-countries-page";
+import AdminCardsPage from "@/pages/admin-cards-page";
+import AdminCardEditorPage from "@/pages/admin-card-editor-page";
+import MyCardPage from "@/pages/my-card-page";
+import CardPublicPage from "@/pages/card-public-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
 import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
@@ -32,6 +36,7 @@ import TermsPage from "@/pages/terms-page";
 import PrivacyPage from "@/pages/privacy-page";
 import CookiesPage from "@/pages/cookies-page";
 import { ProtectedRoute, RoleProtectedRoute } from "@/lib/protected-route";
+import { isReservedCardSlug } from "@shared/card-directions";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
@@ -67,6 +72,9 @@ function Router() {
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
+        <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
+        <RoleProtectedRoute path="/admin/tarjetas/:id/editar" component={AdminCardEditorPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/tarjetas" component={AdminCardsPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
@@ -75,6 +83,7 @@ function Router() {
         <RoleProtectedRoute path="/talento/editar" component={TalentoFormEditorPage} roles={["talento"]} />
         <RoleProtectedRoute path="/talento/:slug" component={TalentoPage} roles={["talento"]} />
         <RoleProtectedRoute path="/talento" component={TalentoDashboardPage} roles={["talento"]} />
+        <Route path="/:slug" component={CardPublicPage} />
         <Route component={NotFound} />
       </Switch>
     </PageTransition>
@@ -118,12 +127,15 @@ function App() {
   useDynamicTitle();
   const [location] = useLocation();
   // Ocultar en /programs/:slug/learn y en el registro en vivo
+  const pathSlug = location.replace(/^\//, "").split("/")[0] || "";
   const hideDonorbox =
     /^\/programs\/[^/]+\/learn$/.test(location) ||
     location === "/integracion" ||
     location.startsWith("/f/") ||
     location.startsWith("/talento") ||
     location.startsWith("/admin") ||
+    location === "/mi-tarjeta" ||
+    (!!pathSlug && !pathSlug.includes("/") && !isReservedCardSlug(pathSlug) && location === `/${pathSlug}`) ||
     location.includes("registro-en-vivo") ||
     location.includes("live-course-registration");
 

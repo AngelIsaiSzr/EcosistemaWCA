@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
-import { Ally, Country, Course, Team, Testimonial } from "@shared/schema";
+import { Ally, Country, Course, PresentationCard, Team, Testimonial } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 type AdminOption = {
@@ -48,6 +48,10 @@ export default function AdminDashboardPage() {
   });
   const { data: countries } = useQuery<Country[]>({
     queryKey: ["/api/countries"],
+    enabled: user?.role === "admin",
+  });
+  const { data: cards } = useQuery<PresentationCard[]>({
+    queryKey: ["/api/cards"],
     enabled: user?.role === "admin",
   });
 
@@ -108,9 +112,11 @@ export default function AdminDashboardPage() {
     {
       id: "tarjetas",
       title: "Tarjetas de presentación",
-      description: "Genera y administra tarjetas de presentación digitales del equipo WCA.",
+      description: "Crea y administra tarjetas digitales estilo Linktree del equipo WCA.",
+      href: "/admin/tarjetas",
       icon: CreditCard,
-      disabled: true,
+      count: cards?.length ?? null,
+      countLabel: "tarjetas",
     },
   ];
 
