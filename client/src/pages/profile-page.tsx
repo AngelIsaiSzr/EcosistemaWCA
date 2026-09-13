@@ -23,7 +23,6 @@ import {
   LayoutGrid,
   Check,
   X,
-  Lock,
   CreditCard,
 } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
@@ -93,7 +92,7 @@ interface EnrollmentWithProgram {
   };
 }
 
-type SectionId = "perfil" | "tarjeta" | "programas" | "seguridad" | "cuenta";
+type SectionId = "perfil" | "tarjeta" | "programas" | "cuenta";
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth();
@@ -388,7 +387,6 @@ export default function ProfilePage() {
     { id: "perfil", label: "Editar perfil", icon: User },
     { id: "tarjeta", label: "Mi tarjeta", icon: CreditCard, hidden: !myCard },
     { id: "programas", label: "Mis programas", icon: LayoutGrid },
-    { id: "seguridad", label: "Contraseña", icon: Lock, hidden: isOfficialAccount },
     { id: "cuenta", label: "Cuenta", icon: Shield },
   ];
 
@@ -479,18 +477,6 @@ export default function ProfilePage() {
                     );
                   })}
               </nav>
-              {!isOfficialAccount && (
-                <div className="mt-4 border-t pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setSection("cuenta")}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-destructive transition hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Eliminar cuenta
-                  </button>
-                </div>
-              )}
             </aside>
 
             {/* Main */}
@@ -830,124 +816,139 @@ export default function ProfilePage() {
                 </section>
               )}
 
-              {section === "seguridad" && !isOfficialAccount && (
-                <section className="rounded-2xl border bg-card p-5 md:p-6">
-                  <div className="mb-4">
-                    <h2 className="font-heading text-lg font-semibold">Contraseña</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Cambia tu contraseña de acceso.
-                    </p>
-                  </div>
-                  <form
-                    onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
-                    className="space-y-4"
-                  >
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="currentPassword">Contraseña actual</Label>
-                        <PasswordInput
-                          id="currentPassword"
-                          autoComplete="current-password"
-                          {...passwordForm.register("currentPassword")}
-                        />
-                        {passwordForm.formState.errors.currentPassword && (
-                          <p className="text-sm text-destructive">
-                            {passwordForm.formState.errors.currentPassword.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="newPassword">Nueva contraseña</Label>
-                        <PasswordInput
-                          id="newPassword"
-                          autoComplete="new-password"
-                          {...passwordForm.register("newPassword")}
-                        />
-                        {passwordForm.formState.errors.newPassword && (
-                          <p className="text-sm text-destructive">
-                            {passwordForm.formState.errors.newPassword.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirmar nueva</Label>
-                        <PasswordInput
-                          id="confirmPassword"
-                          autoComplete="new-password"
-                          {...passwordForm.register("confirmPassword")}
-                        />
-                        {passwordForm.formState.errors.confirmPassword && (
-                          <p className="text-sm text-destructive">
-                            {passwordForm.formState.errors.confirmPassword.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button
-                        type="submit"
-                        className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
-                        disabled={updatePasswordMutation.isPending}
-                      >
-                        {updatePasswordMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Actualizar contraseña
-                      </Button>
-                    </div>
-                  </form>
-                </section>
-              )}
-
               {section === "cuenta" && (
-                <section className="rounded-2xl border bg-card p-5 md:p-6">
-                  <h2 className="font-heading text-lg font-semibold">Administración de cuenta</h2>
+                <div className="space-y-5">
                   {isOfficialAccount ? (
-                    <div className="mt-4 rounded-xl border border-[#5b8fd4]/30 bg-[#5b8fd4]/10 p-4 text-sm">
-                      Esta es una cuenta oficial ({user.role}). La contraseña y la eliminación de
-                      cuenta no están disponibles desde el perfil.
-                    </div>
+                    <section className="rounded-2xl border bg-card p-5 md:p-6">
+                      <div className="mb-4">
+                        <h2 className="font-heading text-lg font-semibold">Administración de cuenta</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Opciones de seguridad y administración.
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#5b8fd4]/30 bg-[#5b8fd4]/10 p-4 text-sm">
+                        Esta es una cuenta oficial ({user.role}). La contraseña y la eliminación de
+                        cuenta no están disponibles desde el perfil.
+                      </div>
+                    </section>
                   ) : (
-                    <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-5">
-                      <h3 className="font-semibold text-destructive">Zona de peligro</h3>
-                      <p className="mt-1 text-sm text-destructive/80">
-                        Una vez que elimines tu cuenta, no hay vuelta atrás.
-                      </p>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="mt-4" disabled={deleteAccountMutation.isPending}>
-                            {deleteAccountMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Eliminando...
-                              </>
-                            ) : (
-                              "Eliminar cuenta"
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Se eliminará permanentemente tu cuenta
-                              y tu progreso.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteAccountMutation.mutate()}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    <>
+                      <section className="rounded-2xl border bg-card p-5 md:p-6">
+                        <div className="mb-4">
+                          <h2 className="font-heading text-lg font-semibold">Contraseña</h2>
+                          <p className="text-sm text-muted-foreground">
+                            Cambia tu contraseña de acceso.
+                          </p>
+                        </div>
+                        <form
+                          onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+                          className="space-y-4"
+                        >
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label htmlFor="currentPassword">Contraseña actual</Label>
+                              <PasswordInput
+                                id="currentPassword"
+                                autoComplete="current-password"
+                                {...passwordForm.register("currentPassword")}
+                              />
+                              {passwordForm.formState.errors.currentPassword && (
+                                <p className="text-sm text-destructive">
+                                  {passwordForm.formState.errors.currentPassword.message}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="newPassword">Nueva contraseña</Label>
+                              <PasswordInput
+                                id="newPassword"
+                                autoComplete="new-password"
+                                {...passwordForm.register("newPassword")}
+                              />
+                              {passwordForm.formState.errors.newPassword && (
+                                <p className="text-sm text-destructive">
+                                  {passwordForm.formState.errors.newPassword.message}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="confirmPassword">Confirmar nueva</Label>
+                              <PasswordInput
+                                id="confirmPassword"
+                                autoComplete="new-password"
+                                {...passwordForm.register("confirmPassword")}
+                              />
+                              {passwordForm.formState.errors.confirmPassword && (
+                                <p className="text-sm text-destructive">
+                                  {passwordForm.formState.errors.confirmPassword.message}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              type="submit"
+                              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                              disabled={updatePasswordMutation.isPending}
                             >
-                              Sí, eliminar cuenta
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                              {updatePasswordMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              )}
+                              Actualizar contraseña
+                            </Button>
+                          </div>
+                        </form>
+                      </section>
+
+                      <section className="rounded-2xl border border-border/80 bg-card/40 p-5 md:p-6">
+                        <h2 className="font-heading text-base font-semibold text-muted-foreground">
+                          Eliminar cuenta
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Si ya no necesitas tu cuenta, puedes eliminarla de forma permanente. Esta
+                          acción no se puede deshacer.
+                        </p>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-4 border-muted-foreground/30 text-muted-foreground hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
+                              disabled={deleteAccountMutation.isPending}
+                            >
+                              {deleteAccountMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Eliminando...
+                                </>
+                              ) : (
+                                "Eliminar mi cuenta"
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará permanentemente tu
+                                cuenta y tu progreso.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteAccountMutation.mutate()}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Sí, eliminar cuenta
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </section>
+                    </>
                   )}
-                </section>
+                </div>
               )}
             </div>
 
