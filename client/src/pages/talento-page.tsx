@@ -566,7 +566,7 @@ export default function TalentoPage({
                     {!formLoading && responses.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={Math.max(fields.length + 2, 3)} className="py-10 text-center text-muted-foreground">
-                          Aún no hay postulaciones.
+                          Aún no hay respuestas.
                         </TableCell>
                       </TableRow>
                     )}

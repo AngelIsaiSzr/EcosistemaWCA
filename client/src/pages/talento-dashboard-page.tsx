@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Eye,
   Globe2,
-  Home,
   MoreHorizontal,
   Pin,
   PinOff,
@@ -96,12 +95,18 @@ export default function TalentoDashboardPage() {
       if (sort === "responses") return (b.responseCount ?? 0) - (a.responseCount ?? 0);
       if (sort === "views") return (b.viewCount ?? 0) - (a.viewCount ?? 0);
       if (sort === "newest") {
-        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        return (
+          (b.createdAt ? new Date(b.createdAt).getTime() : 0) -
+          (a.createdAt ? new Date(a.createdAt).getTime() : 0)
+        );
       }
       const ap = a.pinnedAt ? new Date(a.pinnedAt).getTime() : 0;
       const bp = b.pinnedAt ? new Date(b.pinnedAt).getTime() : 0;
       if (ap !== bp) return bp - ap;
-      return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      return (
+        (b.createdAt ? new Date(b.createdAt).getTime() : 0) -
+        (a.createdAt ? new Date(a.createdAt).getTime() : 0)
+      );
     });
     return list;
   }, [forms, sort]);
@@ -119,16 +124,19 @@ export default function TalentoDashboardPage() {
       <Helmet>
         <title>Talento y Bienestar | Formularios</title>
       </Helmet>
-      <div className="min-h-screen bg-[#0c0f14] text-white">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-white/70">
-              <Home className="h-4 w-4" />
-              <span className="text-sm">Inicio</span>
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Inicio</p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">Formularios</h1>
+              <p className="mt-2 text-muted-foreground">
+                Panel de Dirección de Talento y Bienestar. Crea, fija y gestiona tus formularios.
+              </p>
             </div>
             <Button
-              className="bg-[#3b82f6] hover:bg-[#2563eb]"
+              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending}
             >
@@ -138,13 +146,13 @@ export default function TalentoDashboardPage() {
           </div>
 
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-medium">
+            <div className="inline-flex rounded-full border bg-card px-4 py-1.5 text-sm font-medium">
               Formularios
             </div>
-            <div className="flex items-center gap-2 text-sm text-white/60">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Ordenar por</span>
               <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                <SelectTrigger className="h-9 w-[160px] border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="h-9 w-[160px] bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,36 +170,42 @@ export default function TalentoDashboardPage() {
             <div className="flex justify-center py-20">
               <LoadingSpinner text="Cargando formularios..." />
             </div>
+          ) : sorted.length === 0 ? (
+            <div className="rounded-2xl border border-dashed bg-card px-6 py-16 text-center text-muted-foreground">
+              Aún no hay formularios. Crea el primero con “Nuevo”.
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {sorted.map((form) => {
                 const pinned = !!form.pinnedAt;
                 return (
                   <div
                     key={form.id}
-                    className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#151a22] px-4 py-4 transition hover:border-white/20 hover:bg-[#1a202b] sm:px-5"
+                    className="group relative flex items-start gap-3 rounded-2xl border bg-card p-5 transition hover:border-[#5b8fd4]/40 hover:shadow-sm"
                   >
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left"
                       onClick={() => navigate(`/talento/${form.slug}`)}
                     >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3b82f6]/30 to-[#1d4ed8]/20 ring-1 ring-white/10">
-                        <Globe2 className="h-5 w-5 text-[#93c5fd]" />
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#5b8fd4]/15 ring-1 ring-[#5b8fd4]/25">
+                        <Globe2 className="h-5 w-5 text-[#5b8fd4]" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h2 className="truncate font-heading text-lg font-semibold tracking-tight">
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <div className="flex items-start gap-1.5 pr-8">
+                          <h2 className="line-clamp-2 font-heading text-base font-semibold leading-snug tracking-tight">
                             {form.title}
                           </h2>
-                          {pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#3b82f6]" />}
-                          {!form.isPublished && (
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
-                              Borrador
-                            </span>
+                          {pinned && (
+                            <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5b8fd4]" />
                           )}
                         </div>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-4 text-sm text-white/50">
+                        {!form.isPublished && (
+                          <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                            Borrador
+                          </span>
+                        )}
+                        <div className="mt-2.5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5">
                             <Eye className="h-3.5 w-3.5" />
                             {form.viewCount ?? 0}
@@ -209,10 +223,10 @@ export default function TalentoDashboardPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="shrink-0 text-white/50 hover:bg-white/10 hover:text-white"
+                          className="absolute right-2 top-2 h-8 w-8 shrink-0 text-muted-foreground opacity-70 hover:opacity-100"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontal className="h-5 w-5" />
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
@@ -239,7 +253,11 @@ export default function TalentoDashboardPage() {
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => {
-                              if (confirm(`¿Eliminar “${form.title}”? Esta acción no se puede deshacer.`)) {
+                              if (
+                                confirm(
+                                  `¿Eliminar “${form.title}”? Esta acción no se puede deshacer.`,
+                                )
+                              ) {
                                 deleteMutation.mutate(form.slug);
                               }
                             }}
@@ -252,12 +270,6 @@ export default function TalentoDashboardPage() {
                   </div>
                 );
               })}
-
-              {sorted.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-white/50">
-                  Aún no hay formularios. Crea el primero con “Nuevo”.
-                </div>
-              )}
             </div>
           )}
         </main>
