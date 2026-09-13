@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { ChevronDown, ChevronUp, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { Ally, insertAllySchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -214,18 +214,26 @@ export default function AdminAlliesPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className="mb-8">
-            <p className="text-sm text-muted-foreground">
-              <Link href="/admin" className="hover:text-foreground">
-                Inicio
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                Aliados
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">Aliados</h1>
+              <p className="mt-2 text-muted-foreground">
+                Gestiona los logos del carrusel de aliados en la página principal.
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al panel
               </Link>
-              {" › "}
-              Aliados
-            </p>
-            <h1 className="mt-1 font-heading text-4xl font-bold">Aliados</h1>
-            <p className="mt-2 text-muted-foreground">
-              Gestiona los logos del carrusel de aliados en la página principal.
-            </p>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">

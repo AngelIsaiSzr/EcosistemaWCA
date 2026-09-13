@@ -10,6 +10,7 @@ import {
   PinOff,
   Plus,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { PresentationCard } from "@shared/schema";
 import {
@@ -158,14 +159,22 @@ export default function AdminCardsPage() {
                 Crea y gestiona tarjetas digitales estilo Linktree para el equipo WCA.
               </p>
             </div>
-            <Button
-              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending}
-            >
-              <Plus className="h-4 w-4" />
-              Nueva tarjeta
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/admin">
+                  <ArrowLeft className="h-4 w-4" />
+                  Volver al panel
+                </Link>
+              </Button>
+              <Button
+                className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending}
+              >
+                <Plus className="h-4 w-4" />
+                Nueva tarjeta
+              </Button>
+            </div>
           </div>
 
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

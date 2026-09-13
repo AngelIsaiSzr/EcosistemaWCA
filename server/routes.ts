@@ -992,6 +992,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "You must be logged in to change your password" });
       }
+
+      if (req.user.role === "admin" || req.user.role === "talento") {
+        return res.status(403).json({
+          message: "Las cuentas oficiales no pueden cambiar la contraseña desde el perfil.",
+        });
+      }
       
       const { currentPassword, newPassword } = req.body;
       
