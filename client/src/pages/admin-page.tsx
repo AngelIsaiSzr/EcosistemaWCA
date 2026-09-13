@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Course,
@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Navbar from "@/components/layout/navbar";
 
 import {
   Tabs,
@@ -55,7 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Trash2, Pencil } from "lucide-react";
+import { Loader2, Trash2, Pencil, ArrowLeft } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -209,10 +210,40 @@ type TestimonialFormValues = z.infer<typeof testimonialFormSchema>;
 type ModuleFormValues = z.infer<typeof moduleFormSchema>;
 type SectionFormValues = z.infer<typeof sectionFormSchema>;
 
-export default function AdminPage() {
+const ADMIN_SECTIONS = {
+  programas: {
+    tab: "courses",
+    title: "Programas",
+    description: "Crea y edita programas, módulos y secciones de la plataforma.",
+  },
+  equipo: {
+    tab: "team",
+    title: "Equipo",
+    description: "Gestiona los perfiles del equipo que aparecen en el sitio.",
+  },
+  testimonios: {
+    tab: "testimonials",
+    title: "Testimonios",
+    description: "Administra reseñas y testimonios públicos de la comunidad.",
+  },
+} as const;
+
+type AdminSectionSlug = keyof typeof ADMIN_SECTIONS;
+
+export default function AdminPage({
+  params,
+}: {
+  params?: Record<string | number, string | undefined>;
+}) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const sectionSlug = (params?.section || "programas") as string;
+  const sectionMeta =
+    sectionSlug in ADMIN_SECTIONS
+      ? ADMIN_SECTIONS[sectionSlug as AdminSectionSlug]
+      : null;
+  const activeTab = sectionMeta?.tab ?? "courses";
 
   // Estados para los diálogos de confirmación
   const [moduleToDelete, setModuleToDelete] = useState<number | null>(null);
@@ -235,6 +266,12 @@ export default function AdminPage() {
       });
     }
   }, [user, navigate, toast]);
+
+  useEffect(() => {
+    if (!sectionMeta) {
+      navigate("/admin");
+    }
+  }, [sectionMeta, navigate]);
 
   // Fetch data
   const { data: courses, refetch: refetchCourses } = useQuery<Course[]>({
@@ -1169,25 +1206,39 @@ export default function AdminPage() {
       {testimonialDeleteDialog}
 
       <Helmet>
-        <title>Ecosistema WCA</title>
+        <title>{sectionMeta?.title ?? "Administración"} | Ecosistema WCA</title>
       </Helmet>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-heading font-bold">Panel de Administración</h1>
-            <p className="text-muted">Gestiona el contenido de la plataforma</p>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 pb-16 pt-24">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                {sectionMeta?.title ?? "Administración"}
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">
+                {sectionMeta?.title ?? "Administración"}
+              </h1>
+              <p className="mt-2 text-muted-foreground">
+                {sectionMeta?.description ?? "Gestiona el contenido de la plataforma."}
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al panel
+              </Link>
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => window.location.href = "/"}
-          >
-            Volver al sitio
-          </Button>
-        </div>
 
-        <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-8">
+        <Tabs value={activeTab} className="w-full">
+          {/* Tabs ocultos: la navegación vive en /admin */}
+          <TabsList className="mb-8 hidden">
             <TabsTrigger value="courses">Programas</TabsTrigger>
             <TabsTrigger value="team">Equipo</TabsTrigger>
             <TabsTrigger value="testimonials">Testimonios</TabsTrigger>
@@ -2788,6 +2839,7 @@ export default function AdminPage() {
             </div>
           </TabsContent>
         </Tabs>
+        </main>
       </div>
     </>
   );
