@@ -6,13 +6,16 @@ import {
   InsertSection, Section, 
   InsertTeam, Team, 
   InsertTestimonial, Testimonial,
+  InsertAlly, Ally,
+  InsertCountry, Country,
   InsertContact, Contact,
   InsertLiveCourseRegistration, LiveCourseRegistration,
   InsertIntegrationForm, IntegrationForm,
   InsertIntegrationResponse, IntegrationResponse,
-  users, courses, enrollments, modules, sections, teams, testimonials, contacts, liveCourseRegistrations,
+  users, courses, enrollments, modules, sections, teams, testimonials, allies, countries, contacts, liveCourseRegistrations,
   integrationForms, integrationResponses
 } from "@shared/schema";
+import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
 import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, syncOfficialCopy } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -76,6 +79,18 @@ export interface IStorage {
   updateTestimonial(id: number, testimonial: Partial<InsertTestimonial>): Promise<Testimonial | undefined>;
   deleteTestimonial(id: number): Promise<boolean>;
 
+  // Allies
+  getAllAllies(): Promise<Ally[]>;
+  createAlly(ally: InsertAlly): Promise<Ally>;
+  updateAlly(id: number, ally: Partial<InsertAlly>): Promise<Ally | undefined>;
+  deleteAlly(id: number): Promise<boolean>;
+
+  // Countries
+  getAllCountries(): Promise<Country[]>;
+  createCountry(country: InsertCountry): Promise<Country>;
+  updateCountry(id: number, country: Partial<InsertCountry>): Promise<Country | undefined>;
+  deleteCountry(id: number): Promise<boolean>;
+
   // Contacts
   createContact(contact: InsertContact): Promise<Contact>;
   getAllContacts(): Promise<Contact[]>;
@@ -113,6 +128,8 @@ export class MemStorage implements IStorage {
   private sections: Map<number, Section>;
   private teams: Map<number, Team>;
   private testimonials: Map<number, Testimonial>;
+  private allies: Map<number, Ally>;
+  private countries: Map<number, Country>;
   private contacts: Map<number, Contact>;
   private liveCourseRegistrations: Map<number, LiveCourseRegistration>;
   private integrationForms: Map<number, IntegrationForm>;
@@ -125,6 +142,8 @@ export class MemStorage implements IStorage {
   private currentSectionIds: number;
   private currentTeamIds: number;
   private currentTestimonialIds: number;
+  private currentAllyIds: number;
+  private currentCountryIds: number;
   private currentContactIds: number;
   private currentLiveCourseRegistrationIds: number;
   private currentIntegrationFormIds: number;
@@ -140,6 +159,8 @@ export class MemStorage implements IStorage {
     this.sections = new Map();
     this.teams = new Map();
     this.testimonials = new Map();
+    this.allies = new Map();
+    this.countries = new Map();
     this.contacts = new Map();
     this.liveCourseRegistrations = new Map();
     this.integrationForms = new Map();
@@ -152,10 +173,27 @@ export class MemStorage implements IStorage {
     this.currentSectionIds = 1;
     this.currentTeamIds = 1;
     this.currentTestimonialIds = 1;
+    this.currentAllyIds = 1;
+    this.currentCountryIds = 1;
     this.currentContactIds = 1;
     this.currentLiveCourseRegistrationIds = 1;
     this.currentIntegrationFormIds = 1;
     this.currentIntegrationResponseIds = 1;
+
+    for (const item of DEFAULT_ALLIES) {
+      const id = this.currentAllyIds++;
+      this.allies.set(id, { id, name: item.name, image: item.image, order: item.order });
+    }
+    for (const item of DEFAULT_COUNTRIES) {
+      const id = this.currentCountryIds++;
+      this.countries.set(id, {
+        id,
+        name: item.name,
+        code: item.code,
+        students: item.students,
+        order: item.order,
+      });
+    }
 
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
@@ -477,6 +515,71 @@ export class MemStorage implements IStorage {
       return false;
     }
     return this.testimonials.delete(id);
+  }
+
+  // Allies
+  async getAllAllies(): Promise<Ally[]> {
+    return Array.from(this.allies.values()).sort((a, b) => a.order - b.order);
+  }
+
+  async createAlly(insertAlly: InsertAlly): Promise<Ally> {
+    const id = this.currentAllyIds++;
+    const ally: Ally = {
+      id,
+      name: insertAlly.name || "",
+      image: insertAlly.image,
+      order: insertAlly.order,
+    };
+    this.allies.set(id, ally);
+    return ally;
+  }
+
+  async updateAlly(id: number, allyUpdate: Partial<InsertAlly>): Promise<Ally | undefined> {
+    const ally = this.allies.get(id);
+    if (!ally) return undefined;
+    const updated: Ally = { ...ally, ...allyUpdate };
+    this.allies.set(id, updated);
+    return updated;
+  }
+
+  async deleteAlly(id: number): Promise<boolean> {
+    if (!this.allies.has(id)) return false;
+    return this.allies.delete(id);
+  }
+
+  // Countries
+  async getAllCountries(): Promise<Country[]> {
+    return Array.from(this.countries.values()).sort((a, b) => a.order - b.order);
+  }
+
+  async createCountry(insertCountry: InsertCountry): Promise<Country> {
+    const id = this.currentCountryIds++;
+    const country: Country = {
+      id,
+      name: insertCountry.name,
+      code: insertCountry.code.toLowerCase(),
+      students: insertCountry.students,
+      order: insertCountry.order,
+    };
+    this.countries.set(id, country);
+    return country;
+  }
+
+  async updateCountry(id: number, countryUpdate: Partial<InsertCountry>): Promise<Country | undefined> {
+    const country = this.countries.get(id);
+    if (!country) return undefined;
+    const updated: Country = {
+      ...country,
+      ...countryUpdate,
+      code: countryUpdate.code ? countryUpdate.code.toLowerCase() : country.code,
+    };
+    this.countries.set(id, updated);
+    return updated;
+  }
+
+  async deleteCountry(id: number): Promise<boolean> {
+    if (!this.countries.has(id)) return false;
+    return this.countries.delete(id);
   }
 
   // Contacts
@@ -944,6 +1047,64 @@ export class DatabaseStorage implements IStorage {
       .delete(testimonials)
       .where(eq(testimonials.id, id))
       .returning();
+    return result.length > 0;
+  }
+
+  // Allies
+  async getAllAllies(): Promise<Ally[]> {
+    return await db.select().from(allies).orderBy(asc(allies.order));
+  }
+
+  async createAlly(insertAlly: InsertAlly): Promise<Ally> {
+    const [ally] = await db.insert(allies).values(insertAlly).returning();
+    return ally;
+  }
+
+  async updateAlly(id: number, allyUpdate: Partial<InsertAlly>): Promise<Ally | undefined> {
+    const [ally] = await db
+      .update(allies)
+      .set(allyUpdate)
+      .where(eq(allies.id, id))
+      .returning();
+    return ally;
+  }
+
+  async deleteAlly(id: number): Promise<boolean> {
+    const result = await db.delete(allies).where(eq(allies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Countries
+  async getAllCountries(): Promise<Country[]> {
+    return await db.select().from(countries).orderBy(asc(countries.order));
+  }
+
+  async createCountry(insertCountry: InsertCountry): Promise<Country> {
+    const [country] = await db
+      .insert(countries)
+      .values({
+        ...insertCountry,
+        code: insertCountry.code.toLowerCase(),
+      })
+      .returning();
+    return country;
+  }
+
+  async updateCountry(id: number, countryUpdate: Partial<InsertCountry>): Promise<Country | undefined> {
+    const payload = {
+      ...countryUpdate,
+      ...(countryUpdate.code ? { code: countryUpdate.code.toLowerCase() } : {}),
+    };
+    const [country] = await db
+      .update(countries)
+      .set(payload)
+      .where(eq(countries.id, id))
+      .returning();
+    return country;
+  }
+
+  async deleteCountry(id: number): Promise<boolean> {
+    const result = await db.delete(countries).where(eq(countries.id, id)).returning();
     return result.length > 0;
   }
 

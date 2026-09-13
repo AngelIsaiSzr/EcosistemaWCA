@@ -90,6 +90,21 @@ export const testimonials = pgTable("testimonials", {
   order: integer("order").notNull(),
 });
 
+export const allies = pgTable("allies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  image: text("image").notNull(),
+  order: integer("order").notNull(),
+});
+
+export const countries = pgTable("countries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  students: text("students").notNull(),
+  order: integer("order").notNull(),
+});
+
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -171,6 +186,14 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   id: true,
 });
 
+export const insertAllySchema = createInsertSchema(allies).omit({
+  id: true,
+});
+
+export const insertCountrySchema = createInsertSchema(countries).omit({
+  id: true,
+});
+
 export const insertContactSchema = z.object({
   name: z.string().min(1, {
     message: "El nombre es requerido"
@@ -207,6 +230,8 @@ export type InsertModule = z.infer<typeof insertModuleSchema>;
 export type InsertSection = z.infer<typeof insertSectionSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type InsertAlly = z.infer<typeof insertAllySchema>;
+export type InsertCountry = z.infer<typeof insertCountrySchema>;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertLiveCourseRegistration = z.infer<typeof insertLiveCourseRegistrationSchema>;
 export type InsertIntegrationForm = z.infer<typeof insertIntegrationFormSchema>;
@@ -220,6 +245,8 @@ export type Module = typeof modules.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
+export type Ally = typeof allies.$inferSelect;
+export type Country = typeof countries.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
 export type LiveCourseRegistration = typeof liveCourseRegistrations.$inferSelect;
 export type IntegrationForm = typeof integrationForms.$inferSelect;

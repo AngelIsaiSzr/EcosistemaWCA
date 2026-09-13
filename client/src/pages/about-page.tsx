@@ -287,7 +287,7 @@ export default function AboutPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-primary-700 rounded-xl p-8 text-center">
-                  <div className="text-4xl font-bold accent-red mb-4">+120</div>
+                  <div className="text-4xl font-bold accent-red mb-4">+130</div>
                   <h3 className="text-xl font-heading font-semibold mb-2">Estudiantes</h3>
                   <p className="text-muted">Personas de 9 países en Latinoamérica y España que han accedido a educación tecnológica de calidad.</p>
                 </div>

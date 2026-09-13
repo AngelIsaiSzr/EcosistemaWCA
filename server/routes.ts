@@ -7,6 +7,7 @@ import { sendEmail, EmailData } from "./services/email";
 import { saveRegistrationToSheet } from './services/google-sheets';
 import { registerTalentoRoutes } from "./routes-talento";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
+import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
 
 const ADMIN_EMAIL = "admin@ecosistemawca.com";
 const ADMIN_PASSWORD = "EcosistemaWCA@0";
@@ -613,6 +614,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: "Testimonial deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
+  // Allies (logos carousel)
+  app.get("/api/allies", async (req, res) => {
+    try {
+      await ensureAlliesAndCountriesTables();
+      const items = await storage.getAllAllies();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch allies" });
+    }
+  });
+
+  app.post("/api/allies", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const ally = await storage.createAlly(req.body);
+      res.status(201).json(ally);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create ally" });
+    }
+  });
+
+  app.patch("/api/allies/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateAlly(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Ally not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update ally" });
+    }
+  });
+
+  app.delete("/api/allies/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAlly(id);
+      if (!success) {
+        return res.status(404).json({ message: "Ally not found" });
+      }
+      res.json({ message: "Ally deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete ally" });
+    }
+  });
+
+  // Countries (flags carousel)
+  app.get("/api/countries", async (req, res) => {
+    try {
+      await ensureAlliesAndCountriesTables();
+      const items = await storage.getAllCountries();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch countries" });
+    }
+  });
+
+  app.post("/api/countries", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const country = await storage.createCountry(req.body);
+      res.status(201).json(country);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create country" });
+    }
+  });
+
+  app.patch("/api/countries/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateCountry(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Country not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update country" });
+    }
+  });
+
+  app.delete("/api/countries/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureAlliesAndCountriesTables();
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCountry(id);
+      if (!success) {
+        return res.status(404).json({ message: "Country not found" });
+      }
+      res.json({ message: "Country deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete country" });
     }
   });
   

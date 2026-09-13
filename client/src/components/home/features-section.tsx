@@ -28,7 +28,7 @@ const features = [
   {
     icon: 'fas fa-globe-americas',
     title: 'Impacto Global',
-    description: 'Más de 120 estudiantes de 9 países en Latinoamérica y España, formando agentes de cambio para el desarrollo sostenible.',
+    description: 'Más de 130 estudiantes de 9 países en Latinoamérica y España, formando agentes de cambio para el desarrollo sostenible.',
     color: 'accent-yellow'
   },
   {

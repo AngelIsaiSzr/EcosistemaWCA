@@ -17,6 +17,8 @@ import ContactPage from "@/pages/contact-page";
 import EditorPage from "@/pages/editor-page";
 import AdminDashboardPage from "@/pages/admin-dashboard-page";
 import AdminPage from "@/pages/admin-page";
+import AdminAlliesPage from "@/pages/admin-allies-page";
+import AdminCountriesPage from "@/pages/admin-countries-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
 import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
@@ -65,6 +67,8 @@ function Router() {
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
+        <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
         <RoleProtectedRoute path="/talento/:slug/editar" component={TalentoFormEditorPage} roles={["talento"]} />

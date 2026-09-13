@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { Ally } from "@shared/schema";
 
-// Componente para manejar la carga individual de cada logo
 const LogoImage = ({ src, alt }: { src: string; alt: string }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -16,7 +17,7 @@ const LogoImage = ({ src, alt }: { src: string; alt: string }) => {
         alt={alt}
         className={cn(
           "object-contain h-full w-auto max-w-full select-none transition-opacity duration-500 ease-in-out",
-          isLoaded ? "opacity-100" : "opacity-0"
+          isLoaded ? "opacity-100" : "opacity-0",
         )}
         onLoad={() => setIsLoaded(true)}
         draggable={false}
@@ -26,27 +27,13 @@ const LogoImage = ({ src, alt }: { src: string; alt: string }) => {
   );
 };
 
-// Array de rutas de logos
-const logos = [
-    "https://i.ibb.co/DH3TZKPG/logo1-vvirpf.png",
-    "https://i.ibb.co/9mjvc9Fj/logo2-wqdznp.png",
-    "https://i.ibb.co/PZ2CTGm2/logo3-s02rgy.png",
-    "https://i.ibb.co/RGrQC93M/logo4-ilfyy0.png",
-    "https://i.ibb.co/G4FbZGLy/logo5-xq2wnf.png",
-    "https://i.ibb.co/MJPggHQ/logo6-iT3Wnt.png",
-    "https://i.ibb.co/fYTRxP2G/logo7-o8Mj5c.png",
-    "https://i.ibb.co/XfdjR9bk/logo8-z6C9yx.png",
-    "https://i.ibb.co/SwVW4MW3/logo11-b3kTz6.png"
-];
-
-// Genera una secuencia alternada de logos para llenar el ancho visible y que sea múltiplo exacto de logos.length
-const getAlternatingLogos = (logos: string[], minCount: number) => {
-  const arr: string[] = [];
+const getAlternatingLogos = (items: Ally[], minCount: number) => {
+  if (items.length === 0) return [] as Ally[];
+  const arr: Ally[] = [];
   let i = 0;
-  // Calcula el siguiente múltiplo de logos.length mayor o igual a minCount
-  const total = Math.ceil(minCount / logos.length) * logos.length;
+  const total = Math.ceil(minCount / items.length) * items.length;
   while (arr.length < total) {
-    arr.push(logos[i % logos.length]);
+    arr.push(items[i % items.length]);
     i++;
   }
   return arr;
@@ -55,18 +42,24 @@ const getAlternatingLogos = (logos: string[], minCount: number) => {
 export const LogosCarousel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [logoCount, setLogoCount] = useState(16); // valor por defecto
+  const [logoCount, setLogoCount] = useState(16);
   const [baseWidth, setBaseWidth] = useState(0);
   const [offset, setOffset] = useState(0);
 
-  // Calcula cuántos logos se necesitan para cubrir al menos 3 veces el ancho visible
+  const { data: allies = [], isLoading } = useQuery<Ally[]>({
+    queryKey: ["/api/allies"],
+  });
+
+  const logos = useMemo(
+    () => [...allies].sort((a, b) => a.order - b.order),
+    [allies],
+  );
+
   useEffect(() => {
     const updateLogoCount = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        // Cada logo + gap (gap pequeño: 8px)
         const logoWidth = 224 + 8;
-        // 3 veces el ancho visible para evitar huecos
         const minCount = Math.ceil((containerWidth * 3) / logoWidth);
         setLogoCount(minCount);
       }
@@ -76,33 +69,38 @@ export const LogosCarousel: React.FC = () => {
     return () => window.removeEventListener("resize", updateLogoCount);
   }, []);
 
-  // Triplicar la secuencia base para el bucle perfecto
-  const baseLogos = getAlternatingLogos(logos, logoCount);
-  const repeatedLogos = [...baseLogos, ...baseLogos, ...baseLogos];
+  const baseLogos = useMemo(
+    () => getAlternatingLogos(logos, logoCount),
+    [logos, logoCount],
+  );
+  const repeatedLogos = useMemo(
+    () => [...baseLogos, ...baseLogos, ...baseLogos],
+    [baseLogos],
+  );
 
-  // Medir el ancho de la secuencia base (la longitud de baseLogos)
   useEffect(() => {
-    if (trackRef.current) {
-      // Suma el ancho de los primeros N hijos (baseLogos.length)
-      const children = Array.from(trackRef.current.children).slice(0, baseLogos.length) as HTMLDivElement[];
-      const width = children.reduce((acc, child) => acc + child.offsetWidth + 8, 0); // 8px gap
-      setBaseWidth(width);
+    if (!trackRef.current || baseLogos.length === 0) {
+      setBaseWidth(0);
+      return;
     }
-  }, [logoCount]);
+    const children = Array.from(trackRef.current.children).slice(
+      0,
+      baseLogos.length,
+    ) as HTMLDivElement[];
+    const width = children.reduce((acc, child) => acc + child.offsetWidth + 8, 0);
+    setBaseWidth(width);
+  }, [baseLogos.length, logos.length]);
 
-  // Animación profesional con JS
   useEffect(() => {
     if (!baseWidth) return;
     let start: number | null = null;
     let rafId: number;
-    const speed = 80; // px por segundo
+    const speed = 80;
 
     const animate = (timestamp: number) => {
       if (!start) start = timestamp;
       const elapsed = timestamp - start;
-      // Avance en píxeles
       const px = (elapsed / 1000) * speed;
-      // Cuando llega al final de la secuencia base, reinicia
       if (px >= baseWidth) {
         start = timestamp;
         setOffset(0);
@@ -116,8 +114,24 @@ export const LogosCarousel: React.FC = () => {
     return () => cancelAnimationFrame(rafId);
   }, [baseWidth]);
 
+  if (isLoading) {
+    return (
+      <div className="w-full overflow-hidden border-y-0 bg-secondary-900 py-8">
+        <div className="flex justify-center gap-2 px-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-56 rounded-md bg-primary-700" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (logos.length === 0) {
+    return null;
+  }
+
   return (
-    <div ref={containerRef} className="w-full overflow-hidden py-8 bg-secondary-900 border-y-0">
+    <div ref={containerRef} className="w-full overflow-hidden border-y-0 bg-secondary-900 py-8">
       <div className="relative flex items-center justify-center">
         <div
           ref={trackRef}
@@ -127,19 +141,15 @@ export const LogosCarousel: React.FC = () => {
             willChange: "transform",
           }}
         >
-          {repeatedLogos.map((src, idx) => (
-            <div key={idx} className="flex-shrink-0 h-32 w-56 flex items-center justify-center">
-              <LogoImage src={src} alt={`Logo ${(idx % logos.length) + 1}`} />
+          {repeatedLogos.map((ally, idx) => (
+            <div key={`${ally.id}-${idx}`} className="flex h-32 w-56 flex-shrink-0 items-center justify-center">
+              <LogoImage src={ally.image} alt={ally.name || `Logo ${(idx % logos.length) + 1}`} />
             </div>
           ))}
         </div>
       </div>
-      {/*
-        NOTA: Para quitar el fondo blanco de los logos, usa imágenes PNG con fondo transparente.
-        Puedes usar remove.bg o cualquier editor de imágenes para lograrlo.
-      */}
     </div>
   );
 };
 
-export default LogosCarousel; 
+export default LogosCarousel;

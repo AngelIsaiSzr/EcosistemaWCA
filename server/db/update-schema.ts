@@ -94,6 +94,33 @@ const updateSchema = async () => {
       `ALTER TABLE teams ADD COLUMN IF NOT EXISTS role_color TEXT NOT NULL DEFAULT 'blue';`,
     );
 
+    await runQuery(
+      client,
+      "tabla allies",
+      `
+      CREATE TABLE IF NOT EXISTS allies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT '',
+        image TEXT NOT NULL,
+        "order" INTEGER NOT NULL
+      );
+      `,
+    );
+
+    await runQuery(
+      client,
+      "tabla countries",
+      `
+      CREATE TABLE IF NOT EXISTS countries (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        code TEXT NOT NULL,
+        students TEXT NOT NULL,
+        "order" INTEGER NOT NULL
+      );
+      `,
+    );
+
     console.log("✅ Esquema actualizado");
   } catch (err) {
     console.error("❌ Error al actualizar el esquema:", err);

@@ -4,13 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   CreditCard,
+  Flag,
+  Handshake,
   MessageSquareQuote,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
-import { Course, Team, Testimonial } from "@shared/schema";
+import { Ally, Country, Course, Team, Testimonial } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 type AdminOption = {
@@ -38,6 +40,14 @@ export default function AdminDashboardPage() {
   });
   const { data: testimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials"],
+    enabled: user?.role === "admin",
+  });
+  const { data: allies } = useQuery<Ally[]>({
+    queryKey: ["/api/allies"],
+    enabled: user?.role === "admin",
+  });
+  const { data: countries } = useQuery<Country[]>({
+    queryKey: ["/api/countries"],
     enabled: user?.role === "admin",
   });
 
@@ -76,6 +86,24 @@ export default function AdminDashboardPage() {
       icon: MessageSquareQuote,
       count: testimonials?.length ?? null,
       countLabel: "testimonios",
+    },
+    {
+      id: "aliados",
+      title: "Aliados",
+      description: "Gestiona los logos del carrusel de aliados en la página principal.",
+      href: "/admin/aliados",
+      icon: Handshake,
+      count: allies?.length ?? null,
+      countLabel: "aliados",
+    },
+    {
+      id: "paises",
+      title: "Países",
+      description: "Edita banderas, orden y número de estudiantes del carrusel de países.",
+      href: "/admin/paises",
+      icon: Flag,
+      count: countries?.length ?? null,
+      countLabel: "países",
     },
     {
       id: "tarjetas",

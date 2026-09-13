@@ -47,7 +47,7 @@ export default function HeroSection() {
                     <img src="https://i.ibb.co/SDnRydwd/portraits3-itzkds.png" className="w-10 h-10 rounded-full border-2 border-primary-800" alt="Estudiante" />
                   </div>
                   <div className="ml-4">
-                    <p className="font-medium">+120 estudiantes</p>
+                    <p className="font-medium">+130 estudiantes</p>
                     <p className="text-sm text-muted">se han unido a la comunidad</p>
                   </div>
                 </div>

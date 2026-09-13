@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS allies (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL,
+  "order" INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS countries (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  code TEXT NOT NULL,
+  students TEXT NOT NULL,
+  "order" INTEGER NOT NULL
+);

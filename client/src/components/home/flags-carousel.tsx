@@ -1,34 +1,31 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { Country } from "@shared/schema";
 
-// Interfaz para los datos de países
-interface CountryData {
-  name: string;
-  code: string;
-  students: string;
-}
-
-// Componente para manejar la carga individual de cada bandera
-const FlagImage = ({ country }: { country: CountryData }) => {
+const FlagImage = ({ country }: { country: Country }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const code = country.code.toLowerCase();
 
   return (
-    <div className="relative h-32 w-40 flex flex-col items-center justify-center">
+    <div className="relative flex h-32 w-40 flex-col items-center justify-center">
       {!isLoaded && (
         <Skeleton className="absolute inset-0 h-full w-full rounded-md bg-primary-700" />
       )}
-      <div className={cn(
-        "flex flex-col items-center space-y-2 transition-opacity duration-500 ease-in-out",
-        isLoaded ? "opacity-100" : "opacity-0"
-      )}>
+      <div
+        className={cn(
+          "flex flex-col items-center space-y-2 transition-opacity duration-500 ease-in-out",
+          isLoaded ? "opacity-100" : "opacity-0",
+        )}
+      >
         <img
-          src={`https://flagcdn.com/w160/${country.code.toLowerCase()}.png`}
-          srcSet={`https://flagcdn.com/w320/${country.code.toLowerCase()}.png 2x`}
+          src={`https://flagcdn.com/w160/${code}.png`}
+          srcSet={`https://flagcdn.com/w320/${code}.png 2x`}
           width="160"
           height="120"
           alt={country.name}
-          className="object-contain h-20 w-32 shadow-sm select-none"
+          className="h-20 w-32 select-none object-contain shadow-sm"
           onLoad={() => setIsLoaded(true)}
           draggable={false}
         />
@@ -43,28 +40,13 @@ const FlagImage = ({ country }: { country: CountryData }) => {
   );
 };
 
-// Array de datos de países con sus códigos ISO y cantidad de estudiantes
-const countries: CountryData[] = [
-  { name: "México", code: "mx", students: "+80" },
-  { name: "Venezuela", code: "ve", students: "8" },
-  { name: "Argentina", code: "ar", students: "8" },
-  { name: "Colombia", code: "co", students: "4" },
-  { name: "Brasil", code: "br", students: "3" },
-  { name: "Chile", code: "cl", students: "2" },
-  { name: "Ecuador", code: "ec", students: "2" },
-  { name: "Honduras", code: "hn", students: "1" },
-  { name: "Nicaragua", code: "ni", students: "1" },
-  { name: "España", code: "es", students: "1" }
-];
-
-// Genera una secuencia alternada de países para llenar el ancho visible y que sea múltiplo exacto de countries.length
-const getAlternatingCountries = (countries: CountryData[], minCount: number) => {
-  const arr: CountryData[] = [];
+const getAlternatingCountries = (items: Country[], minCount: number) => {
+  if (items.length === 0) return [] as Country[];
+  const arr: Country[] = [];
   let i = 0;
-  // Calcula el siguiente múltiplo de countries.length mayor o igual a minCount
-  const total = Math.ceil(minCount / countries.length) * countries.length;
+  const total = Math.ceil(minCount / items.length) * items.length;
   while (arr.length < total) {
-    arr.push(countries[i % countries.length]);
+    arr.push(items[i % items.length]);
     i++;
   }
   return arr;
@@ -73,18 +55,24 @@ const getAlternatingCountries = (countries: CountryData[], minCount: number) => 
 export const FlagsCarousel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [countryCount, setCountryCount] = useState(16); // valor por defecto
+  const [countryCount, setCountryCount] = useState(16);
   const [baseWidth, setBaseWidth] = useState(0);
   const [offset, setOffset] = useState(0);
 
-  // Calcula cuántos países se necesitan para cubrir al menos 3 veces el ancho visible
+  const { data: countriesData = [], isLoading } = useQuery<Country[]>({
+    queryKey: ["/api/countries"],
+  });
+
+  const countries = useMemo(
+    () => [...countriesData].sort((a, b) => a.order - b.order),
+    [countriesData],
+  );
+
   useEffect(() => {
     const updateCountryCount = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        // Cada bandera + gap (gap duplicado: 16px)
         const flagWidth = 160 + 16;
-        // 3 veces el ancho visible para evitar huecos
         const minCount = Math.ceil((containerWidth * 3) / flagWidth);
         setCountryCount(minCount);
       }
@@ -94,33 +82,38 @@ export const FlagsCarousel: React.FC = () => {
     return () => window.removeEventListener("resize", updateCountryCount);
   }, []);
 
-  // Triplicar la secuencia base para el bucle perfecto
-  const baseCountries = getAlternatingCountries(countries, countryCount);
-  const repeatedCountries = [...baseCountries, ...baseCountries, ...baseCountries];
+  const baseCountries = useMemo(
+    () => getAlternatingCountries(countries, countryCount),
+    [countries, countryCount],
+  );
+  const repeatedCountries = useMemo(
+    () => [...baseCountries, ...baseCountries, ...baseCountries],
+    [baseCountries],
+  );
 
-  // Medir el ancho de la secuencia base (la longitud de baseCountries)
   useEffect(() => {
-    if (trackRef.current) {
-      // Suma el ancho de los primeros N hijos (baseCountries.length)
-      const children = Array.from(trackRef.current.children).slice(0, baseCountries.length) as HTMLDivElement[];
-      const width = children.reduce((acc, child) => acc + child.offsetWidth + 16, 0); // 16px gap
-      setBaseWidth(width);
+    if (!trackRef.current || baseCountries.length === 0) {
+      setBaseWidth(0);
+      return;
     }
-  }, [countryCount]);
+    const children = Array.from(trackRef.current.children).slice(
+      0,
+      baseCountries.length,
+    ) as HTMLDivElement[];
+    const width = children.reduce((acc, child) => acc + child.offsetWidth + 16, 0);
+    setBaseWidth(width);
+  }, [baseCountries.length, countries.length]);
 
-  // Animación profesional con JS
   useEffect(() => {
     if (!baseWidth) return;
     let start: number | null = null;
     let rafId: number;
-    const speed = 60; // px por segundo (más lento que logos)
+    const speed = 60;
 
     const animate = (timestamp: number) => {
       if (!start) start = timestamp;
       const elapsed = timestamp - start;
-      // Avance en píxeles
       const px = (elapsed / 1000) * speed;
-      // Cuando llega al final de la secuencia base, reinicia
       if (px >= baseWidth) {
         start = timestamp;
         setOffset(0);
@@ -134,8 +127,24 @@ export const FlagsCarousel: React.FC = () => {
     return () => cancelAnimationFrame(rafId);
   }, [baseWidth]);
 
+  if (isLoading) {
+    return (
+      <div className="w-full overflow-hidden border-y-0 bg-secondary-900 py-12">
+        <div className="flex justify-center gap-4 px-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 w-40 rounded-md bg-primary-700" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (countries.length === 0) {
+    return null;
+  }
+
   return (
-    <div ref={containerRef} className="w-full overflow-hidden py-12 bg-secondary-900 border-y-0">
+    <div ref={containerRef} className="w-full overflow-hidden border-y-0 bg-secondary-900 py-12">
       <div className="relative flex items-center justify-center">
         <div
           ref={trackRef}
@@ -146,7 +155,10 @@ export const FlagsCarousel: React.FC = () => {
           }}
         >
           {repeatedCountries.map((country, idx) => (
-            <div key={idx} className="flex-shrink-0 h-40 w-40 flex items-center justify-center">
+            <div
+              key={`${country.id}-${idx}`}
+              className="flex h-40 w-40 flex-shrink-0 items-center justify-center"
+            >
               <FlagImage country={country} />
             </div>
           ))}
@@ -156,4 +168,4 @@ export const FlagsCarousel: React.FC = () => {
   );
 };
 
-export default FlagsCarousel; 
+export default FlagsCarousel;
