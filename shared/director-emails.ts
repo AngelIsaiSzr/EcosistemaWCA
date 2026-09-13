@@ -1,11 +1,13 @@
 export const DIRECTOR_EMAIL_CONTACT = "contacto@ecosistemawca.com";
 
-/** Lunes 14 de septiembre 2026 (inicio del ciclo). */
+/** Inicio del ciclo actual (Semana Tec). */
 export const DEFAULT_DIRECTOR_CAMPAIGN_START = "2026-09-14";
 
 export type DirectorEmailTemplateSeed = {
   weekIndex: number;
   label: string;
+  /** Fecha de envío YYYY-MM-DD (America/Mexico_City). */
+  sendDate: string;
   subject: string;
   bodyText: string;
   bodyHtml: string;
@@ -46,14 +48,19 @@ function buildBodyHtml(weekLabel: string): string {
   `.trim();
 }
 
+/**
+ * Orden del periodo actual:
+ * Semana Tec (14 sep) → Semanas 1–5 (editables) → cierre (7 dic).
+ * Semana 5 termina ~4 dic; cierre el lunes 7 dic 2026.
+ */
 export const DEFAULT_DIRECTOR_EMAIL_TEMPLATES: DirectorEmailTemplateSeed[] = [
-  { weekIndex: 1, label: "Semana 1" },
-  { weekIndex: 2, label: "Semana 2" },
-  { weekIndex: 3, label: "Semana 3" },
-  { weekIndex: 4, label: "Semana 4" },
-  { weekIndex: 5, label: "Semana 5" },
-  { weekIndex: 6, label: "Semana Tec" },
-  { weekIndex: 7, label: "Semana de cierre" },
+  { weekIndex: 1, label: "Semana Tec", sendDate: "2026-09-14" },
+  { weekIndex: 2, label: "Semana 1", sendDate: "2026-09-21" },
+  { weekIndex: 3, label: "Semana 2", sendDate: "2026-09-28" },
+  { weekIndex: 4, label: "Semana 3", sendDate: "2026-10-05" },
+  { weekIndex: 5, label: "Semana 4", sendDate: "2026-10-12" },
+  { weekIndex: 6, label: "Semana 5", sendDate: "2026-11-30" },
+  { weekIndex: 7, label: "Cierre de semestre", sendDate: "2026-12-07" },
 ].map((item) => ({
   ...item,
   subject: `Recordatorio directores · ${item.label} | Ecosistema WCA`,
@@ -61,22 +68,8 @@ export const DEFAULT_DIRECTOR_EMAIL_TEMPLATES: DirectorEmailTemplateSeed[] = [
   bodyHtml: buildBodyHtml(item.label),
 }));
 
-/** Calcula el índice de semana (1-based) desde fechas calendario YYYY-MM-DD. */
-export function getCampaignWeekIndex(startDateIso: string, todayOrNow: Date | string = new Date()): number | null {
-  const start = parseDateOnly(startDateIso);
-  if (!start) return null;
-  const today =
-    typeof todayOrNow === "string"
-      ? parseDateOnly(todayOrNow)
-      : new Date(todayOrNow.getFullYear(), todayOrNow.getMonth(), todayOrNow.getDate());
-  if (!today) return null;
-  const diffMs = today.getTime() - start.getTime();
-  if (diffMs < 0) return null;
-  return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
-}
-
 export function parseDateOnly(iso: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? "").trim());
   if (!match) return null;
   const y = Number(match[1]);
   const m = Number(match[2]) - 1;
@@ -93,11 +86,16 @@ export function parseRecipientList(raw: string | string[] | null | undefined): s
         .split(/[,;\n]+/)
         .map((s) => s.trim())
         .filter(Boolean);
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Más permisivo que z.email(): acepta subdominios institucionales (p. ej. @tec.mx)
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
   const unique = new Set<string>();
   for (const part of parts) {
     const email = part.toLowerCase();
     if (emailRe.test(email)) unique.add(email);
   }
   return Array.from(unique);
+}
+
+export function isValidRecipientEmail(value: string): boolean {
+  return parseRecipientList(value).length === 1;
 }

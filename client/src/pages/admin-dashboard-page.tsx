@@ -55,6 +55,15 @@ export default function AdminDashboardPage() {
     queryKey: ["/api/cards"],
     enabled: user?.role === "admin",
   });
+  const { data: emailStats } = useQuery<{ officialSent: number }>({
+    queryKey: ["/api/admin/email-automation/stats"],
+    enabled: user?.role === "admin",
+    queryFn: async () => {
+      const res = await fetch("/api/admin/email-automation/stats", { credentials: "include" });
+      if (!res.ok) throw new Error("No se pudieron cargar estadísticas");
+      return res.json();
+    },
+  });
 
   if (isLoading || !user || user.role !== "admin") {
     return (
@@ -126,6 +135,8 @@ export default function AdminDashboardPage() {
         "Recordatorios semanales a directores, plantillas editables y correos de prueba.",
       href: "/admin/correos",
       icon: Mail,
+      count: emailStats?.officialSent ?? null,
+      countLabel: "enviados",
     },
   ];
 

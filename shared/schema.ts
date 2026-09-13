@@ -202,6 +202,8 @@ export const emailWeekTemplates = pgTable("email_week_templates", {
   id: serial("id").primaryKey(),
   weekIndex: integer("week_index").notNull().unique(),
   label: text("label").notNull(),
+  /** Fecha calendario de envío YYYY-MM-DD (zona America/Mexico_City). */
+  sendDate: text("send_date"),
   subject: text("subject").notNull(),
   bodyText: text("body_text").notNull(),
   bodyHtml: text("body_html").notNull(),
@@ -214,9 +216,10 @@ export const emailAutomationLogs = pgTable("email_automation_logs", {
   kind: text("kind").notNull(), // weekly | test | integration
   weekIndex: integer("week_index"),
   templateId: integer("template_id"),
+  sendDate: text("send_date"),
   recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
   subject: text("subject").notNull().default(""),
-  status: text("status").notNull(), // sent | error
+  status: text("status").notNull(), // sent | error | partial
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
 });

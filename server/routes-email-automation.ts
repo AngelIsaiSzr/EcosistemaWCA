@@ -1,5 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "./db";
 import {
@@ -7,10 +7,7 @@ import {
   emailAutomationSettings,
   emailWeekTemplates,
 } from "@shared/schema";
-import {
-  getCampaignWeekIndex,
-  parseRecipientList,
-} from "@shared/director-emails";
+import { isValidRecipientEmail, parseRecipientList } from "@shared/director-emails";
 import { ensureEmailAutomationTables } from "./db/ensure-email-automation";
 import {
   sendDirectorTemplateEmail,
@@ -28,13 +25,16 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 const settingsSchema = z.object({
   enabled: z.boolean().optional(),
   recipients: z.union([z.array(z.string()), z.string()]).optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   sendHour: z.number().int().min(0).max(23).optional(),
-  sendWeekday: z.number().int().min(1).max(7).optional(),
 });
 
 const templateSchema = z.object({
   label: z.string().min(1).optional(),
+  sendDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
+    .nullable()
+    .optional(),
   subject: z.string().min(1).optional(),
   bodyText: z.string().min(1).optional(),
   bodyHtml: z.string().min(1).optional(),
@@ -43,7 +43,7 @@ const templateSchema = z.object({
 
 const testSchema = z.object({
   templateId: z.number().int().positive(),
-  to: z.string().email().optional(),
+  to: z.string().min(3).optional(),
 });
 
 export function registerEmailAutomationRoutes(app: Express) {
@@ -64,25 +64,66 @@ export function registerEmailAutomationRoutes(app: Express) {
         .select()
         .from(emailAutomationLogs)
         .orderBy(desc(emailAutomationLogs.createdAt))
-        .limit(30);
+        .limit(40);
+
+      const [officialCount] = await db
+        .select({ value: count() })
+        .from(emailAutomationLogs)
+        .where(
+          and(
+            eq(emailAutomationLogs.kind, "weekly"),
+            inArray(emailAutomationLogs.status, ["sent", "partial"]),
+          ),
+        );
 
       const localNow = getMexicoCalendarParts();
-      const weekIndex = settings
-        ? getCampaignWeekIndex(settings.startDate, localNow.dateIso)
-        : null;
+      const upcoming = templates
+        .filter((t) => t.enabled && t.sendDate && t.sendDate >= localNow.dateIso)
+        .sort((a, b) => String(a.sendDate).localeCompare(String(b.sendDate)))[0];
+      const dueToday = templates.find(
+        (t) => t.enabled && t.sendDate === localNow.dateIso,
+      );
 
       res.json({
         settings,
         templates,
         logs,
+        stats: {
+          officialSent: Number(officialCount?.value ?? 0),
+        },
         preview: {
-          currentWeekIndex: weekIndex,
+          today: localNow.dateIso,
           timezone: "America/Mexico_City",
+          dueToday: dueToday
+            ? { id: dueToday.id, label: dueToday.label, sendDate: dueToday.sendDate }
+            : null,
+          next: upcoming
+            ? { id: upcoming.id, label: upcoming.label, sendDate: upcoming.sendDate }
+            : null,
         },
       });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "No se pudo cargar la automatización" });
+    }
+  });
+
+  app.get("/api/admin/email-automation/stats", requireAdmin, async (_req, res) => {
+    try {
+      await ensureEmailAutomationTables();
+      const [officialCount] = await db
+        .select({ value: count() })
+        .from(emailAutomationLogs)
+        .where(
+          and(
+            eq(emailAutomationLogs.kind, "weekly"),
+            inArray(emailAutomationLogs.status, ["sent", "partial"]),
+          ),
+        );
+      res.json({ officialSent: Number(officialCount?.value ?? 0) });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudieron cargar estadísticas" });
     }
   });
 
@@ -109,9 +150,7 @@ export function registerEmailAutomationRoutes(app: Express) {
         .set({
           ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
           ...(recipients !== undefined ? { recipients } : {}),
-          ...(parsed.data.startDate !== undefined ? { startDate: parsed.data.startDate } : {}),
           ...(parsed.data.sendHour !== undefined ? { sendHour: parsed.data.sendHour } : {}),
-          ...(parsed.data.sendWeekday !== undefined ? { sendWeekday: parsed.data.sendWeekday } : {}),
           updatedAt: new Date(),
         })
         .where(eq(emailAutomationSettings.id, settings.id))
@@ -176,27 +215,73 @@ export function registerEmailAutomationRoutes(app: Express) {
 
       const [settings] = await db.select().from(emailAutomationSettings).limit(1);
       const recipients = parsed.data.to
-        ? [parsed.data.to]
+        ? parseRecipientList(parsed.data.to)
         : parseRecipientList(settings?.recipients);
 
       if (recipients.length === 0) {
         return res.status(400).json({
-          message: "Indica un correo de prueba o configura destinatarios",
+          message: "Indica un correo de prueba válido (incluye @tec.mx) o configura destinatarios",
         });
       }
 
-      await sendDirectorTemplateEmail({
+      if (parsed.data.to && !isValidRecipientEmail(parsed.data.to.trim())) {
+        return res.status(400).json({
+          message: "El correo de prueba no es válido",
+        });
+      }
+
+      const result = await sendDirectorTemplateEmail({
         template,
         recipients,
         kind: "test",
       });
 
-      res.json({ message: "Correo de prueba enviado", recipients });
+      const failed = result.results.filter((r) => !r.ok);
+      res.json({
+        message:
+          failed.length === 0
+            ? "Correo de prueba enviado"
+            : "Envío parcial: algunos destinatarios fallaron",
+        recipients,
+        results: result.results,
+        status: result.status,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({
         message: error instanceof Error ? error.message : "No se pudo enviar la prueba",
       });
+    }
+  });
+
+  app.delete("/api/admin/email-automation/logs/:id", requireAdmin, async (req, res) => {
+    try {
+      await ensureEmailAutomationTables();
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ message: "ID inválido" });
+      }
+
+      const [log] = await db
+        .select()
+        .from(emailAutomationLogs)
+        .where(eq(emailAutomationLogs.id, id))
+        .limit(1);
+
+      if (!log) {
+        return res.status(404).json({ message: "Registro no encontrado" });
+      }
+      if (log.kind !== "test") {
+        return res.status(400).json({
+          message: "Solo se pueden eliminar envíos de prueba del historial",
+        });
+      }
+
+      await db.delete(emailAutomationLogs).where(eq(emailAutomationLogs.id, id));
+      res.json({ message: "Eliminado" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo eliminar el registro" });
     }
   });
 }

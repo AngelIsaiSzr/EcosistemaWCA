@@ -18,6 +18,14 @@ export interface TransactionalEmailData {
   fromName?: string;
 }
 
+export type SendRecipientResult = {
+  to: string;
+  ok: boolean;
+  response?: string;
+  rejected?: string[];
+  error?: string;
+};
+
 // Configuración del transportador de correo
 if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
   console.error('Error: Las credenciales de correo no están configuradas correctamente');
@@ -44,7 +52,7 @@ const transporter = nodemailer.createTransport({
   logger: true
 });
 
-transporter.verify(function (err: Error | null, success: true) {
+transporter.verify(function (err: Error | null, _success: true) {
   if (err) {
     console.error('Error al verificar el transportador de correo:', err);
     const error = err as Error & { code?: string };
@@ -56,30 +64,78 @@ transporter.verify(function (err: Error | null, success: true) {
   }
 });
 
-const defaultFrom = () =>
-  `"Ecosistema WCA" <${process.env.SMTP_USER || 'contacto@ecosistemawca.com'}>`;
+const smtpFromAddress = () => process.env.SMTP_USER || 'contacto@ecosistemawca.com';
 
-export async function sendTransactionalEmail(data: TransactionalEmailData): Promise<void> {
-  try {
-    const to = Array.isArray(data.to) ? data.to.join(', ') : data.to;
-    const mailOptions = {
-      from: data.fromName
-        ? `"${data.fromName}" <${process.env.SMTP_USER || 'contacto@ecosistemawca.com'}>`
-        : defaultFrom(),
-      to,
-      replyTo: data.replyTo,
-      subject: data.subject,
-      text: data.text,
-      html: data.html ?? data.text.replace(/\n/g, '<br>'),
-    };
+const defaultFrom = () => `"Ecosistema WCA" <${smtpFromAddress()}>`;
 
-    console.log('Enviando correo transaccional a:', to, '|', data.subject);
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Correo enviado:', info.response);
-  } catch (error) {
-    console.error('Error al enviar correo transaccional:', error);
-    throw new Error('No se pudo enviar el correo electrónico');
+/**
+ * Envía de a un destinatario (mejor entrega a dominios institucionales como @tec.mx).
+ * Un fallo parcial no oculta los éxitos.
+ */
+export async function sendTransactionalEmail(
+  data: TransactionalEmailData,
+): Promise<{ results: SendRecipientResult[] }> {
+  const list = (Array.isArray(data.to) ? data.to : [data.to])
+    .map((e) => String(e).trim().toLowerCase())
+    .filter(Boolean);
+
+  if (list.length === 0) {
+    throw new Error('No hay destinatarios');
   }
+
+  const from = data.fromName
+    ? `"${data.fromName}" <${smtpFromAddress()}>`
+    : defaultFrom();
+
+  const results: SendRecipientResult[] = [];
+
+  for (const to of list) {
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to,
+        replyTo: data.replyTo || smtpFromAddress(),
+        subject: data.subject,
+        text: data.text,
+        html: data.html ?? data.text.replace(/\n/g, '<br>'),
+        // Envelope explícito: evita que Gmail agrupe mal destinatarios institucionales
+        envelope: {
+          from: smtpFromAddress(),
+          to: [to],
+        },
+      });
+
+      const rejected = Array.isArray(info.rejected)
+        ? info.rejected.map(String)
+        : [];
+      const ok = rejected.length === 0;
+      results.push({
+        to,
+        ok,
+        response: info.response,
+        rejected,
+        error: ok ? undefined : `Rechazado por SMTP: ${rejected.join(', ')}`,
+      });
+      console.log(
+        ok ? 'Correo aceptado para' : 'Correo rechazado para',
+        to,
+        info.response,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      console.error('Error al enviar a', to, error);
+      results.push({ to, ok: false, error: message });
+    }
+  }
+
+  const anyOk = results.some((r) => r.ok);
+  if (!anyOk) {
+    throw new Error(
+      `No se pudo enviar el correo: ${results.map((r) => `${r.to}: ${r.error}`).join(' | ')}`,
+    );
+  }
+
+  return { results };
 }
 
 export async function sendEmail(data: EmailData): Promise<void> {

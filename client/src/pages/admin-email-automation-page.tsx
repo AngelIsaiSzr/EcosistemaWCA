@@ -2,13 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Loader2,
-  Mail,
-  Pencil,
-  Send,
-} from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Pencil, Send, Trash2 } from "lucide-react";
 import type {
   EmailAutomationLog,
   EmailAutomationSettings,
@@ -38,18 +32,26 @@ type AutomationPayload = {
   settings: EmailAutomationSettings;
   templates: EmailWeekTemplate[];
   logs: EmailAutomationLog[];
-  preview: { currentWeekIndex: number | null; timezone: string };
+  stats: { officialSent: number };
+  preview: {
+    today: string;
+    timezone: string;
+    dueToday: { id: number; label: string; sendDate: string | null } | null;
+    next: { id: number; label: string; sendDate: string | null } | null;
+  };
 };
 
-const WEEKDAY_LABELS: Record<number, string> = {
-  1: "Lunes",
-  2: "Martes",
-  3: "Miércoles",
-  4: "Jueves",
-  5: "Viernes",
-  6: "Sábado",
-  7: "Domingo",
-};
+function formatDateMx(iso: string | null | undefined) {
+  if (!iso) return "Sin fecha";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString("es-MX", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default function AdminEmailAutomationPage() {
   const { user, isLoading } = useAuth();
@@ -57,14 +59,13 @@ export default function AdminEmailAutomationPage() {
   const { toast } = useToast();
 
   const [recipientsText, setRecipientsText] = useState("");
-  const [startDate, setStartDate] = useState("2026-09-14");
   const [sendHour, setSendHour] = useState(9);
-  const [sendWeekday, setSendWeekday] = useState(1);
   const [enabled, setEnabled] = useState(false);
 
   const [editing, setEditing] = useState<EmailWeekTemplate | null>(null);
   const [editForm, setEditForm] = useState({
     label: "",
+    sendDate: "",
     subject: "",
     bodyText: "",
     bodyHtml: "",
@@ -93,9 +94,7 @@ export default function AdminEmailAutomationPage() {
     if (!data?.settings) return;
     setEnabled(data.settings.enabled);
     setRecipientsText((data.settings.recipients ?? []).join("\n"));
-    setStartDate(data.settings.startDate);
     setSendHour(data.settings.sendHour);
-    setSendWeekday(data.settings.sendWeekday);
     if (!testEmail && user?.email) setTestEmail(user.email);
   }, [data?.settings, testEmail, user?.email]);
 
@@ -104,15 +103,14 @@ export default function AdminEmailAutomationPage() {
       const res = await apiRequest("PATCH", "/api/admin/email-automation/settings", {
         enabled,
         recipients: recipientsText,
-        startDate,
         sendHour,
-        sendWeekday,
       });
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Guardado", description: "Configuración de automatización actualizada." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation/stats"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -125,7 +123,10 @@ export default function AdminEmailAutomationPage() {
       const res = await apiRequest(
         "PATCH",
         `/api/admin/email-automation/templates/${editing.id}`,
-        editForm,
+        {
+          ...editForm,
+          sendDate: editForm.sendDate || null,
+        },
       );
       return res.json();
     },
@@ -148,11 +149,34 @@ export default function AdminEmailAutomationPage() {
       });
       return res.json();
     },
-    onSuccess: (result: { recipients?: string[] }) => {
+    onSuccess: (result: {
+      recipients?: string[];
+      status?: string;
+      results?: Array<{ to: string; ok: boolean; error?: string }>;
+      message?: string;
+    }) => {
+      const failed = (result.results ?? []).filter((r) => !r.ok);
       toast({
-        title: "Correo de prueba enviado",
-        description: `Enviado a ${(result.recipients ?? []).join(", ")}`,
+        title: failed.length ? "Envío parcial" : "Correo de prueba enviado",
+        description: failed.length
+          ? failed.map((f) => `${f.to}: ${f.error ?? "falló"}`).join(" · ")
+          : `Enviado a ${(result.recipients ?? []).join(", ")}. Si es @tec.mx, revisa spam/cuarentena.`,
+        variant: failed.length ? "destructive" : "default",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteLogMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/email-automation/logs/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Prueba eliminada del historial" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation"] });
     },
     onError: (error: Error) => {
@@ -163,12 +187,15 @@ export default function AdminEmailAutomationPage() {
   const templates = data?.templates ?? [];
   const logs = data?.logs ?? [];
 
-  const currentLabel = useMemo(() => {
-    const idx = data?.preview?.currentWeekIndex;
-    if (!idx) return "Fuera de ciclo / aún no inicia";
-    const t = templates.find((x) => x.weekIndex === idx);
-    return t ? `${t.label} (semana ${idx})` : `Semana ${idx} (sin plantilla)`;
-  }, [data?.preview?.currentWeekIndex, templates]);
+  const scheduleHint = useMemo(() => {
+    if (data?.preview?.dueToday) {
+      return `Hoy toca: ${data.preview.dueToday.label} (${formatDateMx(data.preview.dueToday.sendDate)})`;
+    }
+    if (data?.preview?.next) {
+      return `Próximo: ${data.preview.next.label} · ${formatDateMx(data.preview.next.sendDate)}`;
+    }
+    return "No hay envíos próximos con fecha configurada";
+  }, [data?.preview]);
 
   if (isLoading || !user || user.role !== "admin") {
     return (
@@ -186,18 +213,27 @@ export default function AdminEmailAutomationPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className="mb-6">
-            <Button variant="ghost" size="sm" className="mb-3 gap-1.5 px-0" asChild>
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                Automatización de correos
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">Automatización de correos</h1>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Recordatorios a directores desde contacto@ecosistemawca.com. Cada plantilla tiene su
+                propia fecha (Semana Tec, semanas del periodo y cierre de semestre).
+              </p>
+            </div>
+            <Button variant="outline" asChild>
               <Link href="/admin">
                 <ArrowLeft className="h-4 w-4" />
                 Volver al panel
               </Link>
             </Button>
-            <h1 className="font-heading text-3xl font-bold md:text-4xl">Automatización de correos</h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Recordatorios semanales a directores desde contacto@ecosistemawca.com. Edita cada
-              semana del ciclo (5 semanas + Semana Tec + cierre), destinatarios y pruebas.
-            </p>
           </div>
 
           {loadingData ? (
@@ -231,23 +267,15 @@ export default function AdminEmailAutomationPage() {
                         rows={4}
                         value={recipientsText}
                         onChange={(e) => setRecipientsText(e.target.value)}
-                        placeholder={"uno@correo.com\ndos@correo.com"}
+                        placeholder={"nombre@tec.mx\notro@gmail.com"}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Uno por línea o separados por coma.
+                        Uno por línea. Se envía un correo individual a cada destinatario (mejor
+                        entrega a @tec.mx).
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="startDate">Inicio del ciclo</Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sendHour">Hora de envío</Label>
+                      <Label htmlFor="sendHour">Hora de envío (0–23)</Label>
                       <Input
                         id="sendHour"
                         type="number"
@@ -257,25 +285,14 @@ export default function AdminEmailAutomationPage() {
                         onChange={(e) => setSendHour(Number(e.target.value))}
                       />
                     </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="sendWeekday">Día de envío</Label>
-                      <select
-                        id="sendWeekday"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={sendWeekday}
-                        onChange={(e) => setSendWeekday(Number(e.target.value))}
-                      >
-                        {Object.entries(WEEKDAY_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="space-y-2">
+                      <Label>Hoy (CDMX)</Label>
+                      <Input value={data?.preview.today ?? ""} readOnly />
                     </div>
                   </div>
 
                   <div className="mt-4 rounded-xl border border-dashed bg-muted/30 px-4 py-3 text-sm">
-                    Semana actual del ciclo: <span className="font-medium">{currentLabel}</span>
+                    {scheduleHint}
                   </div>
 
                   <div className="mt-4 flex justify-end">
@@ -293,9 +310,10 @@ export default function AdminEmailAutomationPage() {
                 </div>
 
                 <div className="rounded-2xl border bg-card p-5 md:p-6">
-                  <h2 className="font-heading text-lg font-semibold">Plantillas por semana</h2>
+                  <h2 className="font-heading text-lg font-semibold">Plantillas y fechas</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Personaliza el asunto y el cuerpo de cada correo del periodo.
+                    Edita etiqueta, fecha de envío, asunto y cuerpo. El cierre de este periodo:
+                    lunes 7 de diciembre 2026.
                   </p>
                   <div className="mt-4 space-y-3">
                     {templates.map((template) => (
@@ -311,9 +329,10 @@ export default function AdminEmailAutomationPage() {
                             <p className="font-medium">
                               {template.weekIndex}. {template.label}
                             </p>
+                            <Badge variant="outline">{formatDateMx(template.sendDate)}</Badge>
                             {!template.enabled && <Badge variant="outline">Desactivada</Badge>}
-                            {data?.preview.currentWeekIndex === template.weekIndex && (
-                              <Badge className="bg-[#5b8fd4] hover:bg-[#5b8fd4]">Esta semana</Badge>
+                            {data?.preview.dueToday?.id === template.id && (
+                              <Badge className="bg-[#5b8fd4] hover:bg-[#5b8fd4]">Hoy</Badge>
                             )}
                           </div>
                           <p className="mt-1 truncate text-sm text-muted-foreground">
@@ -328,6 +347,7 @@ export default function AdminEmailAutomationPage() {
                             setEditing(template);
                             setEditForm({
                               label: template.label,
+                              sendDate: template.sendDate ?? "",
                               subject: template.subject,
                               bodyText: template.bodyText,
                               bodyHtml: template.bodyHtml,
@@ -372,11 +392,16 @@ export default function AdminEmailAutomationPage() {
                       <Label htmlFor="testEmail">Correo de prueba</Label>
                       <Input
                         id="testEmail"
-                        type="email"
+                        type="text"
+                        inputMode="email"
+                        autoComplete="email"
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
-                        placeholder="tu@correo.com"
+                        placeholder="correo@tec.mx"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Usa un solo correo. Los @tec.mx a veces llegan a spam o cuarentena del Tec.
+                      </p>
                     </div>
                     <Button
                       className="w-full gap-2 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
@@ -395,6 +420,13 @@ export default function AdminEmailAutomationPage() {
 
                 <div className="rounded-2xl border bg-card p-5 md:p-6">
                   <h2 className="font-heading text-lg font-semibold">Historial reciente</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Oficiales enviados:{" "}
+                    <span className="font-medium text-foreground">
+                      {data?.stats.officialSent ?? 0}
+                    </span>
+                    . Las pruebas se pueden borrar.
+                  </p>
                   <div className="mt-4 space-y-3">
                     {logs.length === 0 ? (
                       <p className="text-sm text-muted-foreground">Aún no hay envíos registrados.</p>
@@ -406,18 +438,45 @@ export default function AdminEmailAutomationPage() {
                               {log.kind === "test"
                                 ? "Prueba"
                                 : log.kind === "weekly"
-                                  ? "Semanal"
+                                  ? "Oficial"
                                   : log.kind}
-                              {log.weekIndex != null ? ` · Semana ${log.weekIndex}` : ""}
+                              {log.sendDate ? ` · ${formatDateMx(log.sendDate)}` : ""}
                             </span>
-                            <Badge
-                              variant={log.status === "sent" ? "default" : "destructive"}
-                              className={log.status === "sent" ? "bg-emerald-600" : undefined}
-                            >
-                              {log.status === "sent" ? "Enviado" : "Error"}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge
+                                variant={
+                                  log.status === "sent"
+                                    ? "default"
+                                    : log.status === "partial"
+                                      ? "outline"
+                                      : "destructive"
+                                }
+                                className={
+                                  log.status === "sent" ? "bg-emerald-600 hover:bg-emerald-600" : undefined
+                                }
+                              >
+                                {log.status === "sent"
+                                  ? "Enviado"
+                                  : log.status === "partial"
+                                    ? "Parcial"
+                                    : "Error"}
+                              </Badge>
+                              {log.kind === "test" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => deleteLogMutation.mutate(log.id)}
+                                  disabled={deleteLogMutation.isPending}
+                                  aria-label="Eliminar prueba"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-1 text-muted-foreground line-clamp-1">{log.subject}</p>
+                          <p className="mt-1 line-clamp-1 text-muted-foreground">{log.subject}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {log.createdAt
                               ? new Date(log.createdAt).toLocaleString("es-MX")
@@ -459,6 +518,17 @@ export default function AdminEmailAutomationPage() {
                 value={editForm.label}
                 onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Fecha de envío</Label>
+              <Input
+                type="date"
+                value={editForm.sendDate}
+                onChange={(e) => setEditForm((f) => ({ ...f, sendDate: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se envía ese día (CDMX) a partir de la hora configurada.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Asunto</Label>
