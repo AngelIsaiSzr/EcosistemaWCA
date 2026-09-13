@@ -25,7 +25,7 @@ export default function CodeWindow({ title, codeLines }: CodeWindowProps) {
         <div className="window-button green-button"></div>
         <span className="ml-2 text-sm text-muted">{title}</span>
       </div>
-      <div className="p-6 font-code text-sm md:text-base whitespace-pre-wrap max-w-full overflow-hidden">
+      <div className="p-4 font-code text-sm whitespace-pre-wrap max-w-full overflow-hidden sm:p-5 lg:p-6 lg:text-base">
         {codeLines.map((line, index) => (
           <div 
             key={index} 

@@ -110,12 +110,13 @@ function TeamCarousel({ members }: { members: Team[] }) {
         measureEl.clientWidth -
         parseFloat(styles.paddingLeft) -
         parseFloat(styles.paddingRight);
-      const visible = contentWidth < 640 ? 1 : contentWidth < 1024 ? 2 : 4;
-      const nextCardWidth = Math.max(
-        280,
-        Math.floor((contentWidth - CARD_GAP_PX * (visible - 1)) / visible),
+      // En pantallas con escala Windows (viewport ~1100–1400) 4 columnas se ven “apretadas”.
+      const visible =
+        contentWidth < 640 ? 1 : contentWidth < 900 ? 2 : contentWidth < 1280 ? 3 : 4;
+      const nextCardWidth = Math.floor(
+        (contentWidth - CARD_GAP_PX * (visible - 1)) / visible,
       );
-      setCardWidth(nextCardWidth);
+      setCardWidth(Math.max(220, nextCardWidth));
 
       const stride = nextCardWidth + CARD_GAP_PX;
       const needed = Math.max(2, Math.ceil((viewportWidth * 2) / (sorted.length * stride)));
@@ -220,7 +221,7 @@ export default function TeamSection() {
               members.length === 1 && "mx-auto max-w-sm grid-cols-1",
               members.length === 2 && "mx-auto max-w-3xl grid-cols-1 md:grid-cols-2",
               members.length === 3 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
-              members.length >= 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+              members.length >= 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
             )}
           >
             {members.map((member, index) => (
