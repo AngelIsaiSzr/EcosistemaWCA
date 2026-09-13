@@ -197,12 +197,13 @@ export function RecruitmentInviteModal() {
                 className="font-heading text-3xl font-bold leading-tight drop-shadow-sm sm:text-4xl md:text-[2.6rem]"
               >
                 ¿Listo para{" "}
-                <span className="text-[#87b1e0]">transformar</span> con nosotros?
+                <span className="text-[#87b1e0]">transformar la educación</span> con nosotros?
               </h2>
 
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
-                En Ecosistema WCA buscamos personas con vocación: instructores, tutoras,
-                facilitadores y líderes. 💙 Educación + tecnología + impacto humano.
+                En el Ecosistema WCA buscamos personas con vocación, visión y liderazgo que quieran cambiar el mundo 💙 
+                <br />
+                Educación + Tecnología + Humanidad.
               </p>
 
               <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-2 text-left text-xs text-white/85 sm:gap-3 sm:text-sm">

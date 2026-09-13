@@ -545,6 +545,20 @@ export function formatAnswerForSheet(
   return String(value);
 }
 
+/** Evita que Sheets interprete +, =, @, - como fórmula (p. ej. teléfonos con lada). */
+export function toGoogleSheetsCellValue(value: string): string {
+  if (!value) return value;
+  if (/^[=+\-@]/.test(value)) return `'${value}`;
+  return value;
+}
+
+export function formatAnswerForGoogleSheet(
+  field: IntegrationField,
+  value: unknown,
+): string {
+  return toGoogleSheetsCellValue(formatAnswerForSheet(field, value));
+}
+
 export function buildSheetRow(
   definition: IntegrationFormDefinition,
   answers: Record<string, unknown>,
@@ -552,7 +566,7 @@ export function buildSheetRow(
   submissionId: string,
 ): string[] {
   const fieldValues = getAllFields(definition).map((field) =>
-    formatAnswerForSheet(field, answers[field.id]),
+    formatAnswerForGoogleSheet(field, answers[field.id]),
   );
   return [
     submittedAt.toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),

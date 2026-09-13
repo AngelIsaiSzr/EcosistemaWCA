@@ -9,7 +9,7 @@ import {
   PHONE_COUNTRIES,
   buildSheetRow,
   extractSpreadsheetId,
-  formatAnswerForSheet,
+  formatAnswerForGoogleSheet,
   getAllFields,
   getSheetHeaders,
   isFieldVisible,
@@ -400,7 +400,7 @@ export function registerTalentoRoutes(app: Express) {
             form.spreadsheetTab || "Respuestas",
             `WCA-INT-${responseId}`,
             columnIndex,
-            formatAnswerForSheet(field, answers[fieldId]),
+            formatAnswerForGoogleSheet(field, answers[fieldId]),
           );
           sheetUpdated = true;
         } catch (sheetError) {
