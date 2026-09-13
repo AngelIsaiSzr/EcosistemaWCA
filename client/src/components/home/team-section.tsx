@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Team } from "@shared/schema";
-import { getTeamRoleTextClass } from "@shared/team-colors";
+import { getTeamRoleColorMeta } from "@shared/team-colors";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Misma separación que el grid de 4 (gap-8). */
+const CARD_GAP_PX = 32;
+
+function roleColorStyle(roleColor?: string | null): CSSProperties {
+  const meta = getTeamRoleColorMeta(roleColor);
+  return { color: `hsl(var(${meta.swatchVar}))` };
+}
 
 function TeamMemberCard({
   member,
@@ -24,7 +32,7 @@ function TeamMemberCard({
       />
       <div className="p-6">
         <h3 className="mb-1 font-heading text-xl font-semibold">{member.name}</h3>
-        <p className={`${getTeamRoleTextClass(member.roleColor)} mb-3 text-sm font-medium`}>
+        <p className="mb-3 text-sm font-medium" style={roleColorStyle(member.roleColor)}>
           {member.role}
         </p>
         <p className="mb-4 text-sm text-muted">{member.bio}</p>
@@ -83,6 +91,7 @@ function TeamCarousel({ members }: { members: Team[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [copies, setCopies] = useState(3);
   const [duration, setDuration] = useState(40);
+  const [cardWidth, setCardWidth] = useState(280);
 
   const sorted = useMemo(
     () => [...members].sort((a, b) => a.order - b.order),
@@ -93,10 +102,18 @@ function TeamCarousel({ members }: { members: Team[] }) {
     const update = () => {
       if (!containerRef.current) return;
       const width = containerRef.current.offsetWidth;
-      const cardWidth = 300 + 24;
-      const needed = Math.max(2, Math.ceil((width * 2) / (sorted.length * cardWidth)));
+      // Mismo ancho visual que el grid de 4 columnas (gap-8).
+      const visible = width < 640 ? 1 : width < 1024 ? 2 : 4;
+      const nextCardWidth = Math.max(
+        260,
+        Math.floor((width - CARD_GAP_PX * (visible - 1)) / visible),
+      );
+      setCardWidth(nextCardWidth);
+
+      const stride = nextCardWidth + CARD_GAP_PX;
+      const needed = Math.max(2, Math.ceil((width * 2) / (sorted.length * stride)));
       setCopies(needed);
-      setDuration(Math.max(28, sorted.length * needed * 4));
+      setDuration(Math.max(32, sorted.length * needed * 4.5));
     };
     update();
     window.addEventListener("resize", update);
@@ -110,27 +127,21 @@ function TeamCarousel({ members }: { members: Team[] }) {
   }, [copies, sorted]);
 
   return (
-    <div
-      ref={containerRef}
-      className="group/carousel relative overflow-hidden py-2"
-      onMouseEnter={(e) => {
-        const track = e.currentTarget.querySelector<HTMLElement>("[data-team-track]");
-        if (track) track.style.animationPlayState = "paused";
-      }}
-      onMouseLeave={(e) => {
-        const track = e.currentTarget.querySelector<HTMLElement>("[data-team-track]");
-        if (track) track.style.animationPlayState = "running";
-      }}
-    >
+    <div ref={containerRef} className="relative overflow-hidden py-2">
       <div
         data-team-track
-        className="flex w-max gap-6 will-change-transform"
+        className="flex w-max will-change-transform"
         style={{
+          gap: CARD_GAP_PX,
           animation: `team-marquee ${duration}s linear infinite`,
         }}
       >
         {loop.map((member, index) => (
-          <div key={`${member.id}-${index}`} className="w-[300px] shrink-0">
+          <div
+            key={`${member.id}-${index}`}
+            className="shrink-0 origin-center transition-transform duration-300 ease-out hover:scale-[0.97]"
+            style={{ width: cardWidth }}
+          >
             <TeamMemberCard member={member} />
           </div>
         ))}
@@ -186,9 +197,7 @@ export default function TeamSection() {
           </div>
         ) : members.length > 0 ? (
           useCarousel ? (
-            <div className="-mx-4 sm:mx-0">
-              <TeamCarousel members={members} />
-            </div>
+            <TeamCarousel members={members} />
           ) : (
             <div
               className={cn(

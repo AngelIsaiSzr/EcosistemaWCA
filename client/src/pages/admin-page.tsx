@@ -59,6 +59,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DEFAULT_TEAM_ROLE_COLOR,
   TEAM_ROLE_COLORS,
+  getTeamRoleCssColor,
   isTeamRoleColorId,
 } from "@shared/team-colors";
 import { ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ArrowLeft } from "lucide-react";
@@ -2435,10 +2436,12 @@ export default function AdminPage({
                               <FormDescription>
                                 Vista previa:{" "}
                                 <span
-                                  className={
-                                    TEAM_ROLE_COLORS.find((c) => c.id === (field.value || watchedRoleColor))
-                                      ?.textClass ?? "accent-blue"
-                                  }
+                                  className="font-medium"
+                                  style={{
+                                    color: getTeamRoleCssColor(
+                                      field.value || watchedRoleColor || DEFAULT_TEAM_ROLE_COLOR,
+                                    ),
+                                  }}
                                 >
                                   {teamForm.watch("role") || "Cargo de ejemplo"}
                                 </span>
@@ -2460,7 +2463,7 @@ export default function AdminPage({
                                     >
                                       <span
                                         className="mb-1.5 block h-4 w-full rounded-md"
-                                        style={{ backgroundColor: `hsl(var(${color.swatchVar}))` }}
+                                        style={{ backgroundColor: `hsl(${color.hsl})` }}
                                       />
                                       <span className="block text-[11px] font-medium leading-tight">{color.label}</span>
                                     </button>
@@ -2588,9 +2591,7 @@ export default function AdminPage({
                     {[...teamMembers]
                       .sort((a, b) => a.order - b.order)
                       .map((member, index, list) => {
-                        const colorMeta =
-                          TEAM_ROLE_COLORS.find((c) => c.id === member.roleColor) ??
-                          TEAM_ROLE_COLORS.find((c) => c.id === DEFAULT_TEAM_ROLE_COLOR)!;
+                        const roleColor = getTeamRoleCssColor(member.roleColor);
                         return (
                           <Card key={member.id} className="overflow-hidden">
                             <div className="flex items-stretch gap-2 p-3 sm:p-4">
@@ -2627,7 +2628,9 @@ export default function AdminPage({
                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                   <div className="min-w-0">
                                     <h4 className="truncate font-medium">{member.name}</h4>
-                                    <p className={`${colorMeta.textClass} text-sm font-medium`}>{member.role}</p>
+                                    <p className="text-sm font-medium" style={{ color: roleColor }}>
+                                      {member.role}
+                                    </p>
                                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{member.bio}</p>
                                   </div>
                                   <div className="flex shrink-0 gap-1">

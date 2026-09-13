@@ -119,6 +119,7 @@ function App() {
     location === "/integracion" ||
     location.startsWith("/f/") ||
     location.startsWith("/talento") ||
+    location.startsWith("/admin") ||
     location.includes("registro-en-vivo") ||
     location.includes("live-course-registration");
 
