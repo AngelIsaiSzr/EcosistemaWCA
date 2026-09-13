@@ -35,7 +35,7 @@ function TeamMemberCard({
         <p className="mb-3 text-sm font-medium" style={roleColorStyle(member.roleColor)}>
           {member.role}
         </p>
-        <p className="mb-4 text-sm text-muted">{member.bio}</p>
+        <p className="mb-4 text-justify text-sm text-muted">{member.bio}</p>
         <div className="flex space-x-3">
           {member.linkedIn && (
             <a
