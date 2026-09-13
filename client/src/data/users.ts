@@ -5,7 +5,7 @@ export const initialUsers: InsertUser[] = [
   {
     username: 'admin',
     email: 'admin@ecosistemawca.com',
-    password: 'admin123456',
+    password: 'EcosistemaWCA@0',
     name: 'Administrador',
     role: 'admin',
     profileImage: 'https://randomuser.me/api/portraits/lego/1.jpg',

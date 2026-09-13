@@ -132,7 +132,7 @@ export default function TalentoDashboardPage() {
               <p className="text-sm text-muted-foreground">Inicio</p>
               <h1 className="mt-1 font-heading text-4xl font-bold">Formularios</h1>
               <p className="mt-2 text-muted-foreground">
-                Panel de Dirección de Talento y Bienestar. Crea, fija y gestiona tus formularios.
+                Panel de la Dirección de Talento y Bienestar. Crea, fija y gestiona tus formularios.
               </p>
             </div>
             <Button

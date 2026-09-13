@@ -7,10 +7,64 @@ import { sendEmail, EmailData } from "./services/email";
 import { saveRegistrationToSheet } from './services/google-sheets';
 import { registerTalentoRoutes } from "./routes-talento";
 
+const ADMIN_EMAIL = "admin@ecosistemawca.com";
+const ADMIN_PASSWORD = "EcosistemaWCA@0";
+const LEGACY_ADMIN_EMAIL = "admin@webcodeacademy.com";
+
+async function ensureAdminAccount() {
+  const hashedPassword = await hashPassword(ADMIN_PASSWORD);
+  const existing = await storage.getUserByEmail(ADMIN_EMAIL);
+  const legacy = await storage.getUserByEmail(LEGACY_ADMIN_EMAIL);
+
+  if (legacy && (!existing || legacy.id === existing.id)) {
+    await storage.updateUser(legacy.id, {
+      email: ADMIN_EMAIL,
+      password: hashedPassword,
+      role: "admin",
+      username: legacy.username || "admin",
+      name: legacy.name || "Administrador",
+    });
+    console.log(`Admin migrado/actualizado: ${ADMIN_EMAIL}`);
+    return;
+  }
+
+  if (legacy && existing && legacy.id !== existing.id) {
+    await storage.updateUser(existing.id, {
+      password: hashedPassword,
+      role: "admin",
+    });
+    console.log(`Admin sincronizado: ${ADMIN_EMAIL}`);
+    return;
+  }
+
+  if (!existing) {
+    await storage.createUser({
+      email: ADMIN_EMAIL,
+      username: "admin",
+      name: "Administrador",
+      password: hashedPassword,
+      role: "admin",
+      profileImage:
+        "https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png",
+      bio: "Administrador principal del Ecosistema WCA.",
+    });
+    console.log(`Created admin user: ${ADMIN_EMAIL}`);
+    return;
+  }
+
+  await storage.updateUser(existing.id, {
+    password: hashedPassword,
+    role: "admin",
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
   registerTalentoRoutes(app);
+  ensureAdminAccount().catch((error) => {
+    console.error("No se pudo asegurar la cuenta admin:", error);
+  });
 
   // Programs routes (API)
   app.get("/api/programs", async (req, res) => {
@@ -876,19 +930,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Esta ruta solo puede ser llamada explícitamente" });
       }
 
-      // Create admin user if not exists
-      const existingAdmin = await storage.getUserByEmail("admin@ecosistemawca.com");
-      if (!existingAdmin) {
-        const hashedPassword = await hashPassword("admin123456");
-        await storage.createUser({
-          email: "admin@ecosistemawca.com",
-          username: "admin",
-          name: "Administrador",
-          password: hashedPassword,
-          role: "admin"
-        });
-        console.log("Created admin user: admin@ecosistemawca.com / admin123456");
-      }
+      // Create / sync admin user
+      await ensureAdminAccount();
 
       const existingTalento = await storage.getUserByEmail("talento@ecosistemawca.com");
       if (!existingTalento) {
