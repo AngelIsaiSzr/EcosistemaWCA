@@ -1,8 +1,17 @@
 import { Helmet } from "react-helmet";
+import { useEffect } from "react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 
 export default function TermsPage() {
+  useEffect(() => {
+    if (window.location.hash === "#convocatoria") {
+      requestAnimationFrame(() => {
+        document.getElementById("convocatoria")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, []);
+
   return (
     <>
       <Helmet>
@@ -143,6 +152,93 @@ export default function TermsPage() {
                     Estos términos se rigen por las leyes de México. Cualquier disputa será resuelta 
                     en los tribunales competentes de México.
                   </p>
+                </div>
+
+                <div id="convocatoria" className="scroll-mt-24 border-t border-secondary-800 pt-8">
+                  <h2 className="mb-2 font-heading text-3xl font-bold text-accent-blue">
+                    Convocatoria de integración
+                  </h2>
+                  <p className="mb-8 text-sm text-muted">
+                    Condiciones específicas del proceso de postulación al equipo de Ecosistema WCA.
+                  </p>
+
+                  <div className="space-y-8">
+                    <div>
+                      <h3 className="mb-4 font-heading text-2xl font-semibold text-accent-blue">
+                        11. ¿Qué es esta convocatoria?
+                      </h3>
+                      <p className="leading-relaxed text-muted">
+                        La convocatoria de integración invita a personas con vocación educativa y tecnológica
+                        a sumarse al Ecosistema WCA como instructores, tutoras, facilitadores, líderes u otros
+                        roles de colaboración. Completar el formulario no garantiza un lugar en el equipo;
+                        es el inicio de un proceso de revisión.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 font-heading text-2xl font-semibold text-accent-blue">
+                        12. Quién puede postularse
+                      </h3>
+                      <p className="leading-relaxed text-muted">
+                        Pueden participar personas mayores de edad (o con consentimiento de tutor cuando aplique)
+                        que compartan el propósito de WCA: educación accesible, tecnología con sentido humano
+                        e impacto social. Se valora experiencia, disponibilidad y compromiso, no solo títulos.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 font-heading text-2xl font-semibold text-accent-blue">
+                        13. Uso de tus datos en la postulación
+                      </h3>
+                      <p className="mb-4 leading-relaxed text-muted">
+                        La información que envíes en el formulario de integración se usa únicamente para:
+                      </p>
+                      <ul className="ml-6 space-y-2 leading-relaxed text-muted">
+                        <li>• Evaluar tu postulación y contactarte</li>
+                        <li>• Coordinar entrevistas o siguientes pasos</li>
+                        <li>• Integrarte al equipo si tu perfil es seleccionado</li>
+                      </ul>
+                      <p className="mt-4 leading-relaxed text-muted">
+                        El tratamiento se rige también por nuestra{" "}
+                        <a href="/privacy" className="text-accent-blue hover:underline">
+                          Política de Privacidad
+                        </a>
+                        .
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 font-heading text-2xl font-semibold text-accent-blue">
+                        14. Proceso de selección
+                      </h3>
+                      <p className="leading-relaxed text-muted">
+                        Talento y Bienestar revisa las respuestas, puede solicitar información adicional y
+                        decide según las necesidades del ecosistema. Los tiempos de respuesta varían; te
+                        contactaremos al correo que indiques si avanzas en el proceso.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 font-heading text-2xl font-semibold text-accent-blue">
+                        15. Compromisos al postularte
+                      </h3>
+                      <ul className="ml-6 space-y-2 leading-relaxed text-muted">
+                        <li>• Proporcionar información veraz y actualizada</li>
+                        <li>• Respetar la comunidad, la confidencialidad y el código de convivencia de WCA</li>
+                        <li>• Entender que roles de colaboración pueden ser voluntarios o con condiciones específicas que se acordarán por escrito</li>
+                      </ul>
+                    </div>
+
+                    <div className="rounded-xl border border-accent-blue/30 bg-accent-blue/10 p-5 text-center">
+                      <p className="mb-4 text-muted">¿Listo para postularte?</p>
+                      <a
+                        href="/integracion"
+                        className="inline-flex rounded-full bg-accent-blue px-6 py-3 font-medium text-white hover:opacity-90"
+                      >
+                        Ir al formulario de integración
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border-t border-secondary-800 pt-8">

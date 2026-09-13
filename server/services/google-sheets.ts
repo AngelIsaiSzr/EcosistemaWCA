@@ -102,4 +102,53 @@ export async function saveIntegrationRowToSheet(
   });
 
   return true;
+}
+
+function columnLetter(index: number): string {
+  let n = index;
+  let label = "";
+  while (n >= 0) {
+    label = String.fromCharCode((n % 26) + 65) + label;
+    n = Math.floor(n / 26) - 1;
+  }
+  return label;
+}
+
+/** Actualiza una sola celda buscando la fila por ID de envío (columna B). columnIndex es 0-based (A=0). */
+export async function updateIntegrationCellInSheet(
+  spreadsheetId: string,
+  tabName: string,
+  submissionId: string,
+  columnIndex: number,
+  value: string,
+) {
+  const sheets = google.sheets({ version: "v4", auth });
+  const tab = tabName?.trim() || "Respuestas";
+
+  const result = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: sheetRange(tab, "B:B"),
+  });
+
+  const rows = result.data.values ?? [];
+  let rowNumber = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i]?.[0] ?? "").trim() === submissionId) {
+      rowNumber = i + 1;
+      break;
+    }
+  }
+  if (rowNumber < 0) {
+    throw new Error(`No se encontró la fila ${submissionId} en Google Sheets`);
+  }
+
+  const cell = `${columnLetter(columnIndex)}${rowNumber}`;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: sheetRange(tab, cell),
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [[value]] },
+  });
+
+  return true;
 } 

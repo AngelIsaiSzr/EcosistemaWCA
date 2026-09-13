@@ -9,6 +9,7 @@ import {
   PHONE_COUNTRIES,
   buildSheetRow,
   extractSpreadsheetId,
+  formatAnswerForSheet,
   getAllFields,
   getSheetHeaders,
   isFieldVisible,
@@ -19,7 +20,7 @@ import {
   sheetTabFilename,
   slugify,
 } from "@shared/integration-form";
-import { saveIntegrationRowToSheet } from "./services/google-sheets";
+import { saveIntegrationRowToSheet, updateIntegrationCellInSheet } from "./services/google-sheets";
 import { ensureIntegrationTables } from "./db/ensure-integration-tables";
 
 const TALENTO_ROLE = "talento";
@@ -308,6 +309,109 @@ export function registerTalentoRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error al cargar las respuestas" });
+    }
+  });
+
+  app.patch("/api/talento/responses/:id", requireTalento, async (req, res) => {
+    try {
+      const responseId = Number(req.params.id);
+      if (!Number.isFinite(responseId)) {
+        return res.status(400).json({ message: "ID inválido" });
+      }
+
+      const fieldId = typeof req.body?.fieldId === "string" ? req.body.fieldId : "";
+      if (!fieldId) {
+        return res.status(400).json({ message: "Falta el campo a editar" });
+      }
+
+      const form = await storage.getOrCreateDefaultIntegrationForm();
+      const existing = await storage.getIntegrationResponseById(responseId);
+      if (!existing || existing.formId !== form.id) {
+        return res.status(404).json({ message: "Respuesta no encontrada" });
+      }
+
+      const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
+      const fields = getAllFields(definition);
+      const field = fields.find((item) => item.id === fieldId);
+      if (!field) {
+        return res.status(400).json({ message: "Campo desconocido" });
+      }
+
+      let nextValue = req.body?.value as unknown;
+      if (field.type === "phone" && typeof nextValue === "string") {
+        const match = nextValue.trim().match(/^(\+\d{1,4})?\s*(.*)$/);
+        nextValue = {
+          dial: match?.[1] || "+52",
+          number: (match?.[2] || "").replace(/[^\d\s-]/g, "").trim(),
+        };
+      } else if (field.type === "checkbox") {
+        const raw = String(nextValue ?? "").trim().toLowerCase();
+        nextValue = raw === "sí" || raw === "si" || raw === "true" || raw === "1";
+      } else if (field.type === "multiple_choice" && typeof nextValue === "string") {
+        const parts = nextValue
+          .split("|")
+          .map((part: string) => part.trim())
+          .filter(Boolean);
+        nextValue = parts.map((label: string) => {
+          const option = field.options?.find(
+            (opt) => opt.label === label || opt.value === label,
+          );
+          return option?.value ?? label;
+        });
+      } else if (field.type === "single_choice" && typeof nextValue === "string") {
+        const option = field.options?.find(
+          (opt) => opt.label === nextValue || opt.value === nextValue,
+        );
+        nextValue = option?.value ?? nextValue;
+      } else if (field.type === "number") {
+        nextValue = nextValue === "" || nextValue === null ? "" : Number(nextValue);
+      }
+
+      const answers = {
+        ...(existing.answers as Record<string, unknown>),
+        [fieldId]: nextValue,
+      };
+
+      let email = existing.email;
+      if (fieldId === "email" || field.type === "email") {
+        email = String(nextValue ?? "").trim().toLowerCase();
+        if (!isValidEmail(email)) {
+          return res.status(400).json({ message: "Correo inválido" });
+        }
+        const taken = await storage.getIntegrationResponseByEmail(form.id, email);
+        if (taken && taken.id !== existing.id) {
+          return res.status(409).json({ message: "Ese correo ya está en otra postulación" });
+        }
+      }
+
+      const updated = await storage.updateIntegrationResponse(responseId, { email, answers });
+      if (!updated) {
+        return res.status(500).json({ message: "No se pudo guardar" });
+      }
+
+      let sheetUpdated = false;
+      if (form.spreadsheetId) {
+        try {
+          const fieldIndex = fields.findIndex((item) => item.id === fieldId);
+          // Columnas: 0 Fecha, 1 ID, 2... campos
+          const columnIndex = fieldIndex + 2;
+          await updateIntegrationCellInSheet(
+            form.spreadsheetId,
+            form.spreadsheetTab || "Respuestas",
+            `WCA-INT-${responseId}`,
+            columnIndex,
+            formatAnswerForSheet(field, answers[fieldId]),
+          );
+          sheetUpdated = true;
+        } catch (sheetError) {
+          console.error("Error al actualizar celda en Google Sheets:", sheetError);
+        }
+      }
+
+      res.json({ ...updated, sheetUpdated });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo actualizar la respuesta" });
     }
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ import { IntegrationFormFlow } from "@/components/integration/integration-form-f
 import { FormAtmosphere } from "@/components/integration/form-atmosphere";
 import {
   DEFAULT_INTEGRATION_FORM,
+  IntegrationField,
   IntegrationFormDefinition,
   formatAnswerForSheet,
   getAllFields,
@@ -43,6 +44,271 @@ function asDefinition(schema: unknown): IntegrationFormDefinition {
   return (schema as IntegrationFormDefinition) ?? DEFAULT_INTEGRATION_FORM;
 }
 
+const COL_WIDTHS_KEY = "talento-responses-col-widths";
+const DEFAULT_COL_WIDTH = 180;
+
+function loadColWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(COL_WIDTHS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function AnswerBadges({
+  field,
+  raw,
+  formatted,
+}: {
+  field: IntegrationField;
+  raw: unknown;
+  formatted: string;
+}) {
+  if (Array.isArray(raw)) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {(raw as string[]).map((tag) => (
+          <Badge
+            key={tag}
+            className="border border-emerald-500/25 bg-emerald-500/15 px-2.5 py-1 text-xs leading-snug text-emerald-700 dark:text-emerald-300"
+          >
+            {formatAnswerForSheet(field, [tag])}
+          </Badge>
+        ))}
+      </div>
+    );
+  }
+  if (formatted) {
+    return (
+      <Badge className="border border-sky-500/25 bg-sky-500/15 px-2.5 py-1 text-xs leading-snug text-sky-700 dark:text-sky-300">
+        {formatted}
+      </Badge>
+    );
+  }
+  return <span className="text-muted-foreground">—</span>;
+}
+
+function EditableAnswerCell({
+  responseId,
+  field,
+  raw,
+  expanded,
+  onToggleExpand,
+  onSaved,
+}: {
+  responseId: number;
+  field: IntegrationField;
+  raw: unknown;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const formatted = formatAnswerForSheet(field, raw);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(formatted);
+  const [saving, setSaving] = useState(false);
+  const isChoice = field.type === "single_choice" || field.type === "multiple_choice";
+  const isLong = formatted.length > 90;
+  const multilineField = field.type === "long_text" || field.type === "multiple_choice";
+  const inputRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(formatted);
+      requestAnimationFrame(() => {
+        (multilineField ? textRef.current : inputRef.current)?.focus();
+      });
+    }
+  }, [editing, formatted, multilineField]);
+
+  const save = async () => {
+    if (draft === formatted) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await apiRequest("PATCH", `/api/talento/responses/${responseId}`, {
+        fieldId: field.id,
+        value: draft,
+      });
+      const data = await res.json();
+      setEditing(false);
+      onSaved();
+      toast({
+        title: "Respuesta actualizada",
+        description: data.sheetUpdated
+          ? "También se actualizó esa celda en Google Sheets."
+          : "Guardado en la plataforma.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "No se pudo guardar",
+        description: error?.message || "Intenta de nuevo",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <TableCell className="align-middle py-3">
+        <div className="flex flex-col gap-2">
+          {multilineField ? (
+            <textarea
+              ref={textRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditing(false);
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void save();
+              }}
+              rows={3}
+              disabled={saving}
+              className="w-full min-w-[140px] rounded-md border bg-background px-2 py-1.5 text-sm"
+              placeholder={
+                field.type === "multiple_choice"
+                  ? "Opciones separadas por |"
+                  : undefined
+              }
+            />
+          ) : (
+            <Input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditing(false);
+                if (e.key === "Enter") void save();
+              }}
+              disabled={saving}
+              className="h-8 min-w-[140px] text-sm"
+            />
+          )}
+          <div className="flex gap-1">
+            <Button size="sm" className="h-7 px-2 text-xs" disabled={saving} onClick={() => void save()}>
+              {saving ? "…" : "Guardar"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </TableCell>
+    );
+  }
+
+  return (
+    <TableCell
+      className="group align-middle py-3 cursor-pointer"
+      onDoubleClick={() => setEditing(true)}
+      title="Doble clic para editar"
+    >
+      <div className="flex items-start gap-1.5">
+        <div className="min-w-0 flex-1">
+          {field.type === "email" && formatted ? (
+            <a className="text-[#5b8fd4] hover:underline" href={`mailto:${formatted}`} onClick={(e) => e.stopPropagation()}>
+              {formatted}
+            </a>
+          ) : field.type === "phone" && formatted ? (
+            <a className="text-[#5b8fd4] hover:underline" href={`tel:${formatted.replace(/\s/g, "")}`} onClick={(e) => e.stopPropagation()}>
+              {formatted}
+            </a>
+          ) : field.type === "url" && formatted ? (
+            <a className="text-[#5b8fd4] hover:underline" href={formatted} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+              Ver enlace
+            </a>
+          ) : isChoice ? (
+            <AnswerBadges field={field} raw={raw} formatted={formatted} />
+          ) : isLong ? (
+            <div>
+              <p className="leading-snug">{expanded ? formatted : `${formatted.slice(0, 90)}…`}</p>
+              <button
+                type="button"
+                className="mt-1 text-xs text-[#5b8fd4]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand();
+                }}
+              >
+                {expanded ? "Ver menos" : "Ver más"}
+              </button>
+            </div>
+          ) : (
+            <span className="leading-snug">{formatted || "—"}</span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="mt-0.5 shrink-0 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }}
+          aria-label="Editar"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </TableCell>
+  );
+}
+
+function ResizableHead({
+  id,
+  label,
+  width,
+  onResize,
+}: {
+  id: string;
+  label: string;
+  width: number;
+  onResize: (id: string, width: number) => void;
+}) {
+  const startX = useRef(0);
+  const startW = useRef(0);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startX.current = e.clientX;
+    startW.current = width;
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.max(100, startW.current + (ev.clientX - startX.current));
+      onResize(id, next);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  return (
+    <TableHead style={{ width, minWidth: width, maxWidth: width }} className="relative select-none">
+      <span className="pr-2 line-clamp-2">{label}</span>
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={onMouseDown}
+        className="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize hover:bg-[#5b8fd4]/40"
+      />
+    </TableHead>
+  );
+}
+
 export default function TalentoPage() {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
@@ -50,6 +316,19 @@ export default function TalentoPage() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [tab, setTab] = useState("responses");
+  const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
+
+  const setColWidth = useCallback((id: string, width: number) => {
+    setColWidths((prev) => {
+      const next = { ...prev, [id]: width };
+      try {
+        localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "talento")) {
@@ -202,16 +481,30 @@ export default function TalentoPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border bg-card">
-                <Table>
+              <div className="overflow-x-auto rounded-xl border bg-card">
+                <Table className="min-w-max table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Fecha</TableHead>
+                      <ResizableHead
+                        id="_index"
+                        label="#"
+                        width={colWidths._index ?? 56}
+                        onResize={setColWidth}
+                      />
+                      <ResizableHead
+                        id="_fecha"
+                        label="Fecha"
+                        width={colWidths._fecha ?? 160}
+                        onResize={setColWidth}
+                      />
                       {fields.map((field) => (
-                        <TableHead key={field.id} className="min-w-[160px]">
-                          {field.label}
-                        </TableHead>
+                        <ResizableHead
+                          key={field.id}
+                          id={field.id}
+                          label={field.label}
+                          width={colWidths[field.id] ?? DEFAULT_COL_WIDTH}
+                          onResize={setColWidth}
+                        />
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -232,56 +525,38 @@ export default function TalentoPage() {
                       const answers = (item.answers ?? {}) as Record<string, unknown>;
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell className="whitespace-nowrap text-muted-foreground">
+                          <TableCell
+                            className="align-middle py-3"
+                            style={{ width: colWidths._index ?? 56 }}
+                          >
+                            {index + 1}
+                          </TableCell>
+                          <TableCell
+                            className="align-middle whitespace-nowrap py-3 text-muted-foreground"
+                            style={{ width: colWidths._fecha ?? 160 }}
+                          >
                             {item.submittedAt
                               ? new Date(item.submittedAt).toLocaleString("es-MX")
                               : "—"}
                           </TableCell>
                           {fields.map((field) => {
-                            const raw = answers[field.id];
-                            const formatted = formatAnswerForSheet(field, raw);
                             const key = `${item.id}-${field.id}`;
-                            const isLong = formatted.length > 90;
-                            const isChoice = field.type === "single_choice" || field.type === "multiple_choice";
                             return (
-                              <TableCell key={field.id} className="align-top">
-                                {field.type === "email" && formatted ? (
-                                  <a className="text-[#5b8fd4] hover:underline" href={`mailto:${formatted}`}>
-                                    {formatted}
-                                  </a>
-                                ) : field.type === "phone" && formatted ? (
-                                  <a className="text-[#5b8fd4] hover:underline" href={`tel:${formatted.replace(/\s/g, "")}`}>
-                                    {formatted}
-                                  </a>
-                                ) : field.type === "url" && formatted ? (
-                                  <a className="text-[#5b8fd4] hover:underline" href={formatted} target="_blank" rel="noreferrer">
-                                    Ver enlace
-                                  </a>
-                                ) : isChoice && Array.isArray(raw) ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {(raw as string[]).map((tag) => (
-                                      <Badge key={tag} className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                                        {formatAnswerForSheet(field, [tag])}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                ) : isChoice && formatted ? (
-                                  <Badge className="bg-sky-500/15 text-sky-700 dark:text-sky-300">{formatted}</Badge>
-                                ) : isLong ? (
-                                  <div>
-                                    <p>{expanded[key] ? formatted : `${formatted.slice(0, 90)}…`}</p>
-                                    <button
-                                      className="mt-1 text-xs text-[#5b8fd4]"
-                                      onClick={() => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                    >
-                                      {expanded[key] ? "Ver menos" : "Ver más"}
-                                    </button>
-                                  </div>
-                                ) : (
-                                  formatted || "—"
-                                )}
-                              </TableCell>
+                              <EditableAnswerCell
+                                key={field.id}
+                                responseId={item.id}
+                                field={field}
+                                raw={answers[field.id]}
+                                expanded={!!expanded[key]}
+                                onToggleExpand={() =>
+                                  setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
+                                }
+                                onSaved={() => {
+                                  void queryClient.invalidateQueries({
+                                    queryKey: ["/api/talento/responses"],
+                                  });
+                                }}
+                              />
                             );
                           })}
                         </TableRow>
@@ -290,6 +565,10 @@ export default function TalentoPage() {
                   </TableBody>
                 </Table>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Doble clic en una celda (o el ícono de lápiz) para editar. Arrastra el borde derecho de
+                cada encabezado para ajustar el ancho.
+              </p>
             </TabsContent>
 
             <TabsContent value="preview">

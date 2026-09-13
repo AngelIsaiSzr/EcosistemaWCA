@@ -555,13 +555,23 @@ function FieldControl({
             />
             <span className="text-sm leading-relaxed text-white/85">
               {field.label}{" "}
+              Consulta los{" "}
+              <a
+                href="/terms#convocatoria"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#87b1e0] underline-offset-4 hover:underline"
+              >
+                términos de la convocatoria
+              </a>{" "}
+              y la{" "}
               <a
                 href="/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#87b1e0] underline-offset-4 hover:underline"
               >
-                Ver política de privacidad
+                política de privacidad
               </a>
               .
             </span>

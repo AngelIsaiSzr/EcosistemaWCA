@@ -440,7 +440,7 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
           type: "checkbox",
           label:
             "Acepto que mis datos se usen únicamente para el proceso de selección e integración al equipo de Ecosistema WCA.",
-          description: "Puedes consultar cómo protegemos tu información en la Política de Privacidad.",
+          description: "Consulta los términos de la convocatoria y la política de privacidad.",
           required: true,
         },
       ],

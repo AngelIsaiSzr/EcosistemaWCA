@@ -51,6 +51,14 @@ function Router() {
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPage} />
         <Route path="/cookies" component={CookiesPage} />
+        <Route path="/convocatoria/terminos">
+          {() => {
+            if (typeof window !== "undefined") {
+              window.location.replace("/terms#convocatoria");
+            }
+            return null;
+          }}
+        </Route>
         <Route path="/integracion" component={IntegrationFormPage} />
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />

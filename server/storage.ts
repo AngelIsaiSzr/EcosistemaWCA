@@ -89,7 +89,12 @@ export interface IStorage {
   updateIntegrationForm(id: number, data: Partial<InsertIntegrationForm>): Promise<IntegrationForm | undefined>;
   getIntegrationResponses(formId: number, search?: string): Promise<IntegrationResponse[]>;
   getIntegrationResponseByEmail(formId: number, email: string): Promise<IntegrationResponse | undefined>;
+  getIntegrationResponseById(id: number): Promise<IntegrationResponse | undefined>;
   createIntegrationResponse(response: InsertIntegrationResponse): Promise<IntegrationResponse>;
+  updateIntegrationResponse(
+    id: number,
+    data: { email?: string; answers: Record<string, unknown> },
+  ): Promise<IntegrationResponse | undefined>;
 
   // Session store
   sessionStore: any;
@@ -557,6 +562,25 @@ export class MemStorage implements IStorage {
     this.integrationResponses.set(id, created);
     return created;
   }
+
+  async getIntegrationResponseById(id: number): Promise<IntegrationResponse | undefined> {
+    return this.integrationResponses.get(id);
+  }
+
+  async updateIntegrationResponse(
+    id: number,
+    data: { email?: string; answers: Record<string, unknown> },
+  ): Promise<IntegrationResponse | undefined> {
+    const existing = this.integrationResponses.get(id);
+    if (!existing) return undefined;
+    const updated: IntegrationResponse = {
+      ...existing,
+      email: data.email ?? existing.email,
+      answers: data.answers,
+    };
+    this.integrationResponses.set(id, updated);
+    return updated;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -965,6 +989,29 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Failed to create integration response");
     }
     return created;
+  }
+
+  async getIntegrationResponseById(id: number): Promise<IntegrationResponse | undefined> {
+    const [response] = await db
+      .select()
+      .from(integrationResponses)
+      .where(eq(integrationResponses.id, id));
+    return response;
+  }
+
+  async updateIntegrationResponse(
+    id: number,
+    data: { email?: string; answers: Record<string, unknown> },
+  ): Promise<IntegrationResponse | undefined> {
+    const [updated] = await db
+      .update(integrationResponses)
+      .set({
+        answers: data.answers,
+        ...(data.email ? { email: data.email.toLowerCase() } : {}),
+      })
+      .where(eq(integrationResponses.id, id))
+      .returning();
+    return updated;
   }
 }
 
