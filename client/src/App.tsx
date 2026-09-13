@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { PageLoader } from "@/components/layout/page-loader";
+import { RecruitmentInviteModal } from "@/components/recruitment-invite-modal";
 import { PageTransition } from "@/components/ui/page-transition";
 import { useDynamicTitle } from './hooks/useDynamicTitle';
 import { useEffect } from "react";
@@ -119,6 +120,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <PageLoader />
+            <RecruitmentInviteModal />
             <Toaster />
             {!hideDonorbox && <DonorboxButton />}
             <Router />

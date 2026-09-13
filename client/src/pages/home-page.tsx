@@ -37,6 +37,11 @@ export default function HomePage() {
         />
         <link rel="canonical" href={`${SITE_URL}/`} />
         <meta property="og:url" content={`${SITE_URL}/`} />
+        <link
+          rel="preload"
+          as="image"
+          href="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1400&q=80"
+        />
       </Helmet>
 
       <div className="flex flex-col min-h-screen overflow-x-hidden">

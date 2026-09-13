@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -360,15 +361,18 @@ function AppearanceEditor({
   onChange: (patch: Partial<IntegrationTheme>) => void;
 }) {
   const preset = theme?.background ?? "aurora";
+  const isCustom = preset === "custom";
   const imagePath = theme?.backgroundImage?.trim() ?? "";
   const imageFieldValue =
     !imagePath || imagePath === "/logo-wca.png" || imagePath === WCA_LOGO_URL ? "" : imagePath;
+
   return (
     <div className="space-y-5">
       <div>
         <h2 className="font-heading text-xl font-semibold">Apariencia</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Elige un estilo de marca WCA. Si agregas una imagen, puedes recortarla, fijarla o alinear su posición.
+          Elige un estilo de marca WCA. El color base siempre se puede ajustar; las opciones de imagen
+          solo aparecen con «Imagen propia».
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -387,7 +391,8 @@ function AppearanceEditor({
           </button>
         ))}
       </div>
-      <div className="grid gap-4 rounded-xl border p-4 md:grid-cols-2">
+
+      <div className={cn("grid gap-4 rounded-xl border p-4", isCustom ? "md:grid-cols-2" : "md:grid-cols-2")}>
         <div>
           <Label>Color de fondo</Label>
           <div className="mt-1 flex items-center gap-2">
@@ -405,73 +410,10 @@ function AppearanceEditor({
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cambia solo el color base. El estilo (luces, ondas, etc.) se mantiene encima.
+            Color base del formulario. Luces y efectos del tema se mantienen encima.
           </p>
         </div>
-        <Field
-          label="URL o ruta de la imagen (opcional)"
-          value={imageFieldValue}
-          onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
-        />
-        <div>
-          <Label>Encaje</Label>
-          <Select value={theme?.imageFit ?? "cover"} onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cover">Cubrir (cover)</SelectItem>
-              <SelectItem value="contain">Contener (contain)</SelectItem>
-              <SelectItem value="auto">Tamaño original</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Posición</Label>
-          <Select value={theme?.imagePosition ?? "center"} onValueChange={(imagePosition) => onChange({ imagePosition: imagePosition as IntegrationImagePosition })}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="center">Centro</SelectItem>
-              <SelectItem value="top">Arriba</SelectItem>
-              <SelectItem value="bottom">Abajo</SelectItem>
-              <SelectItem value="left">Izquierda</SelectItem>
-              <SelectItem value="right">Derecha</SelectItem>
-              <SelectItem value="top left">Arriba izquierda</SelectItem>
-              <SelectItem value="top right">Arriba derecha</SelectItem>
-              <SelectItem value="bottom left">Abajo izquierda</SelectItem>
-              <SelectItem value="bottom right">Abajo derecha</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Anclaje</Label>
-          <Select value={theme?.imageAttachment ?? "fixed"} onValueChange={(imageAttachment) => onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="fixed">Fijo (no se mueve al hacer scroll)</SelectItem>
-              <SelectItem value="scroll">Se mueve con el contenido</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Repetición</Label>
-          <Select value={theme?.imageRepeat ?? "no-repeat"} onValueChange={(imageRepeat) => onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="no-repeat">Sin repetir</SelectItem>
-              <SelectItem value="repeat">Repetir</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Opacidad de la imagen ({theme?.imageOpacity ?? 14}%)</Label>
-          <Slider
-            className="mt-4"
-            min={0}
-            max={100}
-            step={1}
-            value={[theme?.imageOpacity ?? 14]}
-            onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
-          />
-        </div>
+
         <div>
           <Label>Velo oscuro ({theme?.overlayOpacity ?? 0}%)</Label>
           <Slider
@@ -482,10 +424,80 @@ function AppearanceEditor({
             value={[theme?.overlayOpacity ?? 0]}
             onValueChange={([value]) => onChange({ overlayOpacity: value ?? 0 })}
           />
+          <p className="mt-1 text-xs text-muted-foreground">Oscurece un poco el fondo para mejorar el contraste del texto.</p>
         </div>
-        <p className="text-xs text-muted-foreground md:col-span-2">
-          Sube el archivo a <code>client/public/</code> (por ejemplo <code>/logo-wca.png</code>) o pega una URL https.
-        </p>
+
+        {isCustom && (
+          <>
+            <Field
+              label="URL o ruta de la imagen"
+              value={imageFieldValue}
+              onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
+            />
+            <div>
+              <Label>Encaje</Label>
+              <Select value={theme?.imageFit ?? "cover"} onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cover">Cubrir (cover)</SelectItem>
+                  <SelectItem value="contain">Contener (contain)</SelectItem>
+                  <SelectItem value="auto">Tamaño original</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Posición</Label>
+              <Select value={theme?.imagePosition ?? "center"} onValueChange={(imagePosition) => onChange({ imagePosition: imagePosition as IntegrationImagePosition })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="center">Centro</SelectItem>
+                  <SelectItem value="top">Arriba</SelectItem>
+                  <SelectItem value="bottom">Abajo</SelectItem>
+                  <SelectItem value="left">Izquierda</SelectItem>
+                  <SelectItem value="right">Derecha</SelectItem>
+                  <SelectItem value="top left">Arriba izquierda</SelectItem>
+                  <SelectItem value="top right">Arriba derecha</SelectItem>
+                  <SelectItem value="bottom left">Abajo izquierda</SelectItem>
+                  <SelectItem value="bottom right">Abajo derecha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Anclaje</Label>
+              <Select value={theme?.imageAttachment ?? "fixed"} onValueChange={(imageAttachment) => onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fijo (no se mueve al hacer scroll)</SelectItem>
+                  <SelectItem value="scroll">Se mueve con el contenido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Repetición</Label>
+              <Select value={theme?.imageRepeat ?? "no-repeat"} onValueChange={(imageRepeat) => onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-repeat">Sin repetir</SelectItem>
+                  <SelectItem value="repeat">Repetir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Opacidad de la imagen ({theme?.imageOpacity ?? 28}%)</Label>
+              <Slider
+                className="mt-4"
+                min={0}
+                max={100}
+                step={1}
+                value={[theme?.imageOpacity ?? 28]}
+                onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground md:col-span-2">
+              Sube el archivo a <code>client/public/</code> (por ejemplo <code>/fondo-integracion.jpg</code>) o pega una URL https.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

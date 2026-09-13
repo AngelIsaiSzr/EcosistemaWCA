@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,18 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
     () => (section ? visibleFields(section.fields, answers) : []),
     [section, answers],
   );
+
+  useEffect(() => {
+    const scrollTop = () => {
+      const shell = document.querySelector(".integration-form-shell");
+      if (shell instanceof HTMLElement) {
+        shell.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    const timer = window.setTimeout(scrollTop, 40);
+    return () => window.clearTimeout(timer);
+  }, [step, submitted]);
 
   const setValue = (id: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
