@@ -42,7 +42,7 @@ function TeamMemberCard({
               href={member.linkedIn}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted transition-colors hover:text-[hsl(var(--accent-blue-strong))]"
+              className="text-muted transition-colors hover:text-[#0A66C2]"
               aria-label="Sígueme en LinkedIn"
             >
               <i className="fab fa-linkedin-in" />
@@ -53,7 +53,7 @@ function TeamMemberCard({
               href={member.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted transition-colors hover:text-accent-blue"
+              className="text-muted transition-colors hover:text-white"
               aria-label="Sígueme en GitHub"
             >
               <i className="fab fa-github" />
@@ -64,7 +64,7 @@ function TeamMemberCard({
               href={member.twitter}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted transition-colors hover:text-accent-blue"
+              className="text-muted transition-colors hover:text-[#1DA1F2]"
               aria-label="Sígueme en Twitter"
             >
               <i className="fab fa-twitter" />
@@ -75,7 +75,7 @@ function TeamMemberCard({
               href={member.instagram}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted transition-colors hover:text-accent-red"
+              className="text-muted transition-colors hover:text-[#E4405F]"
               aria-label="Sígueme en Instagram"
             >
               <i className="fab fa-instagram" />
@@ -102,11 +102,12 @@ function TeamCarousel({ members }: { members: Team[] }) {
     const update = () => {
       if (!containerRef.current) return;
       const width = containerRef.current.offsetWidth;
-      // Mismo ancho visual que el grid de 4 columnas (gap-8).
-      const visible = width < 640 ? 1 : width < 1024 ? 2 : 4;
+      // Ancho tipo grid de 4 dentro del container, pero el carrusel es full-bleed.
+      const contentWidth = Math.min(width, 1280) - 32;
+      const visible = contentWidth < 640 ? 1 : contentWidth < 1024 ? 2 : 4;
       const nextCardWidth = Math.max(
         260,
-        Math.floor((width - CARD_GAP_PX * (visible - 1)) / visible),
+        Math.floor((contentWidth - CARD_GAP_PX * (visible - 1)) / visible),
       );
       setCardWidth(nextCardWidth);
 
@@ -127,7 +128,7 @@ function TeamCarousel({ members }: { members: Team[] }) {
   }, [copies, sorted]);
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden py-2">
+    <div ref={containerRef} className="relative w-full overflow-hidden border-y-0 py-2">
       <div
         data-team-track
         className="flex w-max will-change-transform"
@@ -195,40 +196,40 @@ export default function TeamSection() {
               más tarde.
             </p>
           </div>
-        ) : members.length > 0 ? (
-          useCarousel ? (
-            <TeamCarousel members={members} />
-          ) : (
-            <div
-              className={cn(
-                "grid gap-8",
-                members.length === 1 && "mx-auto max-w-sm grid-cols-1",
-                members.length === 2 && "mx-auto max-w-3xl grid-cols-1 md:grid-cols-2",
-                members.length === 3 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
-                members.length >= 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
-              )}
-            >
-              {members.map((member, index) => (
-                <motion.div
-                  key={member.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 0.97 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.08 }}
-                >
-                  <TeamMemberCard member={member} />
-                </motion.div>
-              ))}
-            </div>
-          )
-        ) : (
+        ) : members.length === 0 ? (
           <div className="py-16 text-center">
             <h3 className="mb-2 font-heading text-xl font-semibold">Equipo no disponible</h3>
             <p className="text-muted">La información del equipo estará disponible próximamente.</p>
           </div>
-        )}
+        ) : !useCarousel ? (
+          <div
+            className={cn(
+              "grid gap-8",
+              members.length === 1 && "mx-auto max-w-sm grid-cols-1",
+              members.length === 2 && "mx-auto max-w-3xl grid-cols-1 md:grid-cols-2",
+              members.length === 3 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+              members.length >= 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+            )}
+          >
+            {members.map((member, index) => (
+              <motion.div
+                key={member.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 0.97 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+              >
+                <TeamMemberCard member={member} />
+              </motion.div>
+            ))}
+          </div>
+        ) : null}
       </div>
+
+      {members.length > 0 && useCarousel && !isLoading && !error ? (
+        <TeamCarousel members={members} />
+      ) : null}
     </section>
   );
 }
