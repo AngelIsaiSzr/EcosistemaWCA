@@ -931,7 +931,7 @@ export function PresentationCardEditor({
 
                       {userPickerOpen ? (
                         <div
-                          className="absolute left-0 top-[calc(100%+0.5rem)] z-[200] w-full rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg"
+                          className="absolute bottom-[calc(100%+0.5rem)] left-0 z-[200] w-full rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg"
                           onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                         >
