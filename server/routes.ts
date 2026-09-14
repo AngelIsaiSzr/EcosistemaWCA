@@ -11,9 +11,11 @@ import { registerEmailAutomationRoutes } from "./routes-email-automation";
 import { registerMediaProxyRoutes } from "./routes-media-proxy";
 import { registerIneditoRetoRoutes } from "./routes-inedito-reto";
 import { registerLearningRoutes } from "./routes-learning";
+import { registerCertificateRoutes } from "./routes-certificates";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
 import { ensureModuleLearningTables } from "./db/ensure-module-learning";
+import { ensureCertificatesAndEnrollmentActivity } from "./db/ensure-certificates";
 
 const ADMIN_EMAIL = "admin@ecosistemawca.com";
 const ADMIN_PASSWORD = "EcosistemaWCA@0";
@@ -75,11 +77,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMediaProxyRoutes(app);
   registerIneditoRetoRoutes(app);
   registerLearningRoutes(app);
+  registerCertificateRoutes(app);
   ensureAdminAccount().catch((error) => {
     console.error("No se pudo asegurar la cuenta admin:", error);
   });
   ensureModuleLearningTables().catch((error) => {
     console.error("No se pudieron asegurar tablas de learning:", error);
+  });
+  ensureCertificatesAndEnrollmentActivity().catch((error) => {
+    console.error("No se pudieron asegurar certificados:", error);
   });
 
   // Programs routes (API)

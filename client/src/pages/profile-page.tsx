@@ -92,7 +92,18 @@ interface EnrollmentWithProgram {
   };
 }
 
-type SectionId = "perfil" | "tarjeta" | "programas" | "cuenta";
+type SectionId = "perfil" | "tarjeta" | "programas" | "certificados" | "cuenta";
+
+type CertificateRow = {
+  id: number;
+  code: string;
+  studentName: string;
+  programTitle: string;
+  issuedAt: string | null;
+  programSlug: string;
+  programImage: string;
+  programCategory: string;
+};
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth();
@@ -129,6 +140,11 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error("No se pudo cargar la tarjeta");
       return res.json();
     },
+  });
+
+  const { data: certificates = [], isLoading: isLoadingCertificates } = useQuery<CertificateRow[]>({
+    queryKey: ["/api/certificates"],
+    enabled: Boolean(user),
   });
 
   const unenrollMutation = useMutation({
@@ -387,6 +403,7 @@ export default function ProfilePage() {
     { id: "perfil", label: "Editar perfil", icon: User },
     { id: "tarjeta", label: "Mi tarjeta", icon: CreditCard, hidden: !myCard },
     { id: "programas", label: "Mis programas", icon: LayoutGrid },
+    { id: "certificados", label: "Mis certificados", icon: Award },
     { id: "cuenta", label: "Cuenta", icon: Shield },
   ];
 
@@ -790,7 +807,7 @@ export default function ProfilePage() {
                                   <span className="font-medium">{enrollment.progress}%</span>
                                 </div>
                                 <Progress value={enrollment.progress} className="h-2" />
-                                <div className="mt-3 flex items-center justify-between">
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                   {enrollment.completed ? (
                                     <span className="inline-flex items-center gap-1 text-sm text-[#5b8fd4]">
                                       <Award className="h-4 w-4" /> Completado
@@ -800,13 +817,116 @@ export default function ProfilePage() {
                                       {enrollment.progress > 0 ? "En progreso" : "No iniciado"}
                                     </span>
                                   )}
-                                  <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/programs/${enrollment.program.slug}/learn`}>
-                                      {enrollment.progress > 0 ? "Continuar" : "Iniciar"}
-                                    </Link>
-                                  </Button>
+                                  <div className="flex flex-wrap gap-2">
+                                    {enrollment.completed && (
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            const res = await apiRequest(
+                                              "POST",
+                                              `/api/programs/${enrollment.courseId}/certificate`,
+                                            );
+                                            const cert = await res.json();
+                                            window.open(`/api/certificates/${cert.id}/pdf`, "_blank");
+                                            queryClient.invalidateQueries({
+                                              queryKey: ["/api/certificates"],
+                                            });
+                                          } catch (err) {
+                                            toast({
+                                              title: "No se pudo abrir el certificado",
+                                              description:
+                                                err instanceof Error ? err.message : "Error",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Award className="h-4 w-4 mr-1.5" />
+                                        Certificado
+                                      </Button>
+                                    )}
+                                    <Button variant="outline" size="sm" asChild>
+                                      <Link href={`/programs/${enrollment.program.slug}/learn`}>
+                                        {enrollment.progress > 0 ? "Continuar" : "Iniciar"}
+                                      </Link>
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {section === "certificados" && (
+                <section className="rounded-2xl border bg-card p-5 md:p-6">
+                  <h2 className="font-heading text-lg font-semibold">Mis certificados</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Descarga los PDF de los programas que hayas completado al 100%.
+                  </p>
+                  <div className="mt-5">
+                    {isLoadingCertificates ? (
+                      <div className="flex justify-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : certificates.length === 0 ? (
+                      <div className="rounded-xl border border-dashed px-4 py-10 text-center">
+                        <Award className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
+                        <p className="text-muted-foreground">
+                          Aún no tienes certificados. Completa un programa para emitir el tuyo.
+                        </p>
+                        <Button className="mt-4" variant="outline" asChild>
+                          <Link href="/programs">Ver programas</Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {certificates.map((cert) => (
+                          <div
+                            key={cert.id}
+                            className="overflow-hidden rounded-xl border bg-background/40 flex flex-col"
+                          >
+                            <div className="relative h-28 overflow-hidden">
+                              <img
+                                src={cert.programImage}
+                                alt={cert.programTitle}
+                                className="h-full w-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                              <div className="absolute bottom-3 left-3 right-3">
+                                <p className="text-sm font-semibold text-white line-clamp-2">
+                                  {cert.programTitle}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-1 flex-col p-4 gap-3">
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <p>
+                                  Emitido:{" "}
+                                  {cert.issuedAt
+                                    ? new Date(cert.issuedAt).toLocaleDateString("es-MX", {
+                                        dateStyle: "medium",
+                                      })
+                                    : "—"}
+                                </p>
+                                <p className="font-mono">Código: {cert.code}</p>
+                              </div>
+                              <Button className="mt-auto w-full" asChild>
+                                <a
+                                  href={`/api/certificates/${cert.id}/pdf`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <Award className="h-4 w-4 mr-2" />
+                                  Descargar PDF
+                                </a>
+                              </Button>
                             </div>
                           </div>
                         ))}

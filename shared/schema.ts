@@ -45,7 +45,34 @@ export const enrollments = pgTable("enrollments", {
   progress: integer("progress").notNull().default(0),
   completed: boolean("completed").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  /** Última actividad (progreso / inscripción) para ordenar “Mis programas” */
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+/** Certificados de finalización de programas */
+export const certificates = pgTable(
+  "certificates",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseId: integer("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    enrollmentId: integer("enrollment_id")
+      .notNull()
+      .references(() => enrollments.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    studentName: text("student_name").notNull(),
+    programTitle: text("program_title").notNull(),
+    issuedAt: timestamp("issued_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("certificates_user_course_unique").on(table.userId, table.courseId),
+    uniqueIndex("certificates_code_unique").on(table.code),
+  ],
+);
 
 export const modules = pgTable("modules", {
   id: serial("id").primaryKey(),
@@ -318,6 +345,7 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertModuleSchema = createInsertSchema(modules).omit({
@@ -428,6 +456,7 @@ export type InsertEmailWeekTemplate = z.infer<typeof insertEmailWeekTemplateSche
 export type User = typeof users.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
+export type Certificate = typeof certificates.$inferSelect;
 export type Module = typeof modules.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type ModuleProgress = typeof moduleProgress.$inferSelect;

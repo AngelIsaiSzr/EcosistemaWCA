@@ -337,10 +337,12 @@ export class MemStorage implements IStorage {
   // Enrollments
   async createEnrollment(insertEnrollment: InsertEnrollment): Promise<Enrollment> {
     const id = this.currentEnrollmentIds++;
+    const now = new Date();
     const enrollment: Enrollment = { 
       ...insertEnrollment, 
       id,
-      createdAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
       progress: insertEnrollment.progress || 0,
       completed: insertEnrollment.completed || false
     };
@@ -349,9 +351,13 @@ export class MemStorage implements IStorage {
   }
 
   async getEnrollmentsByUserId(userId: number): Promise<Enrollment[]> {
-    return Array.from(this.enrollments.values()).filter(
-      (enrollment) => enrollment.userId === userId
-    );
+    return Array.from(this.enrollments.values())
+      .filter((enrollment) => enrollment.userId === userId)
+      .sort((a, b) => {
+        const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return tb - ta;
+      });
   }
 
   async getEnrollmentByCourseAndUser(courseId: number, userId: number): Promise<Enrollment | undefined> {
@@ -365,8 +371,12 @@ export class MemStorage implements IStorage {
     if (!enrollment) {
       throw new Error(`Enrollment with id ${id} not found`);
     }
-
-    const updatedEnrollment = { ...enrollment, progress, completed };
+    const updatedEnrollment = {
+      ...enrollment,
+      progress,
+      completed,
+      updatedAt: new Date(),
+    };
     this.enrollments.set(id, updatedEnrollment);
     return updatedEnrollment;
   }
@@ -961,9 +971,10 @@ export class DatabaseStorage implements IStorage {
 
   // Enrollments
   async createEnrollment(insertEnrollment: InsertEnrollment): Promise<Enrollment> {
+    const now = new Date();
     const [enrollment] = await db
       .insert(enrollments)
-      .values({ ...insertEnrollment, createdAt: new Date() })
+      .values({ ...insertEnrollment, createdAt: now, updatedAt: now })
       .returning();
     return enrollment;
   }
@@ -972,7 +983,8 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(enrollments)
-      .where(eq(enrollments.userId, userId));
+      .where(eq(enrollments.userId, userId))
+      .orderBy(desc(enrollments.updatedAt), desc(enrollments.createdAt));
   }
 
   async getEnrollmentByCourseAndUser(courseId: number, userId: number): Promise<Enrollment | undefined> {
@@ -991,7 +1003,7 @@ export class DatabaseStorage implements IStorage {
   async updateEnrollmentProgress(id: number, progress: number, completed: boolean): Promise<Enrollment> {
     const [enrollment] = await db
       .update(enrollments)
-      .set({ progress, completed })
+      .set({ progress, completed, updatedAt: new Date() })
       .where(eq(enrollments.id, id))
       .returning();
     

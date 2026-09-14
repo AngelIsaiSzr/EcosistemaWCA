@@ -32,6 +32,8 @@ import {
   Flag,
   Loader2,
   Send,
+  Award,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +41,16 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LiveCourseRegistrationForm } from "@/components/forms/LiveCourseRegistrationForm";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +79,15 @@ type ModuleComment = {
 
 type TabType = "description" | "presentation" | "resources" | "comments" | "report";
 
-function LessonPlayer({ url, reloadKey = 0 }: { url: string; reloadKey?: number }) {
+function LessonPlayer({
+  url,
+  reloadKey = 0,
+  onNativeEnded,
+}: {
+  url: string;
+  reloadKey?: number;
+  onNativeEnded?: () => void;
+}) {
   const media = resolveLessonMedia(url);
 
   if (media.kind === "empty") {
@@ -99,7 +119,13 @@ function LessonPlayer({ url, reloadKey = 0 }: { url: string; reloadKey?: number 
   if (media.kind === "video") {
     return (
       <div className="aspect-video bg-black">
-        <video className="w-full h-full" controls src={media.src} poster="/media/back1-sngqjn.jpg">
+        <video
+          className="w-full h-full"
+          controls
+          src={media.src}
+          poster="/media/back1-sngqjn.jpg"
+          onEnded={() => onNativeEnded?.()}
+        >
           Tu navegador no soporta el elemento de video.
         </video>
       </div>
@@ -182,6 +208,11 @@ export default function ProgramLearningPage() {
   const [reportMessage, setReportMessage] = useState("");
   const [videoReloadKey, setVideoReloadKey] = useState(0);
   const [activeVideoPart, setActiveVideoPart] = useState(0);
+  const [certificateCelebration, setCertificateCelebration] = useState<{
+    id: number;
+    code: string;
+    programTitle: string;
+  } | null>(null);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
   const {
@@ -250,6 +281,7 @@ export default function ProgramLearningPage() {
     (progressData?.modules ?? []).filter((m) => m.completed).map((m) => m.moduleId),
   );
   const progressPercent = progressData?.progressPercent ?? 0;
+  const isCurrentCompleted = activeModuleId != null && completedIds.has(activeModuleId);
 
   const {
     data: comments = [],
@@ -287,13 +319,24 @@ export default function ProgramLearningPage() {
       completed: boolean;
     }) => {
       const res = await apiRequest("POST", `/api/modules/${moduleId}/progress`, { completed });
-      return res.json();
+      return res.json() as Promise<{
+        progressPercent?: number;
+        certificate?: { id: number; code: string; programTitle: string } | null;
+      }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: [`/api/programs/${program?.id}/module-progress`],
       });
       queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates"] });
+      if (data?.certificate?.id) {
+        setCertificateCelebration({
+          id: data.certificate.id,
+          code: data.certificate.code,
+          programTitle: data.certificate.programTitle,
+        });
+      }
     },
     onError: (err: Error) => {
       toast({
@@ -303,6 +346,51 @@ export default function ProgramLearningPage() {
       });
     },
   });
+
+  const markLessonComplete = () => {
+    if (!activeModuleId || isCurrentCompleted || progressMutation.isPending) return;
+    progressMutation.mutate({ moduleId: activeModuleId, completed: true });
+  };
+
+  const handleVideoFinished = () => {
+    if (safeVideoPartIndex < videoParts.length - 1) {
+      setActiveVideoPart(safeVideoPartIndex + 1);
+      setVideoReloadKey(0);
+      return;
+    }
+    markLessonComplete();
+  };
+
+  // Drive/iframe: no emite "ended"; estimamos presencia visible ~15% de la duración de la parte
+  useEffect(() => {
+    if (!activeModule || !activeVideo || isCurrentCompleted) return;
+    if (activeTab === "presentation") return;
+    const media = resolveLessonMedia(activeVideo.url);
+    if (media.kind !== "drive-embed" && media.kind !== "iframe") return;
+
+    const partsCount = Math.max(videoParts.length, 1);
+    const partEstimateSec = Math.max(120, (activeModule.duration * 3600) / partsCount);
+    const thresholdSec = Math.max(90, Math.floor(partEstimateSec * 0.15));
+    let watched = 0;
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      watched += 5;
+      if (watched >= thresholdSec) {
+        window.clearInterval(timer);
+        handleVideoFinished();
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeModule?.id,
+    activeVideo?.url,
+    safeVideoPartIndex,
+    activeTab,
+    isCurrentCompleted,
+  ]);
 
   const commentMutation = useMutation({
     mutationFn: async (body: string) => {
@@ -377,8 +465,6 @@ export default function ProgramLearningPage() {
   const prevModule = activeIndex > 0 ? modules[activeIndex - 1] : null;
   const nextModule =
     activeIndex >= 0 && activeIndex < modules.length - 1 ? modules[activeIndex + 1] : null;
-
-  const isCurrentCompleted = activeModuleId != null && completedIds.has(activeModuleId);
 
   const handleMarkAsCompleted = () => {
     if (!activeModuleId) return;
@@ -728,6 +814,7 @@ export default function ProgramLearningPage() {
                       <LessonPlayer
                         url={activeVideo?.url || ""}
                         reloadKey={videoReloadKey}
+                        onNativeEnded={handleVideoFinished}
                       />
                     )}
                   </div>
@@ -993,6 +1080,55 @@ export default function ProgramLearningPage() {
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={!!certificateCelebration}
+        onOpenChange={(open) => {
+          if (!open) setCertificateCelebration(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-[#5b8fd4]/15 text-[#5b8fd4]">
+              <Award className="h-7 w-7" />
+            </div>
+            <AlertDialogTitle className="text-center">
+              ¡Programa completado!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-2">
+              <span className="block">
+                Terminaste{" "}
+                <strong className="text-foreground">
+                  {certificateCelebration?.programTitle}
+                </strong>
+                . Ya puedes descargar tu certificado PDF.
+              </span>
+              {certificateCelebration?.code && (
+                <span className="block text-xs">
+                  Código: {certificateCelebration.code}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-2">
+            <AlertDialogCancel>Seguir explorando</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <a
+                href={
+                  certificateCelebration
+                    ? `/api/certificates/${certificateCelebration.id}/pdf`
+                    : "#"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="h-4 w-4 mr-2 inline" />
+                Descargar PDF
+              </a>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

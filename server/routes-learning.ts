@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { storage } from "./storage";
 import { ensureModuleLearningTables } from "./db/ensure-module-learning";
+import { issueCertificateIfEligible } from "./routes-certificates";
 import { sendTransactionalEmail } from "./services/email";
 import { DIRECTOR_EMAIL_CONTACT } from "@shared/director-emails";
 import {
@@ -31,9 +32,13 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function syncEnrollmentProgress(userId: number, courseId: number) {
+async function syncEnrollmentProgress(
+  userId: number,
+  courseId: number,
+  studentName?: string,
+) {
   const courseModules = await storage.getModulesByCourseId(courseId);
-  if (courseModules.length === 0) return;
+  if (courseModules.length === 0) return { progressPercent: 0, certificate: null };
 
   const ids = courseModules.map((m) => m.id);
   const progressRows = await db
@@ -49,6 +54,13 @@ async function syncEnrollmentProgress(userId: number, courseId: number) {
   if (enrollment) {
     await storage.updateEnrollmentProgress(enrollment.id, pct, pct >= 100);
   }
+
+  let certificate = null;
+  if (pct >= 100 && studentName) {
+    certificate = await issueCertificateIfEligible(userId, courseId, studentName);
+  }
+
+  return { progressPercent: pct, certificate };
 }
 
 export function registerLearningRoutes(app: Express) {
@@ -129,8 +141,12 @@ export function registerLearningRoutes(app: Express) {
           .returning();
       }
 
-      await syncEnrollmentProgress(req.user!.id, mod.courseId);
-      return res.json(row);
+      const sync = await syncEnrollmentProgress(req.user!.id, mod.courseId, req.user!.name);
+      return res.json({
+        ...row,
+        progressPercent: sync.progressPercent,
+        certificate: sync.certificate,
+      });
     } catch (error) {
       console.error("module progress POST", error);
       if (error instanceof z.ZodError) {
