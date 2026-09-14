@@ -9,6 +9,7 @@ import { registerTalentoRoutes } from "./routes-talento";
 import { registerCardRoutes } from "./routes-cards";
 import { registerEmailAutomationRoutes } from "./routes-email-automation";
 import { registerMediaProxyRoutes } from "./routes-media-proxy";
+import { registerIneditoRetoRoutes } from "./routes-inedito-reto";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
 
@@ -70,6 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCardRoutes(app);
   registerEmailAutomationRoutes(app);
   registerMediaProxyRoutes(app);
+  registerIneditoRetoRoutes(app);
   ensureAdminAccount().catch((error) => {
     console.error("No se pudo asegurar la cuenta admin:", error);
   });

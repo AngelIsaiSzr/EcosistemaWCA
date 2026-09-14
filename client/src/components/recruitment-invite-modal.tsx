@@ -28,6 +28,7 @@ function shouldHideOnPath(path: string) {
   return (
     path === "/integracion" ||
     path.startsWith("/f/") ||
+    path.startsWith("/reto/") ||
     path.startsWith("/talento") ||
     path.startsWith("/admin") ||
     path === "/auth" ||

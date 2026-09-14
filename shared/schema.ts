@@ -229,6 +229,38 @@ export const emailAutomationLogs = pgTable("email_automation_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/** Configuración del Reto INÉDITO (vídeo de un solo uso). */
+export const ineditoRetoSettings = pgTable("inedito_reto_settings", {
+  id: serial("id").primaryKey(),
+  videoUrl: text("video_url").notNull().default(""),
+  emailSubject: text("email_subject").notNull().default("WCA | INÉDITO — Tu acceso al Reto"),
+  emailBodyText: text("email_body_text").notNull().default(""),
+  emailBodyHtml: text("email_body_html").notNull().default(""),
+  /** Horas de vigencia del enlace desde su creación */
+  linkTtlHours: integer("link_ttl_hours").notNull().default(168),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type IneditoRetoTokenStatus =
+  | "pending"
+  | "opened"
+  | "completed"
+  | "expired"
+  | "revoked";
+
+export const ineditoRetoTokens = pgTable("inedito_reto_tokens", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  email: text("email").notNull().default(""),
+  status: text("status").$type<IneditoRetoTokenStatus>().notNull().default("pending"),
+  isTest: boolean("is_test").notNull().default(false),
+  expiresAt: timestamp("expires_at"),
+  openedAt: timestamp("opened_at"),
+  completedAt: timestamp("completed_at"),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -350,3 +382,5 @@ export type IntegrationResponse = typeof integrationResponses.$inferSelect;
 export type EmailAutomationSettings = typeof emailAutomationSettings.$inferSelect;
 export type EmailWeekTemplate = typeof emailWeekTemplates.$inferSelect;
 export type EmailAutomationLog = typeof emailAutomationLogs.$inferSelect;
+export type IneditoRetoSettings = typeof ineditoRetoSettings.$inferSelect;
+export type IneditoRetoToken = typeof ineditoRetoTokens.$inferSelect;

@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { FileText, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
@@ -30,6 +30,16 @@ export default function TalentoHubPage() {
     enabled: user?.role === "talento",
   });
 
+  const { data: retoTokens } = useQuery<{ counts?: Record<string, number> }>({
+    queryKey: ["/api/talento/reto/tokens"],
+    enabled: user?.role === "talento",
+    queryFn: async () => {
+      const res = await fetch("/api/talento/reto/tokens?limit=1", { credentials: "include" });
+      if (!res.ok) return { counts: {} };
+      return res.json();
+    },
+  });
+
   if (isLoading || !user || user.role !== "talento") {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -37,6 +47,9 @@ export default function TalentoHubPage() {
       </div>
     );
   }
+
+  const retoActive =
+    (retoTokens?.counts?.pending ?? 0) + (retoTokens?.counts?.opened ?? 0);
 
   const options: TalentoOption[] = [
     {
@@ -48,6 +61,16 @@ export default function TalentoHubPage() {
       icon: FileText,
       count: forms?.length ?? null,
       countLabel: "formularios",
+    },
+    {
+      id: "reto-inedito",
+      title: "Reto INÉDITO",
+      description:
+        "Enlaces temporales de un solo uso y envío masivo para la 2.ª etapa de WCA | INÉDITO.",
+      href: "/talento/reto-inedito",
+      icon: Sparkles,
+      count: retoActive,
+      countLabel: "enlaces activos",
     },
   ];
 

@@ -165,6 +165,41 @@ const updateSchema = async () => {
       `,
     );
 
+    await runQuery(
+      client,
+      "tabla inedito_reto_settings",
+      `
+      CREATE TABLE IF NOT EXISTS inedito_reto_settings (
+        id SERIAL PRIMARY KEY,
+        video_url TEXT NOT NULL DEFAULT '',
+        email_subject TEXT NOT NULL DEFAULT 'WCA | INÉDITO — Tu acceso al Reto',
+        email_body_text TEXT NOT NULL DEFAULT '',
+        email_body_html TEXT NOT NULL DEFAULT '',
+        link_ttl_hours INTEGER NOT NULL DEFAULT 168,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      `,
+    );
+
+    await runQuery(
+      client,
+      "tabla inedito_reto_tokens",
+      `
+      CREATE TABLE IF NOT EXISTS inedito_reto_tokens (
+        id SERIAL PRIMARY KEY,
+        token TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'pending',
+        is_test BOOLEAN NOT NULL DEFAULT false,
+        expires_at TIMESTAMP,
+        opened_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      `,
+    );
+
     console.log("✅ Esquema actualizado");
   } catch (err) {
     console.error("❌ Error al actualizar el esquema:", err);

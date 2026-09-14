@@ -213,6 +213,7 @@ export const RESERVED_CARD_SLUGS = new Set([
   "robots.txt",
   "sitemap.xml",
   "convocatoria",
+  "reto",
 ]);
 
 export function normalizeCardSlug(raw: string): string {

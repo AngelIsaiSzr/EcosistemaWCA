@@ -28,6 +28,8 @@ import TalentoHubPage from "@/pages/talento-hub-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
 import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
+import TalentoIneditoRetoPage from "@/pages/talento-inedito-reto-page";
+import IneditoRetoPublicPage from "@/pages/inedito-reto-public-page";
 import IntegrationFormPage from "@/pages/integration-form-page";
 import IntegrationFormBySlugPage from "@/pages/integration-form-by-slug-page";
 import ProfilePage from "@/pages/profile-page";
@@ -86,6 +88,7 @@ function Router() {
         {/* Formularios públicos: no tocar */}
         <Route path="/integracion" component={IntegrationFormPage} />
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
+        <Route path="/reto/:token" component={IneditoRetoPublicPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
@@ -98,6 +101,11 @@ function Router() {
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 
         {/* Talento: hub + formularios */}
+        <RoleProtectedRoute
+          path="/talento/reto-inedito"
+          component={TalentoIneditoRetoPage}
+          roles={["talento"]}
+        />
         <RoleProtectedRoute
           path="/talento/formularios/:slug/editar"
           component={TalentoFormEditorPage}
@@ -180,6 +188,7 @@ function App() {
     /^\/programs\/[^/]+\/learn$/.test(location) ||
     location === "/integracion" ||
     location.startsWith("/f/") ||
+    location.startsWith("/reto/") ||
     location.startsWith("/talento") ||
     location.startsWith("/admin") ||
     location === "/mi-tarjeta" ||
