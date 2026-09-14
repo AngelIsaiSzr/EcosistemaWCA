@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <title>Editor de Código - Ecosistema WCA</title>
         <meta 
           name="description" 
-          content="Editor de código en línea de Ecosistema WCA. Practica HTML, CSS y JavaScript con nuestro editor interactivo."
+          content="Editor de código en línea del Ecosistema WCA. Practica HTML, CSS y JavaScript con nuestro editor interactivo."
         />
         <meta name="robots" content="noindex, nofollow" />
         <link rel="canonical" href={`${SITE_URL}/editor`} />

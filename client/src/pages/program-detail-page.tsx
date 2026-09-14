@@ -350,7 +350,14 @@ export default function ProgramDetailPage() {
                           </p>
                           {isEnrolled ? (
                             <Button
-                              className="w-full bg-accent-blue hover:bg-accent-blue hover:opacity-90"
+                              className={`w-full ${program.popular
+                                ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
+                                : program.new
+                                  ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
+                                  : program.featured
+                                    ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
+                                    : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
+                                }`}
                               asChild
                             >
                               <a href={`/programs/${program.slug}/learn`}>Comenzar a Aprender</a>

@@ -8,6 +8,7 @@ import {
   isGoogleDriveUrl,
   toGoogleOpenUrl,
 } from "@shared/drive-media";
+import { resolveModuleVideoParts } from "@shared/module-videos";
 import { resolveMediaUrl } from "@shared/media-url";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -180,6 +181,7 @@ export default function ProgramLearningPage() {
   const [reportReasons, setReportReasons] = useState<LessonReportReasonId[]>([]);
   const [reportMessage, setReportMessage] = useState("");
   const [videoReloadKey, setVideoReloadKey] = useState(0);
+  const [activeVideoPart, setActiveVideoPart] = useState(0);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
   const {
@@ -238,6 +240,12 @@ export default function ProgramLearningPage() {
   });
 
   const activeModule = modules.find((m) => m.id === activeModuleId) ?? null;
+  const videoParts = activeModule ? resolveModuleVideoParts(activeModule) : [];
+  const safeVideoPartIndex = Math.min(
+    activeVideoPart,
+    Math.max(videoParts.length - 1, 0),
+  );
+  const activeVideo = videoParts[safeVideoPartIndex] ?? null;
   const completedIds = new Set(
     (progressData?.modules ?? []).filter((m) => m.completed).map((m) => m.moduleId),
   );
@@ -267,6 +275,7 @@ export default function ProgramLearningPage() {
     setReportReasons([]);
     setReportMessage("");
     setVideoReloadKey(0);
+    setActiveVideoPart(0);
   }, [activeModuleId]);
 
   const progressMutation = useMutation({
@@ -631,11 +640,33 @@ export default function ProgramLearningPage() {
                           </span>
                         )}
                       </div>
+                      {videoParts.length > 1 && activeTab !== "presentation" && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {videoParts.map((part, index) => (
+                            <button
+                              key={`${part.url}-${index}`}
+                              type="button"
+                              onClick={() => {
+                                setActiveVideoPart(index);
+                                setVideoReloadKey(0);
+                              }}
+                              className={cn(
+                                "px-3 py-1 rounded-md text-xs font-medium border transition-colors",
+                                index === safeVideoPartIndex
+                                  ? "bg-accent-blue border-accent-blue text-white"
+                                  : "border-primary-700 text-muted hover:bg-primary-800 hover:text-white",
+                              )}
+                            >
+                              {part.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {activeTab === "description" && !!(activeModule.videoUrl || "").trim() && (
+                    {activeTab === "description" && activeVideo && (
                       <div className="flex items-center gap-1 shrink-0 pt-1">
-                        {isGoogleDriveUrl(activeModule.videoUrl) && (
+                        {isGoogleDriveUrl(activeVideo.url) && (
                           <Button
                             type="button"
                             variant="ghost"
@@ -656,7 +687,7 @@ export default function ProgramLearningPage() {
                           title="Abrir en Drive"
                         >
                           <a
-                            href={toGoogleOpenUrl(activeModule.videoUrl)}
+                            href={toGoogleOpenUrl(activeVideo.url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Abrir vídeo en Drive"
@@ -695,7 +726,7 @@ export default function ProgramLearningPage() {
                       <PresentationStage url={activeModule.presentationUrl || ""} />
                     ) : (
                       <LessonPlayer
-                        url={activeModule.videoUrl || ""}
+                        url={activeVideo?.url || ""}
                         reloadKey={videoReloadKey}
                       />
                     )}
@@ -890,7 +921,7 @@ export default function ProgramLearningPage() {
                           </h3>
                           <p className="text-sm text-muted mt-1">
                             Puedes marcar varios motivos. El reporte llega por correo al equipo
-                            de Ecosistema WCA con los datos de esta clase.
+                            del Ecosistema WCA con los datos de esta clase.
                           </p>
                         </div>
 

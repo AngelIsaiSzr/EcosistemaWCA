@@ -394,6 +394,7 @@ export class MemStorage implements IStorage {
     const module: Module = {
       ...insertModule,
       videoUrl: insertModule.videoUrl ?? "",
+      videoParts: insertModule.videoParts ?? [],
       presentationUrl: insertModule.presentationUrl ?? "",
       resourcesUrl: insertModule.resourcesUrl ?? "",
       id,
@@ -1032,6 +1033,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertModule,
         videoUrl: insertModule.videoUrl ?? "",
+        videoParts: insertModule.videoParts ?? [],
         presentationUrl: insertModule.presentationUrl ?? "",
         resourcesUrl: insertModule.resourcesUrl ?? "",
       })

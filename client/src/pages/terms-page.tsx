@@ -18,7 +18,7 @@ export default function TermsPage() {
         <title>Términos y Condiciones - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Términos y condiciones de uso de Ecosistema WCA. Conoce nuestros términos legales y condiciones de servicio."
+          content="Términos y condiciones de uso del Ecosistema WCA. Conoce nuestros términos legales y condiciones de servicio."
         />
         <meta name="robots" content="noindex, follow" />
       </Helmet>
@@ -97,7 +97,7 @@ export default function TermsPage() {
                     5. Propiedad Intelectual
                   </h2>
                   <p className="text-muted leading-relaxed">
-                    Todo el contenido de Ecosistema WCA, incluyendo textos, gráficos, código, 
+                    Todo el contenido del Ecosistema WCA, incluyendo textos, gráficos, código, 
                     y software, está protegido por derechos de autor y otras leyes de propiedad intelectual. 
                     Se te otorga una licencia limitada para uso personal y educativo.
                   </p>
@@ -160,7 +160,7 @@ export default function TermsPage() {
                     Convocatoria de integración
                   </h2>
                   <p className="mb-8 text-sm text-muted">
-                    Condiciones específicas del proceso de postulación al equipo de Ecosistema WCA.
+                    Condiciones específicas del proceso de postulación al equipo del Ecosistema WCA.
                   </p>
 
                   <div className="space-y-8">

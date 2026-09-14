@@ -74,7 +74,7 @@ export default function MerchDetailPage() {
   }, [product.id]);
 
   const handleOrder = () => {
-    // Abrir WhatsApp con el número de Ecosistema WCA
+    // Abrir WhatsApp con el número del Ecosistema WCA
     let message = `Hola! Me interesa el producto: ${product.name} - $${product.price}`;
     if (selectedSize) message += `\nTalla: ${selectedSize}`;
     if (selectedColor) message += `\nColor: ${selectedColor}`;

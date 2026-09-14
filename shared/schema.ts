@@ -56,8 +56,13 @@ export const modules = pgTable("modules", {
   order: integer("order").notNull(),
   difficulty: text("difficulty").notNull(),
   instructor: text("instructor").notNull(),
-  /** URL de vídeo (Drive o mp4 directo) */
+  /** URL de vídeo principal (primera parte; compatibilidad) */
   videoUrl: text("video_url").notNull().default(""),
+  /** Grabaciones adicionales de la misma clase (Parte 1, 2, 3…) */
+  videoParts: jsonb("video_parts")
+    .$type<{ label: string; url: string }[]>()
+    .notNull()
+    .default([]),
   /** PDF / Drive de la presentación de la clase */
   presentationUrl: text("presentation_url").notNull().default(""),
   /** Carpeta Drive o enlace de descarga de recursos */
@@ -318,10 +323,20 @@ export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({
 export const insertModuleSchema = createInsertSchema(modules).omit({
   id: true,
   videoUrl: true,
+  videoParts: true,
   presentationUrl: true,
   resourcesUrl: true,
 }).extend({
   videoUrl: z.string().optional().default(""),
+  videoParts: z
+    .array(
+      z.object({
+        label: z.string(),
+        url: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
   presentationUrl: z.string().optional().default(""),
   resourcesUrl: z.string().optional().default(""),
 });

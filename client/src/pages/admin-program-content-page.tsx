@@ -9,11 +9,19 @@ import {
   Film,
   FolderOpen,
   Loader2,
+  Plus,
   Presentation,
   Save,
+  Trash2,
 } from "lucide-react";
 import { Course, Module } from "@shared/schema";
 import { isGoogleDriveUrl, isGoogleSlidesUrl } from "@shared/drive-media";
+import {
+  moduleHasVideo,
+  resolveModuleVideoParts,
+  serializeModuleVideoParts,
+  type ModuleVideoPart,
+} from "@shared/module-videos";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
@@ -27,19 +35,26 @@ import { cn } from "@/lib/utils";
 type Draft = {
   title: string;
   description: string;
-  videoUrl: string;
+  videoParts: ModuleVideoPart[];
   presentationUrl: string;
   resourcesUrl: string;
 };
 
 function moduleToDraft(m: Module): Draft {
+  const parts = resolveModuleVideoParts(m);
   return {
     title: m.title ?? "",
     description: m.description ?? "",
-    videoUrl: m.videoUrl ?? "",
+    videoParts: parts.length > 0 ? parts : [{ label: "Parte 1", url: "" }],
     presentationUrl: m.presentationUrl ?? "",
     resourcesUrl: m.resourcesUrl ?? "",
   };
+}
+
+function partsEqual(a: ModuleVideoPart[], b: ModuleVideoPart[]) {
+  const sa = serializeModuleVideoParts(a);
+  const sb = serializeModuleVideoParts(b);
+  return JSON.stringify(sa.videoParts) === JSON.stringify(sb.videoParts);
 }
 
 function UrlHint({ url, kind }: { url: string; kind: "video" | "slides" | "folder" }) {
@@ -90,11 +105,12 @@ function UrlHint({ url, kind }: { url: string; kind: "video" | "slides" | "folde
 }
 
 function materialStatus(m: Module) {
-  const hasVideo = !!(m.videoUrl || "").trim();
+  const hasVideo = moduleHasVideo(m);
   const hasSlides = !!(m.presentationUrl || "").trim();
   const hasResources = !!(m.resourcesUrl || "").trim();
+  const parts = resolveModuleVideoParts(m).length;
   const count = [hasVideo, hasSlides, hasResources].filter(Boolean).length;
-  return { hasVideo, hasSlides, hasResources, count, ready: count > 0 };
+  return { hasVideo, hasSlides, hasResources, parts, count, ready: count > 0 };
 }
 
 export default function AdminProgramContentPage() {
@@ -137,6 +153,7 @@ export default function AdminProgramContentPage() {
   }, [
     selected?.id,
     selected?.videoUrl,
+    selected?.videoParts,
     selected?.presentationUrl,
     selected?.resourcesUrl,
     selected?.title,
@@ -148,17 +165,19 @@ export default function AdminProgramContentPage() {
     !!draft &&
     (draft.title !== (selected.title ?? "") ||
       draft.description !== (selected.description ?? "") ||
-      draft.videoUrl !== (selected.videoUrl ?? "") ||
+      !partsEqual(draft.videoParts, resolveModuleVideoParts(selected)) ||
       draft.presentationUrl !== (selected.presentationUrl ?? "") ||
       draft.resourcesUrl !== (selected.resourcesUrl ?? ""));
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selected || !draft) throw new Error("Sin módulo");
+      const { videoParts, videoUrl } = serializeModuleVideoParts(draft.videoParts);
       const res = await apiRequest("PATCH", `/api/modules/${selected.id}`, {
         title: draft.title.trim(),
         description: draft.description.trim(),
-        videoUrl: draft.videoUrl.trim(),
+        videoUrl,
+        videoParts,
         presentationUrl: draft.presentationUrl.trim(),
         resourcesUrl: draft.resourcesUrl.trim(),
       });
@@ -176,6 +195,35 @@ export default function AdminProgramContentPage() {
       });
     },
   });
+
+  const updateVideoPart = (index: number, patch: Partial<ModuleVideoPart>) => {
+    if (!draft) return;
+    const videoParts = draft.videoParts.map((part, i) =>
+      i === index ? { ...part, ...patch } : part,
+    );
+    setDraft({ ...draft, videoParts });
+  };
+
+  const addVideoPart = () => {
+    if (!draft) return;
+    const n = draft.videoParts.length + 1;
+    setDraft({
+      ...draft,
+      videoParts: [...draft.videoParts, { label: `Parte ${n}`, url: "" }],
+    });
+  };
+
+  const removeVideoPart = (index: number) => {
+    if (!draft) return;
+    if (draft.videoParts.length <= 1) {
+      setDraft({ ...draft, videoParts: [{ label: "Parte 1", url: "" }] });
+      return;
+    }
+    setDraft({
+      ...draft,
+      videoParts: draft.videoParts.filter((_, i) => i !== index),
+    });
+  };
 
   if (loadingCourses || loadingModules) {
     return (
@@ -334,7 +382,10 @@ export default function AdminProgramContentPage() {
                       >
                         {status.ready
                           ? [
-                              status.hasVideo && "Vídeo",
+                              status.hasVideo &&
+                                (status.parts > 1
+                                  ? `Vídeo (${status.parts})`
+                                  : "Vídeo"),
                               status.hasSlides && "Slides",
                               status.hasResources && "Recursos",
                             ]
@@ -400,22 +451,83 @@ export default function AdminProgramContentPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="rounded-xl border p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Film className="h-4 w-4 text-primary" />
-                          Vídeo de la clase
+                      <div className="rounded-xl border p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <Film className="h-4 w-4 text-primary" />
+                              Grabaciones de la clase
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Si la clase se cortó en varias tomas, agrega una parte por cada
+                              enlace de Drive.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addVideoPart}
+                            className="shrink-0"
+                          >
+                            <Plus className="h-4 w-4 mr-1.5" />
+                            Añadir parte
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="videoUrl">Enlace (Google Drive o MP4)</Label>
-                          <Input
-                            id="videoUrl"
-                            placeholder="https://drive.google.com/file/d/…/view"
-                            value={draft.videoUrl}
-                            onChange={(e) =>
-                              setDraft({ ...draft, videoUrl: e.target.value })
-                            }
-                          />
-                          <UrlHint url={draft.videoUrl} kind="video" />
+
+                        <div className="space-y-3">
+                          {draft.videoParts.map((part, index) => (
+                            <div
+                              key={`video-part-${index}`}
+                              className="rounded-lg border bg-muted/20 p-3 space-y-3"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <Label className="text-xs text-muted-foreground">
+                                  Grabación {index + 1}
+                                </Label>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeVideoPart(index)}
+                                  aria-label={`Quitar parte ${index + 1}`}
+                                  disabled={
+                                    draft.videoParts.length === 1 && !part.url.trim()
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor={`video-label-${index}`}>Etiqueta</Label>
+                                  <Input
+                                    id={`video-label-${index}`}
+                                    placeholder={`Parte ${index + 1}`}
+                                    value={part.label}
+                                    onChange={(e) =>
+                                      updateVideoPart(index, { label: e.target.value })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor={`video-url-${index}`}>
+                                    Enlace (Drive o MP4)
+                                  </Label>
+                                  <Input
+                                    id={`video-url-${index}`}
+                                    placeholder="https://drive.google.com/file/d/…/view"
+                                    value={part.url}
+                                    onChange={(e) =>
+                                      updateVideoPart(index, { url: e.target.value })
+                                    }
+                                  />
+                                </div>
+                              </div>
+                              <UrlHint url={part.url} kind="video" />
+                            </div>
+                          ))}
                         </div>
                       </div>
 

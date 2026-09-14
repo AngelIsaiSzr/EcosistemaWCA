@@ -26,7 +26,7 @@ export const initialTeam: InsertTeam[] = [
   {
     name: "Victoria García",
     role: "CFO & Diseñadora UX/UI",
-    bio: "Maestra de inglés y experta en gestión financiera. Su enfoque está en asegurar el crecimiento y la sostenibilidad de Ecosistema WCA.",
+    bio: "Maestra de inglés y experta en gestión financiera. Su enfoque está en asegurar el crecimiento y la sostenibilidad del Ecosistema WCA.",
     image: "/media/team3-ongwvm.jpg",
     linkedIn: "https://www.linkedin.com/in/",
     instagram: "https://www.instagram.com/",

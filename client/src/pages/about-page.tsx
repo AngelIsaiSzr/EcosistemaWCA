@@ -111,7 +111,7 @@ export default function AboutPage() {
                 <div className="w-full md:w-1/2 order-1 md:order-2">
                   <img 
                     src={ABOUT_IMAGES[0]} 
-                    alt="Misión de Ecosistema WCA" 
+                    alt="Misión del Ecosistema WCA" 
                     className="rounded-xl shadow-lg"
                     loading="eager"
                     decoding="async"

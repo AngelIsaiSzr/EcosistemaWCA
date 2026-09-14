@@ -4,10 +4,12 @@ import { db } from "../db";
 let ensured = false;
 
 export async function ensureModuleLearningTables() {
-  if (ensured) return;
-
+  // ALTER siempre (idempotente) por si se agregan columnas nuevas en caliente
   await db.execute(sql`
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS video_parts JSONB NOT NULL DEFAULT '[]'::jsonb
   `);
   await db.execute(sql`
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS presentation_url TEXT NOT NULL DEFAULT ''
@@ -15,6 +17,8 @@ export async function ensureModuleLearningTables() {
   await db.execute(sql`
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS resources_url TEXT NOT NULL DEFAULT ''
   `);
+
+  if (ensured) return;
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS module_progress (

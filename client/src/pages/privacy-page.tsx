@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <title>Política de Privacidad - Ecosistema WCA</title>
         <meta
           name="description"
-          content="Política de privacidad de Ecosistema WCA. Conoce cómo protegemos y utilizamos tu información personal."
+          content="Política de privacidad del Ecosistema WCA. Conoce cómo protegemos y utilizamos tu información personal."
         />
         <meta name="robots" content="noindex, follow" />
       </Helmet>

@@ -207,6 +207,11 @@ const updateSchema = async () => {
     );
     await runQuery(
       client,
+      "columna modules.video_parts",
+      `ALTER TABLE modules ADD COLUMN IF NOT EXISTS video_parts JSONB NOT NULL DEFAULT '[]'::jsonb;`,
+    );
+    await runQuery(
+      client,
       "columna modules.presentation_url",
       `ALTER TABLE modules ADD COLUMN IF NOT EXISTS presentation_url TEXT NOT NULL DEFAULT '';`,
     );

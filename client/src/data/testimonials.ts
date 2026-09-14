@@ -14,7 +14,7 @@ export const initialTestimonials: InsertTestimonial[] = [
     name: "Miguel Ángel Hernández",
     courseName: "Python Fullstack",
     image: "https://randomuser.me/api/portraits/men/36.jpg",
-    text: "Lo que más valoro de Ecosistema WCA es la calidad del contenido y la pasión de los instructores. He tomado varios programas en línea, pero ninguno con el nivel que ofrecen aquí.",
+    text: "Lo que más valoro del Ecosistema WCA es la calidad del contenido y la pasión de los instructores. He tomado varios programas en línea, pero ninguno con el nivel que ofrecen aquí.",
     rating: 5,
     order: 2
   },

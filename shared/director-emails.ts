@@ -64,7 +64,7 @@ function buildBodyText(weekLabel: string): string {
   return [
     `Hola,`,
     ``,
-    `Este es el recordatorio semanal de Ecosistema WCA (${weekLabel}).`,
+    `Este es el recordatorio semanal del Ecosistema WCA (${weekLabel}).`,
     ``,
     `Por favor:`,
     ...BASE_BULLETS.map((b, i) => `${i + 1}. ${b}`),
