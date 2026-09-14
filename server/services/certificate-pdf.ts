@@ -85,9 +85,9 @@ function fitCenteredText(
  */
 const LAYOUT = {
   nameLineY: 432,
-  /** Hueco 470–520; un poco más cerca del párrafo */
-  programY: 490,
-  dateY: 520,
+  /** Hueco 470–520; un poco más abajo en el centro */
+  programY: 500,
+  dateY: 528,
   /** Pegado al final de "Fecha de emisión:" */
   dateX: 505,
 } as const;
@@ -163,7 +163,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const codeW = fontSans.widthOfTextAtSize(code, codeSize);
   page.drawText(code, {
     x: (pageWidth - codeW) / 2,
-    y: 28,
+    y: 27.5,
     size: codeSize,
     font: fontSans,
     color: blue,
