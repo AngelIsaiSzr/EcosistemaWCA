@@ -33,7 +33,6 @@ import {
   Loader2,
   Send,
   Award,
-  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,11 +42,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -213,6 +210,7 @@ export default function ProgramLearningPage() {
     code: string;
     programTitle: string;
   } | null>(null);
+  const [downloadingCert, setDownloadingCert] = useState(false);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
   const {
@@ -1087,46 +1085,85 @@ export default function ProgramLearningPage() {
           if (!open) setCertificateCelebration(null);
         }}
       >
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-[#5b8fd4]/15 text-[#5b8fd4]">
-              <Award className="h-7 w-7" />
+        <AlertDialogContent className="max-w-lg overflow-hidden border-0 p-0 sm:rounded-2xl">
+          <div className="bg-gradient-to-br from-[#1e3a5f] via-[#2a4a73] to-[#5b8fd4] px-6 pt-8 pb-6 text-white">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur">
+              <Award className="h-8 w-8" />
             </div>
-            <AlertDialogTitle className="text-center">
-              ¡Programa completado!
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-2">
-              <span className="block">
+            <AlertDialogHeader className="space-y-2 text-center sm:text-center">
+              <AlertDialogTitle className="text-2xl font-heading text-white">
+                ¡Programa completado!
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-white/85 text-sm leading-relaxed">
                 Terminaste{" "}
-                <strong className="text-foreground">
+                <span className="font-semibold text-white">
                   {certificateCelebration?.programTitle}
-                </strong>
-                . Ya puedes descargar tu certificado PDF.
-              </span>
-              {certificateCelebration?.code && (
-                <span className="block text-xs">
-                  Código: {certificateCelebration.code}
                 </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center gap-2">
-            <AlertDialogCancel>Seguir explorando</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <a
-                href={
-                  certificateCelebration
-                    ? `/api/certificates/${certificateCelebration.id}/pdf`
-                    : "#"
-                }
-                target="_blank"
-                rel="noopener noreferrer"
+                . Tu certificado ya está listo para descargar.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {certificateCelebration?.code && (
+              <div className="mt-4 rounded-xl bg-black/20 px-4 py-3 text-center">
+                <p className="text-[11px] uppercase tracking-wider text-white/60">
+                  Código de verificación
+                </p>
+                <p className="mt-1 font-mono text-sm text-white">
+                  {certificateCelebration.code}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="bg-background px-6 py-5 space-y-3">
+            <p className="text-center text-xs text-muted-foreground">
+              También lo encontrarás en tu perfil → Mis certificados.
+            </p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <AlertDialogCancel className="mt-0">Seguir explorando</AlertDialogCancel>
+              <Button
+                className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                disabled={!certificateCelebration || downloadingCert}
+                onClick={async () => {
+                  if (!certificateCelebration) return;
+                  const id = certificateCelebration.id;
+                  setDownloadingCert(true);
+                  try {
+                    const res = await fetch(`/api/certificates/${id}/pdf`, {
+                      credentials: "include",
+                    });
+                    if (!res.ok) throw new Error("No se pudo descargar el PDF");
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `certificado-wca-${certificateCelebration.code}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    toast({
+                      title: "Certificado descargado",
+                      description: "El PDF se guardó en tu dispositivo.",
+                    });
+                  } catch (err) {
+                    toast({
+                      title: "Error al descargar",
+                      description: err instanceof Error ? err.message : "Intenta desde Mis certificados",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setDownloadingCert(false);
+                  }
+                }}
               >
-                <Download className="h-4 w-4 mr-2 inline" />
-                Descargar PDF
-              </a>
-            </AlertDialogAction>
-          </AlertDialogFooter>
+                {downloadingCert ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Descargar certificado
+              </Button>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

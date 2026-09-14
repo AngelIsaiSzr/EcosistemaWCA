@@ -817,42 +817,15 @@ export default function ProfilePage() {
                                       {enrollment.progress > 0 ? "En progreso" : "No iniciado"}
                                     </span>
                                   )}
-                                  <div className="flex flex-wrap gap-2">
-                                    {enrollment.completed && (
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={async () => {
-                                          try {
-                                            const res = await apiRequest(
-                                              "POST",
-                                              `/api/programs/${enrollment.courseId}/certificate`,
-                                            );
-                                            const cert = await res.json();
-                                            window.open(`/api/certificates/${cert.id}/pdf`, "_blank");
-                                            queryClient.invalidateQueries({
-                                              queryKey: ["/api/certificates"],
-                                            });
-                                          } catch (err) {
-                                            toast({
-                                              title: "No se pudo abrir el certificado",
-                                              description:
-                                                err instanceof Error ? err.message : "Error",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        <Award className="h-4 w-4 mr-1.5" />
-                                        Certificado
-                                      </Button>
-                                    )}
-                                    <Button variant="outline" size="sm" asChild>
-                                      <Link href={`/programs/${enrollment.program.slug}/learn`}>
-                                        {enrollment.progress > 0 ? "Continuar" : "Iniciar"}
-                                      </Link>
-                                    </Button>
-                                  </div>
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/programs/${enrollment.program.slug}/learn`}>
+                                      {enrollment.completed
+                                        ? "Revisar"
+                                        : enrollment.progress > 0
+                                          ? "Continuar"
+                                          : "Iniciar"}
+                                    </Link>
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -917,15 +890,35 @@ export default function ProfilePage() {
                                 </p>
                                 <p className="font-mono">Código: {cert.code}</p>
                               </div>
-                              <Button className="mt-auto w-full" asChild>
-                                <a
-                                  href={`/api/certificates/${cert.id}/pdf`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Award className="h-4 w-4 mr-2" />
-                                  Descargar PDF
-                                </a>
+                              <Button
+                                className="mt-auto w-full"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/certificates/${cert.id}/pdf`, {
+                                      credentials: "include",
+                                    });
+                                    if (!res.ok) throw new Error("No se pudo descargar");
+                                    const blob = await res.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `certificado-wca-${cert.code}.pdf`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    toast({
+                                      title: "Error al descargar",
+                                      description:
+                                        err instanceof Error ? err.message : "Intenta de nuevo",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Award className="h-4 w-4 mr-2" />
+                                Descargar PDF
                               </Button>
                             </div>
                           </div>

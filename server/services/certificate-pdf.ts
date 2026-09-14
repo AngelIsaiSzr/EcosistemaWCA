@@ -1,4 +1,7 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { Certificate } from "@shared/schema";
 
 function formatDateEs(date: Date | string | null | undefined): string {
@@ -10,169 +13,101 @@ function formatDateEs(date: Date | string | null | undefined): string {
   });
 }
 
-/** Genera un certificado PDF horizontal (A4 landscape). */
+function resolveTemplatePath(): string {
+  const candidates = [
+    path.join(process.cwd(), "server", "assets", "certificate-template.png"),
+    path.join(process.cwd(), "assets", "certificate-template.png"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "certificate-template.png"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  throw new Error(
+    "No se encontró la plantilla del certificado (server/assets/certificate-template.png)",
+  );
+}
+
+function fitCenteredText(
+  text: string,
+  font: { widthOfTextAtSize: (t: string, s: number) => number },
+  maxWidth: number,
+  startSize: number,
+  minSize: number,
+): { size: number; width: number } {
+  let size = startSize;
+  let width = font.widthOfTextAtSize(text, size);
+  while (width > maxWidth && size > minSize) {
+    size -= 0.5;
+    width = font.widthOfTextAtSize(text, size);
+  }
+  return { size, width };
+}
+
+/** Genera el PDF usando la plantilla oficial WCA + CECyTE. */
 export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array> {
+  const templateBytes = fs.readFileSync(resolveTemplatePath());
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([842, 595]); // A4 landscape
-  const { width, height } = page.getSize();
 
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // A4 landscape
+  const pageWidth = 842;
+  const pageHeight = 595;
+  const page = pdf.addPage([pageWidth, pageHeight]);
 
-  const navy = rgb(0.12, 0.18, 0.28);
-  const accent = rgb(0.35, 0.56, 0.82); // ~ #5b8fd4
-  const muted = rgb(0.35, 0.4, 0.48);
-  const cream = rgb(0.98, 0.98, 0.99);
-
-  page.drawRectangle({
+  const png = await pdf.embedPng(templateBytes);
+  page.drawImage(png, {
     x: 0,
     y: 0,
-    width,
-    height,
-    color: cream,
+    width: pageWidth,
+    height: pageHeight,
   });
 
-  // Marco
-  page.drawRectangle({
-    x: 28,
-    y: 28,
-    width: width - 56,
-    height: height - 56,
-    borderColor: accent,
-    borderWidth: 2,
-  });
-  page.drawRectangle({
-    x: 36,
-    y: 36,
-    width: width - 72,
-    height: height - 72,
-    borderColor: navy,
-    borderWidth: 0.8,
-  });
+  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman);
+  const fontSerifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const fontSans = await pdf.embedFont(StandardFonts.Helvetica);
 
-  // Barra superior
-  page.drawRectangle({
-    x: 36,
-    y: height - 88,
-    width: width - 72,
-    height: 52,
-    color: navy,
-  });
+  const ink = rgb(0.12, 0.14, 0.18);
+  const blue = rgb(0.15, 0.35, 0.75);
 
-  const brand = "Ecosistema WCA";
-  const brandWidth = fontBold.widthOfTextAtSize(brand, 18);
-  page.drawText(brand, {
-    x: (width - brandWidth) / 2,
-    y: height - 70,
-    size: 18,
-    font: fontBold,
-    color: rgb(1, 1, 1),
-  });
-
-  const subtitle = "Certificado de finalizacion";
-  const subW = font.widthOfTextAtSize(subtitle, 11);
-  page.drawText(subtitle, {
-    x: (width - subW) / 2,
-    y: height - 120,
-    size: 11,
-    font,
-    color: muted,
-  });
-
-  const grant = "Se otorga el presente reconocimiento a";
-  const grantW = font.widthOfTextAtSize(grant, 12);
-  page.drawText(grant, {
-    x: (width - grantW) / 2,
-    y: height - 165,
-    size: 12,
-    font,
-    color: muted,
-  });
-
-  const name = cert.studentName || "Estudiante";
-  let nameSize = 28;
-  let nameW = fontBold.widthOfTextAtSize(name, nameSize);
-  while (nameW > width - 120 && nameSize > 16) {
-    nameSize -= 1;
-    nameW = fontBold.widthOfTextAtSize(name, nameSize);
-  }
+  // Coordenadas calibradas sobre la plantilla (origen abajo-izquierda)
+  const name = (cert.studentName || "Estudiante").trim();
+  const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.72, 22, 12);
   page.drawText(name, {
-    x: (width - nameW) / 2,
-    y: height - 210,
-    size: nameSize,
-    font: fontBold,
-    color: navy,
+    x: (pageWidth - nameFit.width) / 2,
+    y: pageHeight * 0.505,
+    size: nameFit.size,
+    font: fontSerifBold,
+    color: ink,
   });
 
-  // Línea bajo el nombre
-  page.drawLine({
-    start: { x: width / 2 - 140, y: height - 222 },
-    end: { x: width / 2 + 140, y: height - 222 },
-    thickness: 1,
-    color: accent,
-  });
-
-  const by = "por haber completado satisfactoriamente el programa";
-  const byW = font.widthOfTextAtSize(by, 12);
-  page.drawText(by, {
-    x: (width - byW) / 2,
-    y: height - 255,
-    size: 12,
-    font,
-    color: muted,
-  });
-
-  const program = cert.programTitle || "Programa";
-  let progSize = 20;
-  let progW = fontBold.widthOfTextAtSize(program, progSize);
-  while (progW > width - 120 && progSize > 12) {
-    progSize -= 1;
-    progW = fontBold.widthOfTextAtSize(program, progSize);
-  }
+  const program = (cert.programTitle || "Programa").trim();
+  const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.55, 16, 10);
   page.drawText(program, {
-    x: (width - progW) / 2,
-    y: height - 290,
-    size: progSize,
-    font: fontBold,
-    color: accent,
+    x: (pageWidth - progFit.width) / 2,
+    y: pageHeight * 0.398,
+    size: progFit.size,
+    font: fontSerifBold,
+    color: ink,
   });
 
-  const dateLabel = `Fecha de emision: ${formatDateEs(cert.issuedAt)}`;
-  const dateW = font.widthOfTextAtSize(dateLabel, 11);
-  page.drawText(dateLabel, {
-    x: (width - dateW) / 2,
-    y: 120,
-    size: 11,
-    font,
-    color: muted,
+  const dateText = formatDateEs(cert.issuedAt);
+  // A la derecha de "Fecha de emisión:" en la plantilla
+  page.drawText(dateText, {
+    x: pageWidth * 0.445,
+    y: pageHeight * 0.348,
+    size: 12,
+    font: fontSerif,
+    color: ink,
   });
 
-  const codeLabel = `Codigo de verificacion: ${cert.code}`;
-  const codeW = font.widthOfTextAtSize(codeLabel, 10);
-  page.drawText(codeLabel, {
-    x: (width - codeW) / 2,
-    y: 98,
-    size: 10,
-    font,
-    color: muted,
-  });
-
-  page.drawText("ecosistemawca.com", {
-    x: 52,
-    y: 52,
-    size: 9,
-    font,
-    color: muted,
-  });
-
-  // Marca de agua sutil
-  page.drawText("WCA", {
-    x: width / 2 - 60,
-    y: height / 2 - 40,
-    size: 72,
-    font: fontBold,
-    color: rgb(0.92, 0.93, 0.95),
-    rotate: degrees(-18),
+  // Código discreto (el sitio lo llama certificado; la plantilla dice constancia)
+  const code = `Código: ${cert.code}`;
+  const codeW = fontSans.widthOfTextAtSize(code, 8);
+  page.drawText(code, {
+    x: (pageWidth - codeW) / 2,
+    y: 22,
+    size: 8,
+    font: fontSans,
+    color: blue,
   });
 
   return pdf.save();
