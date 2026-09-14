@@ -82,10 +82,9 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const templateBytes = fs.readFileSync(resolveTemplatePath());
   const pdf = await PDFDocument.create();
 
-  // A4 landscape
-  const pageWidth = 842;
-  const pageHeight = 595;
-  const page = pdf.addPage([pageWidth, pageHeight]);
+  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman);
+  const fontSerifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const fontSans = await pdf.embedFont(StandardFonts.Helvetica);
 
   const image = isJpeg(templateBytes)
     ? await pdf.embedJpg(templateBytes)
@@ -95,6 +94,11 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
           throw new Error("La plantilla del certificado no es JPEG ni PNG válido");
         })();
 
+  // Misma proporción que la plantilla (evita desfase de textos vs líneas)
+  const pageWidth = 842;
+  const pageHeight = (pageWidth * image.height) / image.width;
+  const page = pdf.addPage([pageWidth, pageHeight]);
+
   page.drawImage(image, {
     x: 0,
     y: 0,
@@ -102,39 +106,35 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
     height: pageHeight,
   });
 
-  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman);
-  const fontSerifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
-  const fontSans = await pdf.embedFont(StandardFonts.Helvetica);
-
   const ink = rgb(0.12, 0.14, 0.18);
   const blue = rgb(0.15, 0.35, 0.75);
 
-  // Coordenadas calibradas sobre la plantilla (origen abajo-izquierda)
+  // Coordenadas medidas sobre la plantilla real (1024×791):
+  // línea nombre y≈440; hueco del programa ~525–555; "Fecha de emisión:" ~560
   const name = toWinAnsiSafe((cert.studentName || "Estudiante").trim());
-  const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.72, 22, 12);
+  const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.74, 32, 16);
   page.drawText(name, {
     x: (pageWidth - nameFit.width) / 2,
-    y: pageHeight * 0.505,
+    y: pageHeight * 0.442,
     size: nameFit.size,
     font: fontSerifBold,
     color: ink,
   });
 
   const program = toWinAnsiSafe((cert.programTitle || "Programa").trim());
-  const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.55, 16, 10);
+  const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.58, 17, 10);
   page.drawText(program, {
     x: (pageWidth - progFit.width) / 2,
-    y: pageHeight * 0.398,
+    y: pageHeight * 0.308,
     size: progFit.size,
     font: fontSerifBold,
     color: ink,
   });
 
   const dateText = toWinAnsiSafe(formatDateEs(cert.issuedAt));
-  // A la derecha de "Fecha de emisión:" en la plantilla
   page.drawText(dateText, {
-    x: pageWidth * 0.445,
-    y: pageHeight * 0.348,
+    x: pageWidth * 0.62,
+    y: pageHeight * 0.282,
     size: 12,
     font: fontSerif,
     color: ink,
@@ -145,7 +145,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const codeW = fontSans.widthOfTextAtSize(code, 8);
   page.drawText(code, {
     x: (pageWidth - codeW) / 2,
-    y: 22,
+    y: pageHeight * 0.035,
     size: 8,
     font: fontSans,
     color: blue,
