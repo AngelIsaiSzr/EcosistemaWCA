@@ -50,7 +50,6 @@ function isPng(bytes: Buffer): boolean {
   );
 }
 
-/** StandardFonts solo soportan WinAnsi; normaliza caracteres fuera de rango. */
 function toWinAnsiSafe(text: string): string {
   return text
     .normalize("NFKC")
@@ -77,9 +76,26 @@ function fitCenteredText(
   return { size, width };
 }
 
+/**
+ * Anclas en píxeles de la plantilla 1024×791 (Y desde arriba).
+ * Medidas con rejilla sobre la plantilla:
+ * - "Por haber completado…": baseline ≈ 470
+ * - "Fecha de emisión:": baseline ≈ 520
+ * - Hueco del programa: 470–520 → centro ≈ 495
+ */
+const LAYOUT = {
+  nameLineY: 432,
+  /** Hueco 470–520; un poco más cerca del párrafo */
+  programY: 490,
+  dateY: 520,
+  /** Pegado al final de "Fecha de emisión:" */
+  dateX: 505,
+} as const;
+
 /** Genera el PDF usando la plantilla oficial WCA + CECyTE. */
 export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array> {
-  const templateBytes = fs.readFileSync(resolveTemplatePath());
+  const templatePath = resolveTemplatePath();
+  const templateBytes = fs.readFileSync(templatePath);
   const pdf = await PDFDocument.create();
 
   const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman);
@@ -94,9 +110,9 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
           throw new Error("La plantilla del certificado no es JPEG ni PNG válido");
         })();
 
-  // Misma proporción que la plantilla (evita desfase de textos vs líneas)
-  const pageWidth = 842;
-  const pageHeight = (pageWidth * image.height) / image.width;
+  // Página = tamaño nativo de la plantilla (1 punto ≈ 1 px) para alinear textos
+  const pageWidth = image.width;
+  const pageHeight = image.height;
   const page = pdf.addPage([pageWidth, pageHeight]);
 
   page.drawImage(image, {
@@ -109,45 +125,46 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const ink = rgb(0.12, 0.14, 0.18);
   const blue = rgb(0.15, 0.35, 0.75);
 
-  // Nombre: ya calibrado sobre la línea
+  // yImg (desde arriba) → yPdf (desde abajo). Baseline ≈ ancla.
+  const yPdf = (yImg: number) => pageHeight - yImg;
+
   const name = toWinAnsiSafe((cert.studentName || "Estudiante").trim());
-  const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.74, 32, 16);
+  const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.74, 36, 16);
   page.drawText(name, {
     x: (pageWidth - nameFit.width) / 2,
-    y: pageHeight * 0.455,
+    y: yPdf(LAYOUT.nameLineY),
     size: nameFit.size,
     font: fontSerifBold,
     color: ink,
   });
 
-  // Programa: centro del hueco entre "el programa:" (~524) y "Fecha de emisión:" (~565)
   const program = toWinAnsiSafe((cert.programTitle || "Programa").trim());
-  const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.58, 17, 10);
+  const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.58, 20, 11);
   page.drawText(program, {
     x: (pageWidth - progFit.width) / 2,
-    y: pageHeight * 0.312,
+    y: yPdf(LAYOUT.programY),
     size: progFit.size,
     font: fontSerifBold,
     color: ink,
   });
 
-  // Fecha: misma línea que el rótulo, justo después de "Fecha de emisión:"
   const dateText = toWinAnsiSafe(formatDateEs(cert.issuedAt));
+  const dateSize = 13;
   page.drawText(dateText, {
-    x: pageWidth * 0.548,
-    y: pageHeight * 0.29,
-    size: 12,
+    x: LAYOUT.dateX,
+    y: yPdf(LAYOUT.dateY),
+    size: dateSize,
     font: fontSerif,
     color: ink,
   });
 
-  // Código discreto (el sitio lo llama certificado; la plantilla dice constancia)
   const code = toWinAnsiSafe(`Código: ${cert.code}`);
-  const codeW = fontSans.widthOfTextAtSize(code, 8);
+  const codeSize = 9;
+  const codeW = fontSans.widthOfTextAtSize(code, codeSize);
   page.drawText(code, {
     x: (pageWidth - codeW) / 2,
-    y: pageHeight * 0.035,
-    size: 8,
+    y: 28,
+    size: codeSize,
     font: fontSans,
     color: blue,
   });
