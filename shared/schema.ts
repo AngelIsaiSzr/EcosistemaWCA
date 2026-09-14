@@ -195,6 +195,11 @@ export const emailAutomationSettings = pgTable("email_automation_settings", {
   sendHour: integer("send_hour").notNull().default(9),
   /** 1 = lunes … 7 = domingo (ISO). */
   sendWeekday: integer("send_weekday").notNull().default(1),
+  /** contacto | tec_angel */
+  senderId: text("sender_id").notNull().default("contacto"),
+  /** AD26 | FJ26 */
+  activeSemester: text("active_semester").notNull().default("AD26"),
+  calendarVersion: integer("calendar_version").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

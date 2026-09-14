@@ -7,13 +7,23 @@ import {
   emailAutomationSettings,
   emailWeekTemplates,
 } from "@shared/schema";
-import { isValidRecipientEmail, parseRecipientList } from "@shared/director-emails";
-import { ensureEmailAutomationTables } from "./db/ensure-email-automation";
+import {
+  EMAIL_SENDER_PROFILES,
+  isValidRecipientEmail,
+  parseRecipientList,
+  SEMESTER_CALENDARS,
+  type SemesterCalendarId,
+} from "@shared/director-emails";
+import {
+  applySemesterCalendar,
+  ensureEmailAutomationTables,
+} from "./db/ensure-email-automation";
 import {
   sendDirectorTemplateEmail,
   startDirectorEmailScheduler,
   getMexicoCalendarParts,
 } from "./services/director-email-scheduler";
+import { getSenderAvailability } from "./services/email";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated() || req.user.role !== "admin") {
@@ -26,6 +36,8 @@ const settingsSchema = z.object({
   enabled: z.boolean().optional(),
   recipients: z.union([z.array(z.string()), z.string()]).optional(),
   sendHour: z.number().int().min(0).max(23).optional(),
+  senderId: z.enum(["contacto", "tec_angel"]).optional(),
+  activeSemester: z.enum(["AD26", "FJ26"]).optional(),
 });
 
 const templateSchema = z.object({
@@ -44,6 +56,10 @@ const templateSchema = z.object({
 const testSchema = z.object({
   templateId: z.number().int().positive(),
   to: z.string().min(3).optional(),
+});
+
+const applySemesterSchema = z.object({
+  semesterId: z.enum(["AD26", "FJ26"]),
 });
 
 export function registerEmailAutomationRoutes(app: Express) {
@@ -84,6 +100,8 @@ export function registerEmailAutomationRoutes(app: Express) {
         (t) => t.enabled && t.sendDate === localNow.dateIso,
       );
 
+      const semesterId = (settings?.activeSemester === "FJ26" ? "FJ26" : "AD26") as SemesterCalendarId;
+
       res.json({
         settings,
         templates,
@@ -91,9 +109,19 @@ export function registerEmailAutomationRoutes(app: Express) {
         stats: {
           officialSent: Number(officialCount?.value ?? 0),
         },
+        senders: EMAIL_SENDER_PROFILES,
+        senderAvailability: getSenderAvailability(),
+        semesters: Object.values(SEMESTER_CALENDARS).map((s) => ({
+          id: s.id,
+          label: s.label,
+          classStart: s.classStart,
+          classEnd: s.classEnd,
+        })),
         preview: {
           today: localNow.dateIso,
           timezone: "America/Mexico_City",
+          activeSemester: semesterId,
+          semesterMeta: SEMESTER_CALENDARS[semesterId],
           dueToday: dueToday
             ? { id: dueToday.id, label: dueToday.label, sendDate: dueToday.sendDate }
             : null,
@@ -145,12 +173,23 @@ export function registerEmailAutomationRoutes(app: Express) {
           ? parseRecipientList(parsed.data.recipients)
           : undefined;
 
+      if (parsed.data.senderId === "tec_angel" && !getSenderAvailability().tec_angel) {
+        return res.status(400).json({
+          message:
+            "El correo Tec aún no está configurado. Agrega SMTP_TEC_PASS (y opcional SMTP_TEC_USER) en Render.",
+        });
+      }
+
       const [updated] = await db
         .update(emailAutomationSettings)
         .set({
           ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
           ...(recipients !== undefined ? { recipients } : {}),
           ...(parsed.data.sendHour !== undefined ? { sendHour: parsed.data.sendHour } : {}),
+          ...(parsed.data.senderId !== undefined ? { senderId: parsed.data.senderId } : {}),
+          ...(parsed.data.activeSemester !== undefined
+            ? { activeSemester: parsed.data.activeSemester }
+            : {}),
           updatedAt: new Date(),
         })
         .where(eq(emailAutomationSettings.id, settings.id))
@@ -160,6 +199,33 @@ export function registerEmailAutomationRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "No se pudo guardar la configuración" });
+    }
+  });
+
+  app.post("/api/admin/email-automation/apply-semester", requireAdmin, async (req, res) => {
+    try {
+      const parsed = applySemesterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Semestre inválido" });
+      }
+      const calendar = await applySemesterCalendar(parsed.data.semesterId);
+      const templates = await db
+        .select()
+        .from(emailWeekTemplates)
+        .orderBy(asc(emailWeekTemplates.weekIndex));
+      res.json({
+        message: `Calendario ${calendar.label} aplicado`,
+        calendar: {
+          id: calendar.id,
+          label: calendar.label,
+          classStart: calendar.classStart,
+          classEnd: calendar.classEnd,
+        },
+        templates,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudo aplicar el calendario del semestre" });
     }
   });
 
@@ -234,6 +300,7 @@ export function registerEmailAutomationRoutes(app: Express) {
         template,
         recipients,
         kind: "test",
+        senderId: settings?.senderId || "contacto",
       });
 
       const failed = result.results.filter((r) => !r.ok);
@@ -245,6 +312,7 @@ export function registerEmailAutomationRoutes(app: Express) {
         recipients,
         results: result.results,
         status: result.status,
+        senderId: settings?.senderId || "contacto",
       });
     } catch (error) {
       console.error(error);

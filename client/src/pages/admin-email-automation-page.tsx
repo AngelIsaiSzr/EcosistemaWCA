@@ -33,9 +33,14 @@ type AutomationPayload = {
   templates: EmailWeekTemplate[];
   logs: EmailAutomationLog[];
   stats: { officialSent: number };
+  senders: Array<{ id: string; label: string; fromEmail: string; description: string }>;
+  senderAvailability: { contacto: boolean; tec_angel: boolean };
+  semesters: Array<{ id: string; label: string; classStart: string; classEnd: string }>;
   preview: {
     today: string;
     timezone: string;
+    activeSemester: string;
+    semesterMeta?: { label: string; classStart: string; classEnd: string };
     dueToday: { id: number; label: string; sendDate: string | null } | null;
     next: { id: number; label: string; sendDate: string | null } | null;
   };
@@ -61,6 +66,8 @@ export default function AdminEmailAutomationPage() {
   const [recipientsText, setRecipientsText] = useState("");
   const [sendHour, setSendHour] = useState(9);
   const [enabled, setEnabled] = useState(false);
+  const [senderId, setSenderId] = useState("contacto");
+  const [semesterId, setSemesterId] = useState("AD26");
 
   const [editing, setEditing] = useState<EmailWeekTemplate | null>(null);
   const [editForm, setEditForm] = useState({
@@ -95,8 +102,10 @@ export default function AdminEmailAutomationPage() {
     setEnabled(data.settings.enabled);
     setRecipientsText((data.settings.recipients ?? []).join("\n"));
     setSendHour(data.settings.sendHour);
+    setSenderId(data.settings.senderId || "contacto");
+    setSemesterId(data.settings.activeSemester || data.preview.activeSemester || "AD26");
     if (!testEmail && user?.email) setTestEmail(user.email);
-  }, [data?.settings, testEmail, user?.email]);
+  }, [data?.settings, data?.preview.activeSemester, testEmail, user?.email]);
 
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
@@ -104,6 +113,7 @@ export default function AdminEmailAutomationPage() {
         enabled,
         recipients: recipientsText,
         sendHour,
+        senderId,
       });
       return res.json();
     },
@@ -111,6 +121,25 @@ export default function AdminEmailAutomationPage() {
       toast({ title: "Guardado", description: "Configuración de automatización actualizada." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation/stats"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const applySemesterMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", "/api/admin/email-automation/apply-semester", {
+        semesterId: id,
+      });
+      return res.json();
+    },
+    onSuccess: (result: { message?: string }) => {
+      toast({
+        title: "Calendario aplicado",
+        description: result.message || "Fechas y plantillas actualizadas según el semestre Tec.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-automation"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -224,8 +253,8 @@ export default function AdminEmailAutomationPage() {
               </p>
               <h1 className="mt-1 font-heading text-4xl font-bold">Automatización de correos</h1>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                Recordatorios a directores desde contacto@ecosistemawca.com. Cada plantilla tiene su
-                propia fecha (Semana Tec, semanas del periodo y cierre de semestre).
+                Recordatorios a directores alineados al calendario Tec (Periodos + Semanas Tec). Elige
+                semestre, remitente y edita cada plantilla.
               </p>
             </div>
             <Button variant="outline" asChild>
@@ -261,6 +290,64 @@ export default function AdminEmailAutomationPage() {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2 sm:col-span-2">
+                      <Label>Semestre Tec</Label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={semesterId}
+                          onChange={(e) => setSemesterId(e.target.value)}
+                        >
+                          {(data?.semesters ?? []).map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label} ({s.classStart} → {s.classEnd})
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="shrink-0"
+                          disabled={applySemesterMutation.isPending}
+                          onClick={() => applySemesterMutation.mutate(semesterId)}
+                        >
+                          {applySemesterMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Aplicar calendario
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        AD26 activo: Semana Tec #1 (14 sep) → Periodo 2 (5 semanas) → Semana Tec #2 (26
+                        oct) → cierre (7 dic). Clases 10 ago – 4 dic.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Enviar desde</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={senderId}
+                        onChange={(e) => setSenderId(e.target.value)}
+                      >
+                        {(data?.senders ?? []).map((s) => {
+                          const available =
+                            s.id === "tec_angel"
+                              ? data?.senderAvailability?.tec_angel
+                              : data?.senderAvailability?.contacto;
+                          return (
+                            <option key={s.id} value={s.id} disabled={!available}>
+                              {s.label}
+                              {!available ? " (no configurado en servidor)" : ""}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        {data?.senders?.find((s) => s.id === senderId)?.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="recipients">Correos de directores</Label>
                       <Textarea
                         id="recipients"
@@ -270,8 +357,7 @@ export default function AdminEmailAutomationPage() {
                         placeholder={"nombre@tec.mx\notro@gmail.com"}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Uno por línea. Se envía un correo individual a cada destinatario (mejor
-                        entrega a @tec.mx).
+                        Uno por línea. Se envía un correo individual a cada destinatario.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -312,8 +398,9 @@ export default function AdminEmailAutomationPage() {
                 <div className="rounded-2xl border bg-card p-5 md:p-6">
                   <h2 className="font-heading text-lg font-semibold">Plantillas y fechas</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Edita etiqueta, fecha de envío, asunto y cuerpo. El cierre de este periodo:
-                    lunes 7 de diciembre 2026.
+                    Calendario Tec AD26: Periodo 1 → Semana Tec #1 → Periodo 2 → Semana Tec #2 →
+                    Periodo 3 → cierre (7 dic). Los recordatorios activos cubren Tec #1, Periodo 2,
+                    Tec #2 y cierre.
                   </p>
                   <div className="mt-4 space-y-3">
                     {templates.map((template) => (

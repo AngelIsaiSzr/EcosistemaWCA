@@ -5,11 +5,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { HeartHandshake, Sparkles, Users, X } from "lucide-react";
 import { usePageLoading } from "@/hooks/use-page-loading";
 import { useTheme } from "@/components/ui/theme-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { WcaLogo } from "@/components/integration/wca-logo";
 import { cn } from "@/lib/utils";
 
 export const RECRUITMENT_STORAGE_KEY = "wca-recruitment-invite-dismissed-at";
-const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 1 día
 const BG_IMAGE =
   "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1400&q=80";
 
@@ -70,8 +71,11 @@ export function RecruitmentInviteModal() {
   const [location] = useLocation();
   const { isLoading } = usePageLoading();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const isOfficialAccount = user?.role === "admin" || user?.role === "talento";
 
   useEffect(() => {
     setMounted(true);
@@ -80,6 +84,10 @@ export function RecruitmentInviteModal() {
 
   useEffect(() => {
     if (!mounted) return;
+    if (isOfficialAccount) {
+      setOpen(false);
+      return;
+    }
     if (shouldHideOnPath(location.split("?")[0] ?? location)) {
       setOpen(false);
       return;
@@ -100,7 +108,7 @@ export function RecruitmentInviteModal() {
 
     const timer = window.setTimeout(() => setOpen(true), 450);
     return () => window.clearTimeout(timer);
-  }, [mounted, location, isLoading]);
+  }, [mounted, location, isLoading, isOfficialAccount]);
 
   const close = () => {
     markDismissed();

@@ -73,6 +73,7 @@ export async function sendDirectorTemplateEmail(opts: {
   template: EmailWeekTemplate;
   recipients: string[];
   kind: "weekly" | "test";
+  senderId?: string;
 }) {
   const recipients = parseRecipientList(opts.recipients);
   if (recipients.length === 0) {
@@ -82,13 +83,20 @@ export async function sendDirectorTemplateEmail(opts: {
   const subject =
     opts.kind === "test" ? `[PRUEBA] ${opts.template.subject}` : opts.template.subject;
 
+  let senderId = opts.senderId;
+  if (!senderId) {
+    const settings = await getSettings();
+    senderId = settings.senderId || "contacto";
+  }
+
   try {
     const { results } = await sendTransactionalEmail({
       to: recipients,
       subject,
       text: opts.template.bodyText,
       html: opts.template.bodyHtml,
-      replyTo: process.env.SMTP_USER || "contacto@ecosistemawca.com",
+      replyTo: undefined,
+      senderId,
     });
 
     const failed = results.filter((r) => !r.ok);
@@ -193,7 +201,12 @@ export async function runDirectorWeeklyEmailJob(now = new Date()): Promise<{
       continue;
     }
 
-    await sendDirectorTemplateEmail({ template, recipients, kind: "weekly" });
+    await sendDirectorTemplateEmail({
+      template,
+      recipients,
+      kind: "weekly",
+      senderId: settings.senderId || "contacto",
+    });
     sentAny = true;
   }
 
