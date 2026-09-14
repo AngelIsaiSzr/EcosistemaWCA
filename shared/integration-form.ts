@@ -114,6 +114,8 @@ export interface IntegrationFormDefinition {
   ending: IntegrationEnding;
   theme?: IntegrationTheme;
   sections: IntegrationSection[];
+  /** Anchos de columnas de la vista de respuestas (id → px) */
+  responseColumnWidths?: Record<string, number>;
 }
 
 export const WCA_LOGO_URL = "/logo-wca.png";

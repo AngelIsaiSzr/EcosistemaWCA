@@ -163,7 +163,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const codeW = fontSans.widthOfTextAtSize(code, codeSize);
   page.drawText(code, {
     x: (pageWidth - codeW) / 2,
-    y: 30,
+    y: 42,
     size: codeSize,
     font: fontSans,
     color: blue,

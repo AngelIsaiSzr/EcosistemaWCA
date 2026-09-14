@@ -56,6 +56,14 @@ function loadColWidths(formSlug: string): Record<string, number> {
   }
 }
 
+function saveColWidthsLocal(formSlug: string, widths: Record<string, number>) {
+  try {
+    localStorage.setItem(`${COL_WIDTHS_KEY_PREFIX}:${formSlug}`, JSON.stringify(widths));
+  } catch {
+    /* ignore */
+  }
+}
+
 function AnswerBadges({
   field,
   raw,
@@ -270,11 +278,13 @@ function ResizableHead({
   label,
   width,
   onResize,
+  onResizeEnd,
 }: {
   id: string;
   label: string;
   width: number;
   onResize: (id: string, width: number) => void;
+  onResizeEnd?: () => void;
 }) {
   const startX = useRef(0);
   const startW = useRef(0);
@@ -285,12 +295,13 @@ function ResizableHead({
     startX.current = e.clientX;
     startW.current = width;
     const onMove = (ev: MouseEvent) => {
-      const next = Math.max(100, startW.current + (ev.clientX - startX.current));
+      const next = Math.max(80, startW.current + (ev.clientX - startX.current));
       onResize(id, next);
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      onResizeEnd?.();
     };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
@@ -322,25 +333,63 @@ export default function TalentoPage({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [tab, setTab] = useState("responses");
   const [colWidths, setColWidths] = useState<Record<string, number>>(() => loadColWidths(formSlug));
+  const colWidthsRef = useRef(colWidths);
+  colWidthsRef.current = colWidths;
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setColWidths(loadColWidths(formSlug));
   }, [formSlug]);
 
-  const setColWidth = useCallback(
-    (id: string, width: number) => {
-      setColWidths((prev) => {
-        const next = { ...prev, [id]: width };
-        try {
-          localStorage.setItem(`${COL_WIDTHS_KEY_PREFIX}:${formSlug}`, JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
-        return next;
-      });
+  // Sincronizar anchos entre pestañas/ventanas del mismo navegador
+  useEffect(() => {
+    const key = `${COL_WIDTHS_KEY_PREFIX}:${formSlug}`;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== key || e.newValue == null) return;
+      try {
+        setColWidths(JSON.parse(e.newValue) as Record<string, number>);
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [formSlug]);
+
+  const persistColWidths = useCallback(
+    (widths: Record<string, number>) => {
+      saveColWidthsLocal(formSlug, widths);
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+      persistTimer.current = setTimeout(() => {
+        void apiRequest("PATCH", `/api/talento/forms/${encodeURIComponent(formSlug)}`, {
+          responseColumnWidths: widths,
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/talento/forms", formSlug] });
+        }).catch(() => {
+          /* localStorage ya guardó; el servidor se reintentará al próximo resize */
+        });
+      }, 400);
     },
     [formSlug],
   );
+
+  useEffect(() => {
+    return () => {
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
+  }, []);
+
+  const setColWidth = useCallback((id: string, width: number) => {
+    setColWidths((prev) => {
+      const next = { ...prev, [id]: width };
+      saveColWidthsLocal(formSlug, next);
+      return next;
+    });
+  }, [formSlug]);
+
+  const commitColWidths = useCallback(() => {
+    persistColWidths(colWidthsRef.current);
+  }, [persistColWidths]);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "talento")) {
@@ -395,7 +444,16 @@ export default function TalentoPage({
     setPublished(form.isPublished);
     setSpreadsheetId(form.spreadsheetId ?? "");
     setSpreadsheetTab(form.spreadsheetTab ?? "Respuestas");
-  }, [form]);
+
+    const serverWidths = asDefinition(form.schema).responseColumnWidths ?? {};
+    const localWidths = loadColWidths(formSlug);
+    // Local (esta máquina) manda; el servidor rellena lo que falte / ventanas nuevas sin cache
+    const next = { ...serverWidths, ...localWidths };
+    if (Object.keys(next).length > 0) {
+      setColWidths(next);
+      saveColWidthsLocal(formSlug, next);
+    }
+  }, [form, formSlug]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -543,12 +601,14 @@ export default function TalentoPage({
                         label="#"
                         width={colWidths._index ?? 56}
                         onResize={setColWidth}
+                        onResizeEnd={commitColWidths}
                       />
                       <ResizableHead
                         id="_fecha"
                         label="Fecha"
                         width={colWidths._fecha ?? 160}
                         onResize={setColWidth}
+                        onResizeEnd={commitColWidths}
                       />
                       {fields.map((field) => (
                         <ResizableHead
@@ -557,6 +617,7 @@ export default function TalentoPage({
                           label={field.label}
                           width={colWidths[field.id] ?? DEFAULT_COL_WIDTH}
                           onResize={setColWidth}
+                          onResizeEnd={commitColWidths}
                         />
                       ))}
                     </TableRow>

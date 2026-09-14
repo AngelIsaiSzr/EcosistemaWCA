@@ -59,6 +59,7 @@ const updateFormSchema = z.object({
   spreadsheetTab: z.string().optional(),
   isPublished: z.boolean().optional(),
   pinned: z.boolean().optional(),
+  responseColumnWidths: z.record(z.number().positive()).optional(),
 });
 
 const createFormSchema = z.object({
@@ -182,8 +183,15 @@ async function applyFormPatch(formId: number, currentSlug: string, body: unknown
     return { error: { status: 400 as const, message: "Datos inválidos" } };
   }
 
+  const current = await storage.getIntegrationFormById(formId);
+  if (!current) {
+    return { error: { status: 404 as const, message: "Formulario no encontrado" } };
+  }
+  const currentDefinition = asDefinition(current.schema);
+
   const patch: Record<string, unknown> = { ...parsed.data };
   delete patch.pinned;
+  delete patch.responseColumnWidths;
 
   if (typeof parsed.data.pinned === "boolean") {
     patch.pinnedAt = parsed.data.pinned ? new Date() : null;
@@ -215,14 +223,28 @@ async function applyFormPatch(formId: number, currentSlug: string, body: unknown
   }
 
   if (parsed.data.schema) {
-    const nextSchema = parsed.data.schema as IntegrationFormDefinition;
+    const nextSchema = { ...(parsed.data.schema as IntegrationFormDefinition) };
     if (!nextSchema.sections || !Array.isArray(nextSchema.sections)) {
       return { error: { status: 400 as const, message: "El JSON del formulario no es válido" } };
+    }
+    // Conservar anchos de columnas si el editor no los envía
+    if (!nextSchema.responseColumnWidths && currentDefinition.responseColumnWidths) {
+      nextSchema.responseColumnWidths = currentDefinition.responseColumnWidths;
     }
     patch.schema = nextSchema;
     if (!parsed.data.title && nextSchema.title) {
       patch.title = nextSchema.title;
     }
+  }
+
+  if (parsed.data.responseColumnWidths) {
+    const base =
+      (patch.schema as IntegrationFormDefinition | undefined) ??
+      currentDefinition;
+    patch.schema = {
+      ...base,
+      responseColumnWidths: parsed.data.responseColumnWidths,
+    };
   }
 
   const updated = await storage.updateIntegrationForm(formId, patch);
