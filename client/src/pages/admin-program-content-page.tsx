@@ -98,8 +98,8 @@ function materialStatus(m: Module) {
 }
 
 export default function AdminProgramContentPage() {
-  const [, params] = useRoute("/admin/programas/:id/contenido");
-  const courseId = Number(params?.id);
+  const [, params] = useRoute("/admin/programas/:slug/contenido");
+  const slug = params?.slug ?? "";
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -109,16 +109,18 @@ export default function AdminProgramContentPage() {
   });
 
   const course = useMemo(
-    () => courses?.find((c) => c.id === courseId),
-    [courses, courseId],
+    () => courses?.find((c) => c.slug === slug),
+    [courses, slug],
   );
+
+  const courseId = course?.id;
 
   const {
     data: modules = [],
     isLoading: loadingModules,
   } = useQuery<Module[]>({
     queryKey: [`/api/programs/${courseId}/modules`],
-    enabled: Number.isFinite(courseId) && courseId > 0,
+    enabled: !!courseId,
   });
 
   const selected = modules.find((m) => m.id === selectedId) ?? null;

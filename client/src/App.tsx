@@ -98,7 +98,7 @@ function Router() {
         <RoleProtectedRoute path="/admin/correos" component={AdminEmailAutomationPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
-        <RoleProtectedRoute path="/admin/programas/:id/contenido" component={AdminProgramContentPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/programas/:slug/contenido" component={AdminProgramContentPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 

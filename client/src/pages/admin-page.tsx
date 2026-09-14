@@ -1803,7 +1803,7 @@ export default function AdminPage({
                               size="sm"
                               className="absolute top-2 right-2 shadow-md gap-1.5 bg-background/95 text-foreground hover:bg-background border"
                               variant="secondary"
-                              onClick={() => navigate(`/admin/programas/${course.id}/contenido`)}
+                              onClick={() => navigate(`/admin/programas/${course.slug}/contenido`)}
                               title="Editar contenido del visor /learn"
                             >
                               <Clapperboard className="h-4 w-4" />

@@ -685,42 +685,40 @@ export default function ProgramLearningPage() {
                       onValueChange={(v) => setActiveTab(v as TabType)}
                       className="flex flex-col"
                     >
-                      <div className="flex flex-wrap items-center gap-2 border-b border-primary-700 pb-2">
-                        <TabsList className="h-auto flex flex-wrap justify-start gap-1 rounded-none bg-transparent p-0 flex-1 min-w-0">
-                          <TabsTrigger value="description" className="gap-2 data-[state=active]:bg-primary-700">
-                            <FileText className="h-4 w-4" />
-                            Descripción
-                          </TabsTrigger>
-                          <TabsTrigger value="presentation" className="gap-2 data-[state=active]:bg-primary-700">
-                            <Presentation className="h-4 w-4" />
-                            Presentación
-                          </TabsTrigger>
-                          <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-primary-700">
-                            <Download className="h-4 w-4" />
-                            Recursos
-                          </TabsTrigger>
-                          <TabsTrigger value="comments" className="gap-2 data-[state=active]:bg-primary-700">
-                            <MessageSquare className="h-4 w-4" />
-                            Comentarios
-                            {comments.length > 0 && (
-                              <span className="ml-1 bg-primary-700 text-xs px-1.5 py-0.5 rounded-full">
-                                {comments.length}
-                              </span>
-                            )}
-                          </TabsTrigger>
-                        </TabsList>
+                      <TabsList className="w-full h-auto flex flex-wrap items-center justify-start gap-1 rounded-none bg-transparent p-0 pb-2 border-b border-primary-700">
+                        <TabsTrigger value="description" className="gap-2 data-[state=active]:bg-primary-700">
+                          <FileText className="h-4 w-4" />
+                          Descripción
+                        </TabsTrigger>
+                        <TabsTrigger value="presentation" className="gap-2 data-[state=active]:bg-primary-700">
+                          <Presentation className="h-4 w-4" />
+                          Presentación
+                        </TabsTrigger>
+                        <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-primary-700">
+                          <Download className="h-4 w-4" />
+                          Recursos
+                        </TabsTrigger>
+                        <TabsTrigger value="comments" className="gap-2 data-[state=active]:bg-primary-700">
+                          <MessageSquare className="h-4 w-4" />
+                          Comentarios
+                          {comments.length > 0 && (
+                            <span className="ml-1 bg-primary-700 text-xs px-1.5 py-0.5 rounded-full">
+                              {comments.length}
+                            </span>
+                          )}
+                        </TabsTrigger>
                         <TabsTrigger
                           value="report"
                           className={cn(
-                            "gap-2 shrink-0 rounded-md px-3 py-1.5 text-sm border border-red-500/60 text-red-400",
-                            "data-[state=active]:bg-red-500/15 data-[state=active]:text-red-300 data-[state=active]:border-red-400",
+                            "gap-2 ml-auto shrink-0 border border-red-500/60 text-red-400",
+                            "data-[state=active]:bg-red-500/15 data-[state=active]:text-red-300 data-[state=active]:border-red-400 data-[state=active]:shadow-none",
                             "hover:bg-red-500/10 hover:text-red-300",
                           )}
                         >
                           <Flag className="h-4 w-4" />
                           Reportar
                         </TabsTrigger>
-                      </div>
+                      </TabsList>
 
                       {nextModule && (
                         <div className="bg-primary-900/50 p-4 rounded-lg mt-4 flex items-center justify-between gap-3">
