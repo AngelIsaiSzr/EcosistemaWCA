@@ -97,6 +97,7 @@ export default function AuthPage() {
           name="description" 
           content="Inicia sesión o regístrate en el Ecosistema WCA, la primera academia tecnológica multidisciplinaria y colaborativa que revoluciona la educación del siglo XXI."
         />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
       <div className="flex min-h-screen">

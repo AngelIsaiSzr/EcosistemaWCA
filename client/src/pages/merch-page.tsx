@@ -36,6 +36,7 @@ export default function MerchPage() {
           name="description"
           content="Descubre nuestra colección oficial de merch: camisetas, hoodies, tazas y más productos con el diseño de Ecosistema WCA"
         />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

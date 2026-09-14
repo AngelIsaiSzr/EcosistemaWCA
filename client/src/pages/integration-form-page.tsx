@@ -21,6 +21,7 @@ export default function IntegrationFormPage() {
           name="description"
           content="Formulario de integración al Ecosistema WCA para personas que desean enseñar, facilitar, liderar y transformar desde la tecnología con propósito."
         />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <div className="integration-form-shell relative h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#0b1220]">
         <FormAtmosphere definition={form?.schema ?? DEFAULT_INTEGRATION_FORM} />

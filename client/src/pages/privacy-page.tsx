@@ -11,6 +11,7 @@ export default function PrivacyPage() {
           name="description"
           content="Política de privacidad de Ecosistema WCA. Conoce cómo protegemos y utilizamos tu información personal."
         />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

@@ -11,6 +11,7 @@ export default function CookiesPage() {
           name="description"
           content="Política de cookies de Ecosistema WCA. Conoce cómo utilizamos las cookies para mejorar tu experiencia."
         />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

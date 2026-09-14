@@ -90,6 +90,7 @@ export default function MerchDetailPage() {
           name="description"
           content={product.description}
         />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

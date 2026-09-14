@@ -20,6 +20,7 @@ export default function TermsPage() {
           name="description"
           content="Términos y condiciones de uso de Ecosistema WCA. Conoce nuestros términos legales y condiciones de servicio."
         />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       <div className="flex flex-col min-h-screen">

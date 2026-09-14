@@ -6,6 +6,17 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// En producción, forzar HTTPS (evita que Google rastree http://…)
+app.use((req, res, next) => {
+  if (app.get("env") === "development") return next();
+  const proto = (req.headers["x-forwarded-proto"] as string | undefined) || req.protocol;
+  if (proto === "http") {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '50mb' })); // Incrementar el límite para permitir imágenes
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

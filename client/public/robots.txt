@@ -1,17 +1,24 @@
 User-agent: *
 Allow: /
+
+# Sitemap solo con páginas útiles para búsqueda
 Sitemap: https://ecosistemawca.com/sitemap.xml
 
-# No permitir rastreo de rutas de API y admin
+# Cuentas, paneles y APIs
 Disallow: /api/
 Disallow: /admin/
-Disallow: /auth/
-
+Disallow: /auth
 Disallow: /talento/
+Disallow: /profile
+Disallow: /mi-tarjeta
+Disallow: /editor
 
-# Permitir rastreo de páginas principales
-Allow: /programs/
-Allow: /editor/
-Allow: /about/
-Allow: /contact/
-Allow: /integracion 
+# Tienda / utilidades / formularios / retos (no para SERP)
+Disallow: /merch
+Disallow: /privacy
+Disallow: /cookies
+Disallow: /terms
+Disallow: /integracion
+Disallow: /f/
+Disallow: /reto/
+Disallow: /convocatoria
