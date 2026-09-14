@@ -109,13 +109,12 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const ink = rgb(0.12, 0.14, 0.18);
   const blue = rgb(0.15, 0.35, 0.75);
 
-  // Coordenadas medidas sobre la plantilla real (1024×791):
-  // línea nombre y≈440; hueco del programa ~525–555; "Fecha de emisión:" ~560
+  // Coordenadas sobre plantilla 1024×791 (origen abajo-izquierda)
   const name = toWinAnsiSafe((cert.studentName || "Estudiante").trim());
   const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.74, 32, 16);
   page.drawText(name, {
     x: (pageWidth - nameFit.width) / 2,
-    y: pageHeight * 0.442,
+    y: pageHeight * 0.455, // un poco arriba de la línea
     size: nameFit.size,
     font: fontSerifBold,
     color: ink,
@@ -125,7 +124,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.58, 17, 10);
   page.drawText(program, {
     x: (pageWidth - progFit.width) / 2,
-    y: pageHeight * 0.308,
+    y: pageHeight * 0.338, // bajo "el programa:", arriba de la fecha
     size: progFit.size,
     font: fontSerifBold,
     color: ink,
@@ -133,8 +132,8 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
 
   const dateText = toWinAnsiSafe(formatDateEs(cert.issuedAt));
   page.drawText(dateText, {
-    x: pageWidth * 0.62,
-    y: pageHeight * 0.282,
+    x: pageWidth * 0.65, // a la derecha de "Fecha de emisión:"
+    y: pageHeight * 0.298,
     size: 12,
     font: fontSerif,
     color: ink,
