@@ -14,17 +14,51 @@ function formatDateEs(date: Date | string | null | undefined): string {
 }
 
 function resolveTemplatePath(): string {
-  const candidates = [
-    path.join(process.cwd(), "server", "assets", "certificate-template.png"),
-    path.join(process.cwd(), "assets", "certificate-template.png"),
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "certificate-template.png"),
+  const names = ["certificate-template.jpg", "certificate-template.jpeg", "certificate-template.png"];
+  const bases = [
+    path.join(process.cwd(), "server", "assets"),
+    path.join(process.cwd(), "dist", "assets"),
+    path.join(process.cwd(), "assets"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "assets"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "server", "assets"),
   ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
+
+  for (const base of bases) {
+    for (const name of names) {
+      const candidate = path.join(base, name);
+      if (fs.existsSync(candidate)) return candidate;
+    }
   }
+
   throw new Error(
-    "No se encontró la plantilla del certificado (server/assets/certificate-template.png)",
+    "No se encontró la plantilla del certificado (server/assets/certificate-template.jpg)",
   );
+}
+
+function isJpeg(bytes: Buffer): boolean {
+  return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+}
+
+function isPng(bytes: Buffer): boolean {
+  return (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  );
+}
+
+/** StandardFonts solo soportan WinAnsi; normaliza caracteres fuera de rango. */
+function toWinAnsiSafe(text: string): string {
+  return text
+    .normalize("NFKC")
+    .replace(/[–—]/g, "-")
+    .replace(/[“”„]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/…/g, "...")
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
 }
 
 function fitCenteredText(
@@ -53,8 +87,15 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const pageHeight = 595;
   const page = pdf.addPage([pageWidth, pageHeight]);
 
-  const png = await pdf.embedPng(templateBytes);
-  page.drawImage(png, {
+  const image = isJpeg(templateBytes)
+    ? await pdf.embedJpg(templateBytes)
+    : isPng(templateBytes)
+      ? await pdf.embedPng(templateBytes)
+      : (() => {
+          throw new Error("La plantilla del certificado no es JPEG ni PNG válido");
+        })();
+
+  page.drawImage(image, {
     x: 0,
     y: 0,
     width: pageWidth,
@@ -69,7 +110,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   const blue = rgb(0.15, 0.35, 0.75);
 
   // Coordenadas calibradas sobre la plantilla (origen abajo-izquierda)
-  const name = (cert.studentName || "Estudiante").trim();
+  const name = toWinAnsiSafe((cert.studentName || "Estudiante").trim());
   const nameFit = fitCenteredText(name, fontSerifBold, pageWidth * 0.72, 22, 12);
   page.drawText(name, {
     x: (pageWidth - nameFit.width) / 2,
@@ -79,7 +120,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
     color: ink,
   });
 
-  const program = (cert.programTitle || "Programa").trim();
+  const program = toWinAnsiSafe((cert.programTitle || "Programa").trim());
   const progFit = fitCenteredText(program, fontSerifBold, pageWidth * 0.55, 16, 10);
   page.drawText(program, {
     x: (pageWidth - progFit.width) / 2,
@@ -89,7 +130,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
     color: ink,
   });
 
-  const dateText = formatDateEs(cert.issuedAt);
+  const dateText = toWinAnsiSafe(formatDateEs(cert.issuedAt));
   // A la derecha de "Fecha de emisión:" en la plantilla
   page.drawText(dateText, {
     x: pageWidth * 0.445,
@@ -100,7 +141,7 @@ export async function buildCertificatePdf(cert: Certificate): Promise<Uint8Array
   });
 
   // Código discreto (el sitio lo llama certificado; la plantilla dice constancia)
-  const code = `Código: ${cert.code}`;
+  const code = toWinAnsiSafe(`Código: ${cert.code}`);
   const codeW = fontSans.widthOfTextAtSize(code, 8);
   page.drawText(code, {
     x: (pageWidth - codeW) / 2,
