@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import {
   cssColorToHexInput,
   normalizeCardSlug,
   resolveCardDirectionColor,
+  type CardSocialKey,
   type PresentationCardLink,
   type PresentationCardTheme,
 } from "@shared/card-directions";
@@ -33,7 +34,6 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
-import type { CardSocialKey } from "@shared/card-directions";
 import {
   Check,
   ChevronDown,
@@ -43,17 +43,9 @@ import {
   Loader2,
   Plus,
   RotateCcw,
+  Search,
   Trash2,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 
 type UserBasic = { id: number; name: string; email: string };
 
@@ -117,6 +109,8 @@ export function PresentationCardEditor({
   const [state, setState] = useState<EditorState | null>(null);
   const [dirty, setDirty] = useState(false);
   const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const userPickerRef = useRef<HTMLDivElement>(null);
 
   const cardQuery = useQuery<PresentationCard>({
     queryKey: cardId ? ["/api/cards", cardId] : ["/api/cards/mine"],
@@ -151,6 +145,24 @@ export function PresentationCardEditor({
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [dirty]);
+
+  useEffect(() => {
+    if (!userPickerOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!userPickerRef.current?.contains(event.target as Node)) {
+        setUserPickerOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setUserPickerOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userPickerOpen]);
 
   const updateField = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
     setDirty(true);
@@ -256,6 +268,14 @@ export function PresentationCardEditor({
   };
   const usersList = usersQuery.data ?? [];
   const assignedUser = usersList.find((u) => u.id === state.assignedUserId);
+  const userQuery = userSearch.trim().toLowerCase();
+  const filteredUsers = !userQuery
+    ? usersList
+    : usersList.filter(
+        (u) =>
+          u.name.toLowerCase().includes(userQuery) ||
+          u.email.toLowerCase().includes(userQuery),
+      );
 
   return (
     <>
@@ -884,59 +904,88 @@ export function PresentationCardEditor({
                 {mode === "admin" && (
                   <div className="space-y-2">
                     <Label>Asignar a usuario</Label>
-                    <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={userPickerOpen}
-                          className="h-10 w-full justify-between font-normal"
-                        >
-                          <span className="truncate">
-                            {assignedUser
-                              ? `${assignedUser.name} · ${assignedUser.email}`
-                              : "Sin asignar"}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[var(--radix-popover-trigger-width)] p-0"
-                        align="start"
+                    <div ref={userPickerRef} className="relative w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={userPickerOpen}
+                        className="h-10 w-full justify-between font-normal"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setUserPickerOpen((prev) => {
+                            const next = !prev;
+                            if (next) setUserSearch("");
+                            return next;
+                          });
+                        }}
                       >
-                        <Command>
-                          <CommandInput placeholder="Buscar por nombre o email..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró ningún usuario.</CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="sin asignar"
-                                onSelect={() => {
-                                  updateField("assignedUserId", null);
-                                  setUserPickerOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4 shrink-0",
-                                    state.assignedUserId == null ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                Sin asignar
-                              </CommandItem>
-                              {usersList.map((u) => (
-                                <CommandItem
+                        <span className="truncate">
+                          {assignedUser
+                            ? `${assignedUser.name} · ${assignedUser.email}`
+                            : "Sin asignar"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+
+                      {userPickerOpen ? (
+                        <div
+                          className="absolute left-0 top-[calc(100%+0.5rem)] z-[200] w-full rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg"
+                          onClick={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <div className="relative mb-2">
+                            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              value={userSearch}
+                              onChange={(e) => setUserSearch(e.target.value)}
+                              placeholder="Buscar por nombre o email..."
+                              className="h-9 pl-8"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-56 overflow-y-auto">
+                            <button
+                              type="button"
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent",
+                                state.assignedUserId == null && "bg-accent/60",
+                              )}
+                              onClick={() => {
+                                updateField("assignedUserId", null);
+                                setUserPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "h-4 w-4 shrink-0",
+                                  state.assignedUserId == null ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              Sin asignar
+                            </button>
+                            {filteredUsers.length === 0 ? (
+                              <p className="px-2 py-3 text-sm text-muted-foreground">
+                                No se encontró ningún usuario.
+                              </p>
+                            ) : (
+                              filteredUsers.map((u) => (
+                                <button
                                   key={u.id}
-                                  value={`${u.name} ${u.email}`}
-                                  onSelect={() => {
+                                  type="button"
+                                  className={cn(
+                                    "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent",
+                                    state.assignedUserId === u.id && "bg-accent/60",
+                                  )}
+                                  onClick={() => {
                                     updateField("assignedUserId", u.id);
                                     setUserPickerOpen(false);
                                   }}
                                 >
                                   <Check
                                     className={cn(
-                                      "mr-2 h-4 w-4 shrink-0",
+                                      "h-4 w-4 shrink-0",
                                       state.assignedUserId === u.id
                                         ? "opacity-100"
                                         : "opacity-0",
@@ -945,13 +994,13 @@ export function PresentationCardEditor({
                                   <span className="truncate">
                                     {u.name} · {u.email}
                                   </span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       El usuario asignado podrá editar su tarjeta en /mi-tarjeta.
                     </p>
