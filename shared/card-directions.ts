@@ -101,6 +101,7 @@ export function resolveCardDirectionColor(
 export const CARD_BACKGROUND_STYLES = [
   "gradient",
   "mesh",
+  "black",
   "solid",
   "aurora",
   "noir",
@@ -121,6 +122,7 @@ export const CARD_BACKGROUND_OPTIONS: {
 }[] = [
   { id: "gradient", label: "Degradado", hint: "Clásico con toque del acento" },
   { id: "mesh", label: "Mesh", hint: "Manchas suaves en capas" },
+  { id: "black", label: "Negro", hint: "Fondo negro puro" },
   { id: "solid", label: "Sólido", hint: "Un solo color a tu elección" },
   { id: "aurora", label: "Aurora", hint: "Luces difusas multicolor" },
   { id: "noir", label: "Noir", hint: "Negro profundo con acento sutil" },
@@ -156,6 +158,20 @@ export function cssColorToHexInput(value: string | undefined | null, fallback = 
     return `#${to(+rgb[1])}${to(+rgb[2])}${to(+rgb[3])}`;
   }
   return fallback;
+}
+
+/** Alpha 0–1 sobre cualquier color CSS → #rrggbbaa (seguro en gradients). */
+export function withCssAlpha(
+  color: string,
+  alpha: number,
+  fallback = "#5b8fd4",
+): string {
+  const hex = cssColorToHexInput(color, fallback);
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const aa = Math.round(clamped * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${aa}`;
 }
 
 function hslToHex(h: number, s: number, l: number): string {

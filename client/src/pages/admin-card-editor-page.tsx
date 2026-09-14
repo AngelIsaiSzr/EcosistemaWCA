@@ -35,14 +35,25 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import type { CardSocialKey } from "@shared/card-directions";
 import {
+  Check,
   ChevronDown,
   ChevronUp,
+  ChevronsUpDown,
   ExternalLink,
   Loader2,
   Plus,
   RotateCcw,
   Trash2,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 type UserBasic = { id: number; name: string; email: string };
 
@@ -105,6 +116,7 @@ export function PresentationCardEditor({
   const [, navigate] = useLocation();
   const [state, setState] = useState<EditorState | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
 
   const cardQuery = useQuery<PresentationCard>({
     queryKey: cardId ? ["/api/cards", cardId] : ["/api/cards/mine"],
@@ -129,6 +141,16 @@ export function PresentationCardEditor({
       setState(cardToState(cardQuery.data));
     }
   }, [cardQuery.data, dirty]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty]);
 
   const updateField = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
     setDirty(true);
@@ -232,6 +254,8 @@ export function PresentationCardEditor({
     theme: state.theme,
     links: state.links,
   };
+  const usersList = usersQuery.data ?? [];
+  const assignedUser = usersList.find((u) => u.id === state.assignedUserId);
 
   return (
     <>
@@ -273,12 +297,18 @@ export function PresentationCardEditor({
                 )}
               >
                 {mode === "admin" ? "Editar tarjeta" : "Mi tarjeta"}
+                {dirty ? <span className="text-amber-500"> *</span> : null}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 URL pública:{" "}
                 <span className="font-medium text-foreground">
                   ecosistemawca.com/{normalizeCardSlug(state.slug) || state.slug}
                 </span>
+                {dirty ? (
+                  <span className="ml-2 text-amber-600 dark:text-amber-400">
+                    · Cambios sin guardar
+                  </span>
+                ) : null}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -296,7 +326,7 @@ export function PresentationCardEditor({
                 disabled={saveMutation.isPending || !dirty}
               >
                 {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Guardar cambios
+                {dirty ? "Guardar cambios *" : "Guardar cambios"}
               </Button>
             </div>
           </div>
@@ -854,24 +884,74 @@ export function PresentationCardEditor({
                 {mode === "admin" && (
                   <div className="space-y-2">
                     <Label>Asignar a usuario</Label>
-                    <Select
-                      value={state.assignedUserId?.toString() || "none"}
-                      onValueChange={(v) =>
-                        updateField("assignedUserId", v === "none" ? null : Number(v))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin asignar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin asignar</SelectItem>
-                        {(usersQuery.data ?? []).map((u) => (
-                          <SelectItem key={u.id} value={String(u.id)}>
-                            {u.name} · {u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={userPickerOpen}
+                          className="h-10 w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {assignedUser
+                              ? `${assignedUser.name} · ${assignedUser.email}`
+                              : "Sin asignar"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput placeholder="Buscar por nombre o email..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró ningún usuario.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="sin asignar"
+                                onSelect={() => {
+                                  updateField("assignedUserId", null);
+                                  setUserPickerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 shrink-0",
+                                    state.assignedUserId == null ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                Sin asignar
+                              </CommandItem>
+                              {usersList.map((u) => (
+                                <CommandItem
+                                  key={u.id}
+                                  value={`${u.name} ${u.email}`}
+                                  onSelect={() => {
+                                    updateField("assignedUserId", u.id);
+                                    setUserPickerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4 shrink-0",
+                                      state.assignedUserId === u.id
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  <span className="truncate">
+                                    {u.name} · {u.email}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <p className="text-xs text-muted-foreground">
                       El usuario asignado podrá editar su tarjeta en /mi-tarjeta.
                     </p>

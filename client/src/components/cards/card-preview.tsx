@@ -5,6 +5,7 @@ import { resolveMediaUrl } from "@shared/media-url";
 import {
   getCardDirectionMeta,
   resolveCardDirectionColor,
+  withCssAlpha,
   type CardSocialKey,
   type PresentationCardLink,
   type PresentationCardTheme,
@@ -90,7 +91,7 @@ function buttonStyles(
   if (style === "soft") {
     return {
       borderRadius: buttonRadius,
-      background: `${accent}28`,
+      background: withCssAlpha(accent, 0.16),
       color: "#fff",
     };
   }
@@ -109,20 +110,29 @@ function resolveCardBackground(
   const solid = theme.backgroundColor?.trim() || "#0b1220";
   const overlayPct = Math.max(0, Math.min(100, theme.backgroundOverlay ?? 55));
   const overlay = overlayPct / 100;
+  const accentSoft = withCssAlpha(accent, 0.2);
+  const accentMid = withCssAlpha(accent, 0.27);
+  const accentStrong = withCssAlpha(accent, 0.35);
 
   switch (style) {
     case "solid":
       return { background: solid };
+    case "black":
+      return { background: "#000000" };
     case "mesh":
       return {
-        background: `radial-gradient(ellipse at 20% 0%, ${accent}33, transparent 50%), radial-gradient(ellipse at 80% 20%, ${accent}22, transparent 45%), linear-gradient(180deg, hsl(222 45% 7%), hsl(222 40% 10%))`,
+        background: [
+          `radial-gradient(ellipse at 20% 0%, ${accentMid}, transparent 50%)`,
+          `radial-gradient(ellipse at 80% 20%, ${accentSoft}, transparent 45%)`,
+          `linear-gradient(180deg, hsl(222 45% 7%), hsl(222 40% 10%))`,
+        ].join(", "),
       };
     case "aurora":
       return {
         background: [
-          `radial-gradient(ellipse at 12% 18%, ${accent}45, transparent 42%)`,
-          `radial-gradient(ellipse at 88% 8%, hsl(280 85% 55% / 0.28), transparent 44%)`,
-          `radial-gradient(ellipse at 55% 95%, hsl(190 90% 45% / 0.22), transparent 48%)`,
+          `radial-gradient(ellipse at 12% 18%, ${accentStrong}, transparent 42%)`,
+          `radial-gradient(ellipse at 88% 8%, ${withCssAlpha("#c084fc", 0.28)}, transparent 44%)`,
+          `radial-gradient(ellipse at 55% 95%, ${withCssAlpha("#22d3ee", 0.22)}, transparent 48%)`,
           `linear-gradient(180deg, hsl(222 48% 6%), hsl(222 40% 10%))`,
         ].join(", "),
       };
@@ -142,7 +152,10 @@ function resolveCardBackground(
       };
     case "spotlight":
       return {
-        background: `radial-gradient(ellipse 85% 55% at 50% -8%, ${accent}50, transparent 55%), linear-gradient(180deg, hsl(222 45% 7%), hsl(222 42% 4%))`,
+        background: [
+          `radial-gradient(ellipse 85% 55% at 50% -8%, ${withCssAlpha(accent, 0.42)}, transparent 55%)`,
+          `linear-gradient(180deg, hsl(222 45% 7%), hsl(222 42% 4%))`,
+        ].join(", "),
       };
     case "duo":
       return {
