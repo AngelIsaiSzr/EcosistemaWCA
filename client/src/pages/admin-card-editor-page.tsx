@@ -2,19 +2,14 @@ import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
 import { PresentationCard } from "@shared/schema";
 import {
+  CARD_BACKGROUND_OPTIONS,
   CARD_DIRECTIONS,
   DEFAULT_CARD_THEME,
+  cssColorToHexInput,
   normalizeCardSlug,
+  resolveCardDirectionColor,
   type PresentationCardLink,
   type PresentationCardTheme,
 } from "@shared/card-directions";
@@ -28,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -38,6 +34,15 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import type { CardSocialKey } from "@shared/card-directions";
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 
 type UserBasic = { id: number; name: string; email: string };
 
@@ -403,11 +408,20 @@ export function PresentationCardEditor({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="gradient">Degradado</SelectItem>
-                        <SelectItem value="mesh">Mesh</SelectItem>
-                        <SelectItem value="solid">Sólido</SelectItem>
+                        {CARD_BACKGROUND_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {
+                        CARD_BACKGROUND_OPTIONS.find(
+                          (o) => o.id === (state.theme.backgroundStyle || "gradient"),
+                        )?.hint
+                      }
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Estilo de botones</Label>
@@ -431,18 +445,193 @@ export function PresentationCardEditor({
                     </Select>
                   </div>
                 </div>
+
+                {(state.theme.backgroundStyle === "solid" ||
+                  state.theme.backgroundStyle === "carbon") && (
+                  <div className="space-y-2">
+                    <Label>
+                      {state.theme.backgroundStyle === "carbon"
+                        ? "Color base (carbono)"
+                        : "Color sólido del fondo"}
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        aria-label="Color de fondo"
+                        className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+                        value={cssColorToHexInput(
+                          state.theme.backgroundColor,
+                          "#0b1220",
+                        )}
+                        onChange={(e) =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundColor: e.target.value,
+                          })
+                        }
+                      />
+                      <Input
+                        className="min-w-0 flex-1"
+                        value={state.theme.backgroundColor || "#0b1220"}
+                        onChange={(e) =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundColor: e.target.value || undefined,
+                          })
+                        }
+                        placeholder="#0b1220, hsl(...), rgb(...)"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Restaurar color de fondo"
+                        onClick={() =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundColor: "#0b1220",
+                          })
+                        }
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {state.theme.backgroundStyle === "image" && (
+                  <div className="space-y-3 rounded-xl border p-3">
+                    <div className="space-y-2">
+                      <Label>URL de imagen de fondo</Label>
+                      <Input
+                        value={state.theme.backgroundImage || ""}
+                        onChange={(e) =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundImage: e.target.value || undefined,
+                          })
+                        }
+                        placeholder="https://... o /media/..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>O subir imagen</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 2.5 * 1024 * 1024) {
+                            toast({
+                              title: "Imagen muy pesada",
+                              description: "Máximo aprox. 2.5 MB para guardarla en la tarjeta.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            updateField("theme", {
+                              ...state.theme,
+                              backgroundImage: String(reader.result || ""),
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Oscurecimiento ({state.theme.backgroundOverlay ?? 55}%)
+                      </Label>
+                      <Slider
+                        min={0}
+                        max={90}
+                        step={1}
+                        value={[state.theme.backgroundOverlay ?? 55]}
+                        onValueChange={([value]) =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundOverlay: value ?? 55,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Más oscuro = mejor contraste del texto sobre la foto.
+                      </p>
+                    </div>
+                    {state.theme.backgroundImage ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground"
+                        onClick={() =>
+                          updateField("theme", {
+                            ...state.theme,
+                            backgroundImage: undefined,
+                          })
+                        }
+                      >
+                        Quitar imagen de fondo
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label>Color de acento personalizado (opcional)</Label>
-                  <Input
-                    value={state.theme.accentColor || ""}
-                    onChange={(e) =>
-                      updateField("theme", {
-                        ...state.theme,
-                        accentColor: e.target.value || undefined,
-                      })
-                    }
-                    placeholder="#5b8fd4 o hsl(...)"
-                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Color de acento personalizado</Label>
+                    {state.theme.accentColor ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5 text-muted-foreground"
+                        onClick={() => {
+                          const next = { ...state.theme };
+                          delete next.accentColor;
+                          updateField("theme", next);
+                        }}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Restaurar
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      aria-label="Color de acento"
+                      className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+                      value={cssColorToHexInput(
+                        state.theme.accentColor ||
+                          resolveCardDirectionColor(state.direction, state.theme),
+                        "#5b8fd4",
+                      )}
+                      onChange={(e) =>
+                        updateField("theme", {
+                          ...state.theme,
+                          accentColor: e.target.value,
+                        })
+                      }
+                    />
+                    <Input
+                      className="min-w-0 flex-1"
+                      value={state.theme.accentColor || ""}
+                      onChange={(e) =>
+                        updateField("theme", {
+                          ...state.theme,
+                          accentColor: e.target.value.trim() || undefined,
+                        })
+                      }
+                      placeholder="Vacío = color de la dirección (#hex, hsl, rgb…)"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Afecta borde de la foto, cargo y botones. Sin personalizar, usa el color de la dirección.
+                  </p>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2">
                   <Label htmlFor="showBrand">Mostrar marca Ecosistema WCA</Label>

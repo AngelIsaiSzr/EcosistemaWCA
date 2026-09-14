@@ -4,6 +4,7 @@ import type { PresentationCard } from "@shared/schema";
 import { resolveMediaUrl } from "@shared/media-url";
 import {
   getCardDirectionMeta,
+  resolveCardDirectionColor,
   type CardSocialKey,
   type PresentationCardLink,
   type PresentationCardTheme,
@@ -33,11 +34,7 @@ export type CardPreviewData = Pick<
 function resolveAccent(card: CardPreviewData): string {
   const theme = card.theme ?? {};
   if (theme.accentColor) return theme.accentColor;
-  if (card.direction === "direccion-sede" && theme.sedeAccent === "purple") {
-    return "hsl(270 95% 68%)";
-  }
-  const meta = getCardDirectionMeta(card.direction);
-  return `hsl(${meta.hsl})`;
+  return resolveCardDirectionColor(card.direction, theme);
 }
 
 const SOCIALS: Array<{
@@ -104,6 +101,83 @@ function buttonStyles(
   };
 }
 
+function resolveCardBackground(
+  theme: PresentationCardTheme,
+  accent: string,
+): CSSProperties {
+  const style = theme.backgroundStyle || "gradient";
+  const solid = theme.backgroundColor?.trim() || "#0b1220";
+  const overlayPct = Math.max(0, Math.min(100, theme.backgroundOverlay ?? 55));
+  const overlay = overlayPct / 100;
+
+  switch (style) {
+    case "solid":
+      return { background: solid };
+    case "mesh":
+      return {
+        background: `radial-gradient(ellipse at 20% 0%, ${accent}33, transparent 50%), radial-gradient(ellipse at 80% 20%, ${accent}22, transparent 45%), linear-gradient(180deg, hsl(222 45% 7%), hsl(222 40% 10%))`,
+      };
+    case "aurora":
+      return {
+        background: [
+          `radial-gradient(ellipse at 12% 18%, ${accent}45, transparent 42%)`,
+          `radial-gradient(ellipse at 88% 8%, hsl(280 85% 55% / 0.28), transparent 44%)`,
+          `radial-gradient(ellipse at 55% 95%, hsl(190 90% 45% / 0.22), transparent 48%)`,
+          `linear-gradient(180deg, hsl(222 48% 6%), hsl(222 40% 10%))`,
+        ].join(", "),
+      };
+    case "noir":
+      return {
+        background: `linear-gradient(180deg, #050505 0%, #0a0a0a 55%, color-mix(in srgb, ${accent} 14%, #050505) 100%)`,
+      };
+    case "sunset":
+      return {
+        background:
+          "linear-gradient(160deg, hsl(222 42% 7%) 0%, hsl(340 48% 16%) 38%, hsl(22 72% 22%) 68%, hsl(38 78% 28%) 100%)",
+      };
+    case "ocean":
+      return {
+        background:
+          "linear-gradient(180deg, hsl(212 52% 7%) 0%, hsl(198 58% 13%) 42%, hsl(168 42% 15%) 100%)",
+      };
+    case "spotlight":
+      return {
+        background: `radial-gradient(ellipse 85% 55% at 50% -8%, ${accent}50, transparent 55%), linear-gradient(180deg, hsl(222 45% 7%), hsl(222 42% 4%))`,
+      };
+    case "duo":
+      return {
+        background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 38%, #0b1220) 0%, #0b1220 48%, color-mix(in srgb, ${accent} 22%, #1a1028) 100%)`,
+      };
+    case "carbon":
+      return {
+        backgroundColor: solid,
+        backgroundImage: [
+          "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.025) 2px, rgba(255,255,255,0.025) 4px)",
+          "repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px)",
+        ].join(", "),
+      };
+    case "image": {
+      const img = theme.backgroundImage?.trim();
+      if (!img) {
+        return { background: solid };
+      }
+      const url = resolveMediaUrl(img);
+      return {
+        backgroundColor: "#0b1220",
+        backgroundImage: `linear-gradient(rgba(0,0,0,${overlay}), rgba(0,0,0,${overlay})), url("${url.replace(/"/g, '\\"')}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      };
+    }
+    case "gradient":
+    default:
+      return {
+        background: `linear-gradient(165deg, hsl(222 45% 8%) 0%, hsl(222 40% 12%) 45%, color-mix(in srgb, ${accent} 18%, hsl(222 40% 8%)) 100%)`,
+      };
+  }
+}
+
 export function CardPreview({
   card,
   className,
@@ -129,12 +203,7 @@ export function CardPreview({
   const circleSocials = activeSocials.filter((s) => socialMode(theme, s.key) === "circle");
   const buttonSocials = activeSocials.filter((s) => socialMode(theme, s.key) === "button");
 
-  const bg =
-    theme.backgroundStyle === "solid"
-      ? `linear-gradient(180deg, hsl(222 40% 8%), hsl(222 40% 8%))`
-      : theme.backgroundStyle === "mesh"
-        ? `radial-gradient(ellipse at 20% 0%, ${accent}33, transparent 50%), radial-gradient(ellipse at 80% 20%, ${accent}22, transparent 45%), linear-gradient(180deg, hsl(222 45% 7%), hsl(222 40% 10%))`
-        : `linear-gradient(165deg, hsl(222 45% 8%) 0%, hsl(222 40% 12%) 45%, color-mix(in srgb, ${accent} 18%, hsl(222 40% 8%)) 100%)`;
+  const bg = resolveCardBackground(theme, accent);
 
   return (
     <div
@@ -145,7 +214,7 @@ export function CardPreview({
           : "fixed inset-0 flex flex-col overflow-y-auto overscroll-y-contain",
         className,
       )}
-      style={{ background: bg }}
+      style={bg}
     >
       <div
         className={cn(
@@ -165,15 +234,21 @@ export function CardPreview({
         )}
 
         <div
-          className="mb-4 h-28 w-28 overflow-hidden rounded-full ring-4"
-          style={{ boxShadow: `0 0 0 3px ${accent}55` }}
+          className="mb-4 h-28 w-28 overflow-hidden rounded-full"
+          style={{ boxShadow: `0 0 0 3px ${accent}` }}
         >
           {card.image ? (
-            <img src={resolveMediaUrl(card.image)} alt={card.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+            <img
+              src={resolveMediaUrl(card.image)}
+              alt={card.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <div
               className="flex h-full w-full items-center justify-center text-3xl font-bold"
-              style={{ background: accent }}
+              style={{ background: accent, color: "#0b1220" }}
             >
               {(card.name || "?").slice(0, 1).toUpperCase()}
             </div>

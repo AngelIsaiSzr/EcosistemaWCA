@@ -87,6 +87,91 @@ export function getCardDirectionCssColor(id?: string | null): string {
   return `hsl(${getCardDirectionMeta(id).hsl})`;
 }
 
+/** Color oficial de la dirección (incluye override morado de sede). */
+export function resolveCardDirectionColor(
+  direction?: string | null,
+  theme?: { sedeAccent?: "blue-strong" | "purple" } | null,
+): string {
+  if (direction === "direccion-sede" && theme?.sedeAccent === "purple") {
+    return "hsl(270 95% 68%)";
+  }
+  return getCardDirectionCssColor(direction);
+}
+
+export const CARD_BACKGROUND_STYLES = [
+  "gradient",
+  "mesh",
+  "solid",
+  "aurora",
+  "noir",
+  "sunset",
+  "ocean",
+  "spotlight",
+  "duo",
+  "carbon",
+  "image",
+] as const;
+
+export type CardBackgroundStyle = (typeof CARD_BACKGROUND_STYLES)[number];
+
+export const CARD_BACKGROUND_OPTIONS: {
+  id: CardBackgroundStyle;
+  label: string;
+  hint: string;
+}[] = [
+  { id: "gradient", label: "Degradado", hint: "Clásico con toque del acento" },
+  { id: "mesh", label: "Mesh", hint: "Manchas suaves en capas" },
+  { id: "solid", label: "Sólido", hint: "Un solo color a tu elección" },
+  { id: "aurora", label: "Aurora", hint: "Luces difusas multicolor" },
+  { id: "noir", label: "Noir", hint: "Negro profundo con acento sutil" },
+  { id: "sunset", label: "Atardecer", hint: "Cálidos rosa–naranja" },
+  { id: "ocean", label: "Océano", hint: "Azules y verdes frescos" },
+  { id: "spotlight", label: "Spotlight", hint: "Foco desde arriba" },
+  { id: "duo", label: "Duotono", hint: "Diagonal teñida por el acento" },
+  { id: "carbon", label: "Carbono", hint: "Textura sutil sobre color base" },
+  { id: "image", label: "Imagen", hint: "Foto o URL de fondo" },
+];
+
+/** Convierte #hex / hsl(...) / "H S% L%" a #rrggbb para <input type="color">. */
+export function cssColorToHexInput(value: string | undefined | null, fallback = "#5b8fd4"): string {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed;
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const r = trimmed[1];
+    const g = trimmed[2];
+    const b = trimmed[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  const hslFn = trimmed.match(
+    /hsla?\(\s*([\d.]+)\s*[, ]\s*([\d.]+)%\s*[, ]\s*([\d.]+)%/i,
+  );
+  if (hslFn) return hslToHex(+hslFn[1], +hslFn[2], +hslFn[3]);
+  const bare = trimmed.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
+  if (bare) return hslToHex(+bare[1], +bare[2], +bare[3]);
+  const rgb = trimmed.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (rgb) {
+    const to = (n: number) =>
+      Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+    return `#${to(+rgb[1])}${to(+rgb[2])}${to(+rgb[3])}`;
+  }
+  return fallback;
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const light = l / 100;
+  const a = sat * Math.min(light, 1 - light);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = light - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 /** Slugs que no pueden usarse para tarjetas públicas en la raíz. */
 export const RESERVED_CARD_SLUGS = new Set([
   "admin",
@@ -143,7 +228,13 @@ export type PresentationCardTheme = {
   accentColor?: string;
   /** Override sede: blue-strong | purple */
   sedeAccent?: "blue-strong" | "purple";
-  backgroundStyle?: "solid" | "gradient" | "mesh";
+  backgroundStyle?: CardBackgroundStyle;
+  /** Color del fondo sólido / base de carbono */
+  backgroundColor?: string;
+  /** URL o data-URL para fondo tipo imagen */
+  backgroundImage?: string;
+  /** Oscurecimiento del fondo imagen, 0–100 (default 55) */
+  backgroundOverlay?: number;
   buttonStyle?: "rounded" | "pill" | "square";
   showBrand?: boolean;
   /** Cómo mostrar redes fijas por defecto */
@@ -167,6 +258,8 @@ export type PresentationCardTheme = {
 
 export const DEFAULT_CARD_THEME: PresentationCardTheme = {
   backgroundStyle: "gradient",
+  backgroundColor: "#0b1220",
+  backgroundOverlay: 55,
   buttonStyle: "rounded",
   showBrand: true,
   socialDisplayDefault: "circle",
