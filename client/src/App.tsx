@@ -45,6 +45,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
 import ProgramLearningPage from "@/pages/program-learning-page";
+import AdminProgramContentPage from "@/pages/admin-program-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 function SoftRedirect({ to }: { to: string }) {
@@ -97,6 +98,7 @@ function Router() {
         <RoleProtectedRoute path="/admin/correos" component={AdminEmailAutomationPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/programas/:id/contenido" component={AdminProgramContentPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 

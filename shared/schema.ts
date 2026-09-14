@@ -56,6 +56,12 @@ export const modules = pgTable("modules", {
   order: integer("order").notNull(),
   difficulty: text("difficulty").notNull(),
   instructor: text("instructor").notNull(),
+  /** URL de vídeo (Drive o mp4 directo) */
+  videoUrl: text("video_url").notNull().default(""),
+  /** PDF / Drive de la presentación de la clase */
+  presentationUrl: text("presentation_url").notNull().default(""),
+  /** Carpeta Drive o enlace de descarga de recursos */
+  resourcesUrl: text("resources_url").notNull().default(""),
 });
 
 export const sections = pgTable("sections", {
@@ -65,6 +71,38 @@ export const sections = pgTable("sections", {
   content: text("content").notNull(),
   duration: integer("duration").notNull(),
   order: integer("order").notNull(),
+});
+
+/** Progreso por módulo (clase) en el visor /learn */
+export const moduleProgress = pgTable(
+  "module_progress",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    moduleId: integer("module_id")
+      .notNull()
+      .references(() => modules.id, { onDelete: "cascade" }),
+    completed: boolean("completed").notNull().default(false),
+    videoProgress: integer("video_progress").notNull().default(0),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("module_progress_user_module_unique").on(table.userId, table.moduleId),
+  ],
+);
+
+export const moduleComments = pgTable("module_comments", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id")
+    .notNull()
+    .references(() => modules.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const teams = pgTable("teams", {
@@ -279,6 +317,13 @@ export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({
 
 export const insertModuleSchema = createInsertSchema(modules).omit({
   id: true,
+  videoUrl: true,
+  presentationUrl: true,
+  resourcesUrl: true,
+}).extend({
+  videoUrl: z.string().optional().default(""),
+  presentationUrl: z.string().optional().default(""),
+  resourcesUrl: z.string().optional().default(""),
 });
 
 export const insertSectionSchema = createInsertSchema(sections).omit({
@@ -350,7 +395,7 @@ export const insertEmailWeekTemplateSchema = createInsertSchema(emailWeekTemplat
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
-export type InsertModule = z.infer<typeof insertModuleSchema>;
+export type InsertModule = z.input<typeof insertModuleSchema>;
 export type InsertSection = z.infer<typeof insertSectionSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
@@ -370,6 +415,8 @@ export type Course = typeof courses.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
 export type Module = typeof modules.$inferSelect;
 export type Section = typeof sections.$inferSelect;
+export type ModuleProgress = typeof moduleProgress.$inferSelect;
+export type ModuleComment = typeof moduleComments.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Ally = typeof allies.$inferSelect;

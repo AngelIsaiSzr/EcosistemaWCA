@@ -10,8 +10,10 @@ import { registerCardRoutes } from "./routes-cards";
 import { registerEmailAutomationRoutes } from "./routes-email-automation";
 import { registerMediaProxyRoutes } from "./routes-media-proxy";
 import { registerIneditoRetoRoutes } from "./routes-inedito-reto";
+import { registerLearningRoutes } from "./routes-learning";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
+import { ensureModuleLearningTables } from "./db/ensure-module-learning";
 
 const ADMIN_EMAIL = "admin@ecosistemawca.com";
 const ADMIN_PASSWORD = "EcosistemaWCA@0";
@@ -72,8 +74,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEmailAutomationRoutes(app);
   registerMediaProxyRoutes(app);
   registerIneditoRetoRoutes(app);
+  registerLearningRoutes(app);
   ensureAdminAccount().catch((error) => {
     console.error("No se pudo asegurar la cuenta admin:", error);
+  });
+  ensureModuleLearningTables().catch((error) => {
+    console.error("No se pudieron asegurar tablas de learning:", error);
   });
 
   // Programs routes (API)
@@ -101,6 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Modules routes
   app.get("/api/programs/:courseId/modules", async (req, res) => {
     try {
+      await ensureModuleLearningTables();
       const courseId = parseInt(req.params.courseId);
       const modules = await storage.getModulesByCourseId(courseId);
       res.json(modules);
@@ -758,39 +765,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.isAuthenticated() || req.user.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized: Admin access required" });
       }
-      
+
+      await ensureModuleLearningTables();
       const moduleId = parseInt(req.params.id);
-      console.log("Updating module with id:", moduleId);
-      console.log("Update data:", req.body);
-      console.log("Request headers:", req.headers);
-      console.log("Request content type:", req.headers['content-type']);
-      
+
       if (!req.body || Object.keys(req.body).length === 0) {
-        console.log("Empty request body or not parsed correctly");
         return res.status(400).json({ message: "Invalid request body" });
       }
-      
-      // Add a function in storage to update a module
+
       const module = await storage.getModule(moduleId);
-      
       if (!module) {
-        console.log("Module not found:", moduleId);
         return res.status(404).json({ message: "Module not found" });
       }
-      
-      // Update the module
+
       const updatedModule = await storage.updateModule(moduleId, req.body);
-      console.log("Updated module:", updatedModule);
-      
       return res.status(200).json(updatedModule);
     } catch (error) {
       console.error("Error updating module:", error);
-      if (error instanceof Error) {
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
-      return res.status(500).json({ message: "Failed to update module", error: error instanceof Error ? error.message : String(error) });
+      return res.status(500).json({
+        message: "Failed to update module",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   });
   
@@ -922,7 +917,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const moduleData of webDevModules) {
         const module = await storage.createModule({
           ...moduleData,
-          courseId: webDevProgram.id
+          courseId: webDevProgram.id,
+          videoUrl: "",
+          presentationUrl: "",
+          resourcesUrl: "",
         });
         newModules.push(module);
       }

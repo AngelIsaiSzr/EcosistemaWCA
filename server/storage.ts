@@ -391,7 +391,13 @@ export class MemStorage implements IStorage {
 
   async createModule(insertModule: InsertModule): Promise<Module> {
     const id = this.currentModuleIds++;
-    const module: Module = { ...insertModule, id };
+    const module: Module = {
+      ...insertModule,
+      videoUrl: insertModule.videoUrl ?? "",
+      presentationUrl: insertModule.presentationUrl ?? "",
+      resourcesUrl: insertModule.resourcesUrl ?? "",
+      id,
+    };
     this.modules.set(id, module);
     return module;
   }
@@ -1023,7 +1029,12 @@ export class DatabaseStorage implements IStorage {
   async createModule(insertModule: InsertModule): Promise<Module> {
     const [module] = await db
       .insert(modules)
-      .values(insertModule)
+      .values({
+        ...insertModule,
+        videoUrl: insertModule.videoUrl ?? "",
+        presentationUrl: insertModule.presentationUrl ?? "",
+        resourcesUrl: insertModule.resourcesUrl ?? "",
+      })
       .returning();
     return module;
   }

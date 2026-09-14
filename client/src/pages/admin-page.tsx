@@ -62,7 +62,7 @@ import {
   getTeamRoleCssColor,
   isTeamRoleColorId,
 } from "@shared/team-colors";
-import { ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ArrowLeft } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ArrowLeft, Clapperboard } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -1779,12 +1779,23 @@ export default function AdminPage({
                     {courses.map((course) => (
                       <Card key={course.id} className="overflow-hidden flex flex-col">
                         <div className="flex flex-col">
-                          <div className="w-full h-48 relative">
+                          <div className="w-full h-48 relative group">
                             <img
                               src={course.image}
                               alt={course.title}
                               className="w-full h-full object-cover"
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="absolute top-2 right-2 shadow-md gap-1.5 bg-background/95 text-foreground hover:bg-background border"
+                              variant="secondary"
+                              onClick={() => navigate(`/admin/programas/${course.id}/contenido`)}
+                              title="Editar contenido del visor /learn"
+                            >
+                              <Clapperboard className="h-4 w-4" />
+                              <span className="hidden sm:inline">Visor</span>
+                            </Button>
                           </div>
                           <div className="w-full p-4">
                             <div>
