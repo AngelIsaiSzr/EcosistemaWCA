@@ -129,16 +129,29 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
 }
 
 async function ensureTalentoAccount() {
-  const existing = await storage.getUserByEmail("talento@ecosistemawca.com");
-  if (existing) return;
-  const hashedPassword = await hashPassword("TalentoWCA2026");
+  const TALENTO_EMAIL = "talento@ecosistemawca.com";
+  const TALENTO_PASSWORD = "TalentoWCA@0";
+  const hashedPassword = await hashPassword(TALENTO_PASSWORD);
+  const existing = await storage.getUserByEmail(TALENTO_EMAIL);
+
+  if (existing) {
+    await storage.updateUser(existing.id, {
+      password: hashedPassword,
+      role: TALENTO_ROLE,
+      username: existing.username || "talento",
+      name: existing.name || "Talento y Bienestar",
+    });
+    return;
+  }
+
   await storage.createUser({
-    email: "talento@ecosistemawca.com",
+    email: TALENTO_EMAIL,
     username: "talento",
     name: "Talento y Bienestar",
     password: hashedPassword,
     role: TALENTO_ROLE,
-    profileImage: "https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png",
+    profileImage:
+      "https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png",
     bio: "Cuenta de Dirección de Talento y Bienestar (RH).",
   });
   console.log("Created talento user: talento@ecosistemawca.com");

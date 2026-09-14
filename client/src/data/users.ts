@@ -14,10 +14,10 @@ export const initialUsers: InsertUser[] = [
   {
     username: 'talento',
     email: 'talento@ecosistemawca.com',
-    password: 'TalentoWCA2026',
+    password: 'TalentoWCA@0',
     name: 'Talento y Bienestar',
     role: 'talento',
     profileImage: 'https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png',
-    bio: 'Cuenta de Dirección de Talento y Bienestar (RH) para gestión de integración al equipo.'
+    bio: 'Cuenta de la Dirección de Talento y Bienestar.'
   }
 ];

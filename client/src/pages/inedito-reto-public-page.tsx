@@ -154,6 +154,7 @@ export default function IneditoRetoPublicPage() {
             <p className="text-center text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
               WCA | INÉDITO
             </p>
+            {/* Borrar si es necesario para mejor diseño */}
             {gate.isTest ? (
               <span className="absolute right-0 top-1/2 -translate-y-1/2 shrink-0 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-amber-200">
                 Prueba

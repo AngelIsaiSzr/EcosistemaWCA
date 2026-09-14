@@ -1070,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingTalento = await storage.getUserByEmail("talento@ecosistemawca.com");
       if (!existingTalento) {
-        const hashedPassword = await hashPassword("TalentoWCA2026");
+        const hashedPassword = await hashPassword("TalentoWCA@0");
         await storage.createUser({
           email: "talento@ecosistemawca.com",
           username: "talento",
@@ -1079,6 +1079,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: "talento"
         });
         console.log("Created talento user: talento@ecosistemawca.com");
+      } else {
+        await storage.updateUser(existingTalento.id, {
+          password: await hashPassword("TalentoWCA@0"),
+          role: "talento",
+        });
       }
       
       // Import program data
