@@ -138,8 +138,10 @@ export function CardPreview({
   return (
     <div
       className={cn(
-        "relative flex overflow-hidden text-white",
-        compact ? "min-h-[560px] items-center justify-center rounded-[2rem]" : "min-h-screen items-center justify-center",
+        "relative text-white",
+        compact
+          ? "flex min-h-[560px] items-center justify-center overflow-hidden rounded-[2rem]"
+          : "fixed inset-0 flex flex-col overflow-y-auto overscroll-y-contain",
         className,
       )}
       style={{ background: bg }}
@@ -147,7 +149,7 @@ export function CardPreview({
       <div
         className={cn(
           "mx-auto flex w-full max-w-md flex-col items-center px-5",
-          compact ? "py-8" : "py-12",
+          compact ? "py-8" : "my-auto py-8 sm:py-10",
         )}
       >
         {theme.showBrand !== false && (
@@ -180,15 +182,21 @@ export function CardPreview({
         <h1 className="text-center font-heading text-2xl font-bold leading-tight">
           {card.name || "Nombre"}
         </h1>
-        <p className="mt-1 text-center text-sm font-medium" style={{ color: accent }}>
+        <p
+          className="mt-1.5 text-center text-[15px] font-semibold tracking-tight"
+          style={{ color: accent }}
+        >
           {card.roleTitle || "Cargo"}
         </p>
-        <span
-          className="mt-3 rounded-full px-3 py-1 text-[11px] font-medium"
-          style={{ background: `${accent}22`, color: accent, border: `1px solid ${accent}55` }}
-        >
-          {direction.label}
-        </span>
+
+        <div className="mt-3.5 flex max-w-[92%] items-center gap-2.5">
+          <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
+          <span className="inline-flex items-center gap-1.5 text-center text-[10px] font-medium uppercase leading-snug tracking-[0.14em] text-white/55">
+            <i className="fas fa-sitemap text-[9px] text-white/40" aria-hidden />
+            {direction.label}
+          </span>
+          <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
+        </div>
 
         {card.bio ? (
           <p className="mt-4 text-center text-sm leading-relaxed text-white/75">{card.bio}</p>

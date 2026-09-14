@@ -28,13 +28,6 @@ export type EmailSenderProfile = {
   smtpPort: number;
 };
 
-/**
- * Remitentes disponibles.
- * - contacto: SMTP actual (Gmail / Workspace de WCA)
- * - tec_angel: cuenta Tec vía Microsoft 365 (requiere SMTP_TEC_USER / SMTP_TEC_PASS en Render)
- *
- * No se puede inventar "wca.a00844409@tec.mx" sin que TI del Tec cree ese alias.
- */
 export const EMAIL_SENDER_PROFILES: EmailSenderProfile[] = [
   {
     id: "contacto",
@@ -49,7 +42,7 @@ export const EMAIL_SENDER_PROFILES: EmailSenderProfile[] = [
     label: "a00844409@tec.mx (Tec)",
     fromEmail: "a00844409@tec.mx",
     description:
-      "Envío desde tu correo Tec (Outlook/M365). Configura SMTP_TEC_USER y SMTP_TEC_PASS en el servidor. Un alias tipo wca.a00844409@tec.mx solo lo puede crear TI del Tec.",
+      "Correo oficial Tec (SMTP_TEC_USER / SMTP_TEC_PASS).",
     envUser: "SMTP_TEC_USER",
     envPass: "SMTP_TEC_PASS",
     smtpHost: "smtp.office365.com",
@@ -63,7 +56,7 @@ export function getEmailSenderProfile(id: string | null | undefined): EmailSende
 
 const BASE_BULLETS = [
   "Revisar su correo de WCA",
-  "Revisar que Ana o Ángel no les haya mandado mensaje por WhatsApp",
+  "Revisar que Ana o Angel no les haya mandado mensaje por WhatsApp",
   "Revisar a su equipo y el desarrollo de sus actividades",
 ];
 
