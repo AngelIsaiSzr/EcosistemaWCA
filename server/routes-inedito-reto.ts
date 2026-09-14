@@ -68,7 +68,7 @@ async function getSettingsRow() {
       emailSubject: DEFAULT_SUBJECT,
       emailBodyText: DEFAULT_TEXT,
       emailBodyHtml: DEFAULT_HTML,
-      linkTtlHours: 168,
+      linkTtlHours: 72,
     })
     .returning();
   return created!;

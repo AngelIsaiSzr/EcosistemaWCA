@@ -175,7 +175,7 @@ const updateSchema = async () => {
         email_subject TEXT NOT NULL DEFAULT 'WCA | INÉDITO — Tu acceso al Reto',
         email_body_text TEXT NOT NULL DEFAULT '',
         email_body_html TEXT NOT NULL DEFAULT '',
-        link_ttl_hours INTEGER NOT NULL DEFAULT 168,
+        link_ttl_hours INTEGER NOT NULL DEFAULT 72,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       `,

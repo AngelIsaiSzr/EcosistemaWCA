@@ -237,7 +237,7 @@ export const ineditoRetoSettings = pgTable("inedito_reto_settings", {
   emailBodyText: text("email_body_text").notNull().default(""),
   emailBodyHtml: text("email_body_html").notNull().default(""),
   /** Horas de vigencia del enlace desde su creación */
-  linkTtlHours: integer("link_ttl_hours").notNull().default(168),
+  linkTtlHours: integer("link_ttl_hours").notNull().default(72),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

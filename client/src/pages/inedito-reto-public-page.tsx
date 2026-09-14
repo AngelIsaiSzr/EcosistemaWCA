@@ -115,7 +115,7 @@ export default function IneditoRetoPublicPage() {
 
   if (gate.kind === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#05070c] text-white">
+      <div className="fixed inset-0 flex items-center justify-center bg-[#05070c] text-white">
         <Loader2 className="h-8 w-8 animate-spin text-white/70" />
       </div>
     );
@@ -127,7 +127,7 @@ export default function IneditoRetoPublicPage() {
         <Helmet>
           <title>Ecosistema WCA</title>
         </Helmet>
-        <div className="flex min-h-screen flex-col items-center justify-center bg-[#05070c] px-6 text-center text-white">
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#05070c] px-6 text-center text-white">
           <ShieldAlert className="mb-4 h-10 w-10 text-red-500" />
           <h1 className="font-heading text-2xl font-bold tracking-tight">{gate.title}</h1>
           <p className="mt-3 max-w-md text-sm text-white/65">{gate.message}</p>
@@ -143,28 +143,25 @@ export default function IneditoRetoPublicPage() {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       <div
-        className="relative flex min-h-screen flex-col bg-[#05070c] text-white select-none"
+        className="fixed inset-0 flex flex-col overflow-y-auto overscroll-y-contain bg-[#05070c] text-white select-none"
         onCopy={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(91,143,212,0.18),transparent_55%)]" />
 
-        <header className="relative z-10 mx-auto flex w-full max-w-3xl items-center justify-between px-5 pt-8">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+        <div className="relative z-10 mx-auto my-auto flex w-full max-w-3xl flex-col items-center px-5 py-8">
+          <header className="relative mb-6 flex w-full items-center justify-center">
+            <p className="text-center text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
               WCA | INÉDITO
             </p>
-          </div>
-          {gate.isTest ? (
-            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-amber-200">
-              Prueba
-            </span>
-          ) : null}
-        </header>
+            {gate.isTest ? (
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 shrink-0 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-amber-200">
+                Prueba
+              </span>
+            ) : null}
+          </header>
 
-        <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 py-8">
-
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-black/50">
+          <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-black/50">
             <video
               ref={videoRef}
               src={gate.videoUrl}
@@ -191,7 +188,8 @@ export default function IneditoRetoPublicPage() {
                 <ShieldAlert className="mb-3 h-8 w-8 text-amber-300" />
                 <p className="font-heading text-lg font-semibold">No abandones el reto</p>
                 <p className="mt-2 max-w-sm text-sm text-white/65">
-                  Se detectó que saliste de esta ventana. Las capturas y grabaciones están restringidas. Si estás ocupado puedes pausar y continuar más tarde.
+                  Se detectó que saliste de esta ventana. Las capturas y grabaciones están
+                  restringidas. Si estás ocupado puedes pausar y continuar más tarde.
                 </p>
                 <button
                   type="button"
@@ -214,7 +212,7 @@ export default function IneditoRetoPublicPage() {
               </div>
             ) : null}
           </div>
-        </main>
+        </div>
       </div>
     </>
   );

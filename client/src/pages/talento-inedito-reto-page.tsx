@@ -21,6 +21,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { IneditoRetoSettings } from "@shared/schema";
 
 type TokenRow = {
@@ -52,10 +62,12 @@ export default function TalentoIneditoRetoPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBodyText, setEmailBodyText] = useState("");
   const [emailBodyHtml, setEmailBodyHtml] = useState("");
-  const [linkTtlHours, setLinkTtlHours] = useState(168);
+  const [linkTtlHours, setLinkTtlHours] = useState(72);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
   const [massEmails, setMassEmails] = useState("");
   const [testEmail, setTestEmail] = useState("");
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const settingsQuery = useQuery<IneditoRetoSettings>({
     queryKey: ["/api/talento/reto/settings"],
@@ -73,7 +85,7 @@ export default function TalentoIneditoRetoPage() {
     setEmailSubject(settingsQuery.data.emailSubject ?? "");
     setEmailBodyText(settingsQuery.data.emailBodyText ?? "");
     setEmailBodyHtml(settingsQuery.data.emailBodyHtml ?? "");
-    setLinkTtlHours(settingsQuery.data.linkTtlHours ?? 168);
+    setLinkTtlHours(settingsQuery.data.linkTtlHours ?? 72);
     setSettingsHydrated(true);
   }, [settingsQuery.data, settingsHydrated]);
 
@@ -256,10 +268,10 @@ export default function TalentoIneditoRetoPage() {
                     min={1}
                     max={1440}
                     value={linkTtlHours}
-                    onChange={(e) => setLinkTtlHours(Number(e.target.value) || 168)}
+                    onChange={(e) => setLinkTtlHours(Number(e.target.value) || 72)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Por defecto 168 h (7 días). Tras expirar o completar el vídeo, el enlace muere.
+                    Por defecto 72 h (3 días). Tras expirar o completar el vídeo, el enlace muere.
                   </p>
                 </div>
               </section>
@@ -330,15 +342,7 @@ export default function TalentoIneditoRetoPage() {
                   <Button
                     className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
                     disabled={sendMutation.isPending || emailCount === 0}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `¿Enviar ${emailCount} correo(s) con enlaces únicos de un solo uso?`,
-                        )
-                      ) {
-                        sendMutation.mutate(false);
-                      }
-                    }}
+                    onClick={() => setSendConfirmOpen(true)}
                   >
                     {sendMutation.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -475,11 +479,7 @@ export default function TalentoIneditoRetoPage() {
                                 variant="ghost"
                                 className="h-8 w-8 text-destructive"
                                 title="Eliminar"
-                                onClick={() => {
-                                  if (confirm("¿Eliminar este enlace de la lista?")) {
-                                    deleteMutation.mutate(t.id);
-                                  }
-                                }}
+                                onClick={() => setDeleteConfirmId(t.id)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -495,6 +495,58 @@ export default function TalentoIneditoRetoPage() {
           </div>
         </main>
       </div>
+
+      <AlertDialog open={sendConfirmOpen} onOpenChange={setSendConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar envío masivo</AlertDialogTitle>
+            <AlertDialogDescription>
+              {emailCount === 1
+                ? "¿Enviar 1 correo con un enlace único de un solo uso?"
+                : `¿Enviar ${emailCount} correos con enlaces únicos de un solo uso?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+              onClick={() => sendMutation.mutate(false)}
+            >
+              Enviar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteConfirmId != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirmId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar enlace</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar este enlace de la lista? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmId != null) {
+                  deleteMutation.mutate(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

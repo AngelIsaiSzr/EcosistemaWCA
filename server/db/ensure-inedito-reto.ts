@@ -34,7 +34,7 @@ export async function ensureIneditoRetoTables() {
       email_subject TEXT NOT NULL DEFAULT 'WCA | INÉDITO — Tu acceso al Reto',
       email_body_text TEXT NOT NULL DEFAULT '',
       email_body_html TEXT NOT NULL DEFAULT '',
-      link_ttl_hours INTEGER NOT NULL DEFAULT 168,
+      link_ttl_hours INTEGER NOT NULL DEFAULT 72,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -71,8 +71,14 @@ export async function ensureIneditoRetoTables() {
       emailSubject: DEFAULT_SUBJECT,
       emailBodyText: DEFAULT_TEXT,
       emailBodyHtml: DEFAULT_HTML,
-      linkTtlHours: 168,
+      linkTtlHours: 72,
     });
+  } else {
+    await db.execute(sql`
+      UPDATE inedito_reto_settings
+      SET link_ttl_hours = 72
+      WHERE link_ttl_hours = 168
+    `);
   }
 
   ensured = true;
