@@ -50,7 +50,7 @@ function UrlHint({ url, kind }: { url: string; kind: "video" | "slides" | "folde
     if (isGoogleSlidesUrl(trimmed)) {
       return (
         <p className="text-xs text-muted-foreground mt-1.5">
-          Google Slides detectado — se embeberá en el visor. Compártela como “Cualquier persona
+          Google Slides detectado - se embeberá en el visor. Compártela como “Cualquier persona
           con el enlace”.
         </p>
       );

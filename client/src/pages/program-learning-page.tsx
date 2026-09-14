@@ -66,10 +66,8 @@ type ModuleComment = {
 
 type TabType = "description" | "presentation" | "resources" | "comments" | "report";
 
-function LessonPlayer({ url }: { url: string }) {
-  const [reloadKey, setReloadKey] = useState(0);
+function LessonPlayer({ url, reloadKey = 0 }: { url: string; reloadKey?: number }) {
   const media = resolveLessonMedia(url);
-  const openUrl = toGoogleOpenUrl(url);
 
   if (media.kind === "empty") {
     return (
@@ -84,43 +82,15 @@ function LessonPlayer({ url }: { url: string }) {
 
   if (media.kind === "drive-embed" || media.kind === "slides-embed" || media.kind === "iframe") {
     return (
-      <div className="space-y-0">
-        <div className="aspect-video bg-black">
-          <iframe
-            key={reloadKey}
-            title="Contenido de la clase"
-            src={media.src}
-            className="w-full h-full border-0"
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-        {isGoogleDriveUrl(url) && (
-          <div className="bg-primary-900/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted border-t border-primary-700">
-            <span>
-              Si Drive muestra “falla temporal”, suele ser el procesamiento del archivo. Ábrelo
-              una vez en Drive y reintenta.
-            </span>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setReloadKey((k) => k + 1)}
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Reintentar
-              </Button>
-              <Button asChild variant="outline" size="sm" className="h-7 text-xs">
-                <a href={openUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  Abrir en Drive
-                </a>
-              </Button>
-            </div>
-          </div>
-        )}
+      <div className="aspect-video bg-black">
+        <iframe
+          key={reloadKey}
+          title="Contenido de la clase"
+          src={media.src}
+          className="w-full h-full border-0"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
       </div>
     );
   }
@@ -170,25 +140,14 @@ function PresentationStage({ url }: { url: string }) {
     media.kind === "iframe"
   ) {
     return (
-      <div className="space-y-0">
-        <div className="aspect-video bg-black">
-          <iframe
-            title="Presentación de la clase"
-            src={media.src}
-            className="w-full h-full border-0"
-            allowFullScreen
-            allow="fullscreen"
-          />
-        </div>
-        <div className="bg-primary-900/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted border-t border-primary-700">
-          <span>Presentación embebida. Puedes ampliarla en pantalla completa o abrirla aparte.</span>
-          <Button asChild variant="outline" size="sm" className="h-7 text-xs shrink-0">
-            <a href={openUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              Abrir presentación
-            </a>
-          </Button>
-        </div>
+      <div className="aspect-video bg-black">
+        <iframe
+          title="Presentación de la clase"
+          src={media.src}
+          className="w-full h-full border-0"
+          allowFullScreen
+          allow="fullscreen"
+        />
       </div>
     );
   }
@@ -220,6 +179,7 @@ export default function ProgramLearningPage() {
   const [commentDraft, setCommentDraft] = useState("");
   const [reportReasons, setReportReasons] = useState<LessonReportReasonId[]>([]);
   const [reportMessage, setReportMessage] = useState("");
+  const [videoReloadKey, setVideoReloadKey] = useState(0);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
   const {
@@ -306,6 +266,7 @@ export default function ProgramLearningPage() {
     setCommentDraft("");
     setReportReasons([]);
     setReportMessage("");
+    setVideoReloadKey(0);
   }, [activeModuleId]);
 
   const progressMutation = useMutation({
@@ -656,26 +617,87 @@ export default function ProgramLearningPage() {
             <div className="max-w-4xl mx-auto space-y-6">
               {activeModule ? (
                 <>
-                  <div className="space-y-2">
-                    <h1 className="text-2xl font-bold">{activeModule.title}</h1>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-                      <span>
-                        {activeModule.duration}h · {activeModule.instructor}
-                      </span>
-                      {isCurrentCompleted && (
-                        <span className="flex items-center gap-1.5 text-green-500">
-                          <CheckCircle className="h-4 w-4" />
-                          Completado
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-2 min-w-0">
+                      <h1 className="text-2xl font-bold">{activeModule.title}</h1>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                        <span>
+                          {activeModule.duration}h · {activeModule.instructor}
                         </span>
-                      )}
+                        {isCurrentCompleted && (
+                          <span className="flex items-center gap-1.5 text-green-500">
+                            <CheckCircle className="h-4 w-4" />
+                            Completado
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {activeTab === "description" && !!(activeModule.videoUrl || "").trim() && (
+                      <div className="flex items-center gap-1 shrink-0 pt-1">
+                        {isGoogleDriveUrl(activeModule.videoUrl) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted hover:text-white"
+                            title="Reintentar vídeo"
+                            aria-label="Reintentar vídeo"
+                            onClick={() => setVideoReloadKey((k) => k + 1)}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 text-muted hover:text-white"
+                          title="Abrir en Drive"
+                        >
+                          <a
+                            href={toGoogleOpenUrl(activeModule.videoUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Abrir vídeo en Drive"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+
+                    {activeTab === "presentation" &&
+                      !!(activeModule.presentationUrl || "").trim() && (
+                        <div className="flex items-center gap-1 shrink-0 pt-1">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted hover:text-white"
+                            title="Abrir presentación"
+                          >
+                            <a
+                              href={toGoogleOpenUrl(activeModule.presentationUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="Abrir presentación"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      )}
                   </div>
 
                   <div className="bg-primary-800 rounded-xl overflow-hidden">
                     {activeTab === "presentation" ? (
                       <PresentationStage url={activeModule.presentationUrl || ""} />
                     ) : (
-                      <LessonPlayer url={activeModule.videoUrl || ""} />
+                      <LessonPlayer
+                        url={activeModule.videoUrl || ""}
+                        reloadKey={videoReloadKey}
+                      />
                     )}
                   </div>
 
@@ -739,17 +761,17 @@ export default function ProgramLearningPage() {
                       )}
 
                       <TabsContent value="description" className="pt-4 mt-0">
-                        <div className="prose prose-invert max-w-none">
-                          <p className="text-muted whitespace-pre-wrap">
-                            {activeModule.description || "Sin descripción para esta clase."}
-                          </p>
-                        </div>
+                        <p className="text-muted whitespace-pre-wrap leading-relaxed">
+                          {activeModule.description || "Sin descripción para esta clase."}
+                        </p>
                       </TabsContent>
 
                       <TabsContent value="presentation" className="pt-4 mt-0">
-                        <p className="text-sm text-muted">
-                          La presentación se muestra arriba. Usa pantalla completa del player o
-                          “Abrir presentación” si prefieres verla aparte.
+                        <p className="text-muted whitespace-pre-wrap leading-relaxed">
+                          Presentación de esta clase
+                          {activeModule.title ? `: ${activeModule.title}.` : "."}{" "}
+                          Puedes verla arriba o abrirla en una pestaña nueva con el ícono de la
+                          esquina.
                         </p>
                       </TabsContent>
 
