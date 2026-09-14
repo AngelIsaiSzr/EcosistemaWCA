@@ -15,7 +15,7 @@ export default function HeroSection() {
 
   return (
     <section className="relative flex min-h-[100svh] max-w-[100vw] items-center overflow-hidden bg-gradient-to-b from-primary-900 to-primary-800 pb-12 pt-24 sm:pb-16 md:pb-20 md:pt-28 lg:pb-24 lg:pt-32">
-      <div className="absolute inset-0 bg-[url('https://i.ibb.co/qMLJGWf3/hero-a2wdq6.webp')] bg-cover bg-center opacity-[0.1]"></div>
+      <div className="absolute inset-0 bg-[url('/media/hero-a2wdq6.webp')] bg-cover bg-center opacity-[0.1]"></div>
       <div className="absolute inset-0 bg-gradient-to-r from-primary-900/95 to-primary-800/95"></div>
 
       <div className="container relative z-10 mx-auto overflow-x-hidden px-4">
@@ -42,9 +42,9 @@ export default function HeroSection() {
               <AnimateInView animation="fadeIn" delay={0.3}>
                 <div className="flex items-center">
                   <div className="flex -space-x-2">
-                    <img src="https://i.ibb.co/PvX8XW8K/portraits1-n976eu.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" />
-                    <img src="https://i.ibb.co/G4wxX952/portraits2-wzwuuv.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" />
-                    <img src="https://i.ibb.co/SDnRydwd/portraits3-itzkds.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" />
+                    <img src="/media/portraits1-n976eu.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" loading="eager" decoding="async" />
+                    <img src="/media/portraits2-wzwuuv.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" loading="eager" decoding="async" />
+                    <img src="/media/portraits3-itzkds.png" className="h-9 w-9 rounded-full border-2 border-primary-800 xl:h-10 xl:w-10" alt="Estudiante" loading="eager" decoding="async" />
                   </div>
                   <div className="ml-3 xl:ml-4">
                     <p className="font-medium">+130 estudiantes</p>

@@ -6,8 +6,8 @@ import TeamSection from "@/components/home/team-section";
 import { SITE_URL } from "@/utils/titles";
 
 const ABOUT_IMAGES = [
-  "https://i.ibb.co/xbFQPY1/about1-cy3qzm.jpg",
-  "https://i.ibb.co/rKPSpHYq/about2-rxuu0v.jpg",
+  "/media/about1-cy3qzm.jpg",
+  "/media/about2-rxuu0v.jpg",
 ] as const;
 
 const aboutImageCache = new Map<string, HTMLImageElement>();

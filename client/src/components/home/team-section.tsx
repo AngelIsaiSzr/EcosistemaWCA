@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { OptimizedImage } from "@/components/ui/optimized-image";
+
 /** Misma separación que el grid de 4 (gap-8). */
 const CARD_GAP_PX = 32;
 
@@ -23,12 +25,10 @@ function TeamMemberCard({
 }) {
   return (
     <div className={cn("overflow-hidden rounded-xl bg-primary-700", className)}>
-      <img
+      <OptimizedImage
         src={member.image}
         alt={`${member.name} - ${member.role}`}
         className="aspect-square w-full object-cover object-center"
-        loading="lazy"
-        decoding="async"
       />
       <div className="p-6">
         <h3 className="mb-1 font-heading text-xl font-semibold">{member.name}</h3>

@@ -389,7 +389,7 @@ export default function ProgramLearningPage() {
                 <div className="relative">
                   {activeSectionId ? (
                     <div className="aspect-video bg-black">
-                      <video className="w-full h-full" controls src="https://files.catbox.moe/g2nlhd.mp4" poster="https://i.ibb.co/BSjjCWc/back1-sngqjn.jpg" onTimeUpdate={(e) => handleVideoProgress(Math.floor(e.currentTarget.currentTime))} onEnded={() => handleVideoProgress(100)} autoPlay={false} loop={false}>Tu navegador no soporta el elemento de video.</video>
+                      <video className="w-full h-full" controls src="https://files.catbox.moe/g2nlhd.mp4" poster="/media/back1-sngqjn.jpg" onTimeUpdate={(e) => handleVideoProgress(Math.floor(e.currentTarget.currentTime))} onEnded={() => handleVideoProgress(100)} autoPlay={false} loop={false}>Tu navegador no soporta el elemento de video.</video>
                     </div>
                   ) : (
                     <div className="aspect-video bg-primary-900 flex items-center justify-center flex-col gap-4"><PlayCircle className="h-16 w-16 text-muted" /><p className="text-muted">Selecciona una sección para comenzar</p></div>

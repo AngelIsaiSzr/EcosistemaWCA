@@ -3,6 +3,7 @@ import { Testimonial } from '@shared/schema';
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { resolveMediaUrl } from '@shared/media-url';
 
 export default function TestimonialsSection() {
   const { data: testimonials, isLoading, error } = useQuery<Testimonial[]>({
@@ -84,9 +85,11 @@ export default function TestimonialsSection() {
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center">
                         <img 
-                          src={testimonial.image} 
+                          src={resolveMediaUrl(testimonial.image)} 
                           alt={testimonial.name} 
                           className="w-12 h-12 rounded-full mr-4 object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div>
                           <h3 className="font-medium">{testimonial.name}</h3>

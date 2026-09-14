@@ -11,7 +11,7 @@ const products = [
     id: 1,
     name: "Playera del Ecosistema WCA",
     price: 300.00,
-    image: "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
+    image: "/media/playera1-uq6j7s.png",
     category: "Ropa",
     description: "Viste el cambio. Con esta playera, no solo llevas nuestro logo, sino nuestro compromiso con la educación accesible para todos.",
     inStock: true
@@ -20,7 +20,7 @@ const products = [
     id: 2,
     name: "Hoodie de la Comunidad WCA",
     price: 450.00,
-    image: "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
+    image: "/media/hoodie1-ysuzwc.png",
     category: "Ropa",
     description: "Perfecta para largas sesiones de trabajo. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",
     inStock: false

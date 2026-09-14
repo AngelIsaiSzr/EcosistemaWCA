@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import type { PresentationCard } from "@shared/schema";
+import { resolveMediaUrl } from "@shared/media-url";
 import {
   getCardDirectionMeta,
   type CardSocialKey,
@@ -168,7 +169,7 @@ export function CardPreview({
           style={{ boxShadow: `0 0 0 3px ${accent}55` }}
         >
           {card.image ? (
-            <img src={card.image} alt={card.name} className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(card.image)} alt={card.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div
               className="flex h-full w-full items-center justify-center text-3xl font-bold"

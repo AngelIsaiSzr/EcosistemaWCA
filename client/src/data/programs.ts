@@ -11,7 +11,7 @@ export const initialPrograms: InsertCourse[] = [
     category: "Desarrollo Web",
     duration: 24,
     modules: 11,
-    image: "https://i.ibb.co/BSjjCWc/back1-sngqjn.jpg",
+    image: "/media/back1-sngqjn.jpg",
     featured: false,
     popular: true,
     new: false,

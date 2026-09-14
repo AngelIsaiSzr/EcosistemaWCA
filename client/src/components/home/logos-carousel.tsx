@@ -4,8 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Ally } from "@shared/schema";
 
+import { resolveMediaUrl } from "@shared/media-url";
+
 const LogoImage = ({ src, alt }: { src: string; alt: string }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const resolved = resolveMediaUrl(src);
 
   return (
     <div className="relative h-28 w-56">
@@ -13,13 +16,15 @@ const LogoImage = ({ src, alt }: { src: string; alt: string }) => {
         <Skeleton className="absolute inset-0 h-full w-full rounded-md bg-primary-700" />
       )}
       <img
-        src={src}
+        src={resolved}
         alt={alt}
         className={cn(
           "object-contain h-full w-auto max-w-full select-none transition-opacity duration-500 ease-in-out",
           isLoaded ? "opacity-100" : "opacity-0",
         )}
         onLoad={() => setIsLoaded(true)}
+        loading="lazy"
+        decoding="async"
         draggable={false}
         style={{ background: "transparent" }}
       />

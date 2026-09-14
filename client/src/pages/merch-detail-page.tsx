@@ -13,11 +13,11 @@ const products = [
     id: 1,
     name: "Playera del Ecosistema WCA",
     price: 300.00,
-    image: "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
+    image: "/media/playera1-uq6j7s.png",
     gallery: [
-        "https://i.ibb.co/PzfH85zX/playera1-uq6j7s.png",
-        "https://i.ibb.co/mrVmvk53/playera2-a8n9kq.png",
-        "https://i.ibb.co/C38QsZtt/playera3-jvwcbg.png"
+        "/media/playera1-uq6j7s.png",
+        "/media/playera2-a8n9kq.png",
+        "/media/playera3-jvwcbg.png"
     ],
     category: "Ropa",
     description: "Viste el cambio. Con esta playera, no solo llevas nuestro logo, sino nuestro compromiso con la educación accesible para todos.",
@@ -37,11 +37,11 @@ const products = [
     id: 2,
     name: "Hoodie de la Comunidad WCA",
     price: 450.00,
-    image: "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
+    image: "/media/hoodie1-ysuzwc.png",
     gallery: [
-        "https://i.ibb.co/d0N3qdFH/hoodie1-ysuzwc.png",
-        "https://i.ibb.co/rKszt1Cc/hoodie2-nlrpx1.png",
-        "https://i.ibb.co/JjmxW289/hoodie3-hemyoj.png"
+        "/media/hoodie1-ysuzwc.png",
+        "/media/hoodie2-nlrpx1.png",
+        "/media/hoodie3-hemyoj.png"
     ],
     category: "Ropa",
     description: "Perfecta para largas sesiones de trabajo. Representa la colaboración y el apoyo mutuo que nos define como comunidad.",

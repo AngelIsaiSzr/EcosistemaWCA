@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { Course } from '@shared/schema';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 
 type ProgramCardProps = {
   program: Course;
@@ -10,7 +11,7 @@ export default function ProgramCard({ program, index = 0 }: ProgramCardProps) {
   return (
     <div className="program-card bg-primary-900 rounded-xl overflow-hidden">
       <div className="relative">
-        <img 
+        <OptimizedImage 
           src={program.image} 
           alt={program.title} 
           className="w-full h-48 object-cover"
