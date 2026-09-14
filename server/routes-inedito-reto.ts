@@ -12,6 +12,7 @@ import { sendTransactionalEmail } from "./services/email";
 import {
   ensureIneditoRetoTables,
   DEFAULT_HTML,
+  DEFAULT_SUBJECT,
   DEFAULT_TEXT,
 } from "./db/ensure-inedito-reto";
 
@@ -135,7 +136,7 @@ export function registerIneditoRetoRoutes(app: Express) {
 
       if (row.status === "completed") {
         return res.status(410).json({
-          message: "Este reto ya fue completado. El enlace ya no está disponible.",
+          message: "Página no encontrada",
           status: "completed",
         });
       }
@@ -377,13 +378,13 @@ export function registerIneditoRetoRoutes(app: Express) {
         })
         .parse(req.body);
 
-      const emails = [
-        ...new Set(
+      const emails = Array.from(
+        new Set(
           body.emails
             .map((e) => e.trim().toLowerCase())
             .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
         ),
-      ];
+      );
 
       if (emails.length === 0) {
         return res.status(400).json({ message: "No hay correos válidos" });
@@ -460,6 +461,34 @@ export function registerIneditoRetoRoutes(app: Express) {
     } catch (error) {
       console.error("POST revoke reto token", error);
       return res.status(500).json({ message: "No se pudo revocar" });
+    }
+  });
+
+  app.delete("/api/talento/reto/tokens/:id", requireTalento, async (req, res) => {
+    try {
+      await ensureIneditoRetoTables();
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "ID inválido" });
+
+      const [row] = await db
+        .select()
+        .from(ineditoRetoTokens)
+        .where(eq(ineditoRetoTokens.id, id))
+        .limit(1);
+
+      if (!row) return res.status(404).json({ message: "Enlace no encontrado" });
+
+      if (row.status !== "revoked" && row.status !== "completed" && row.status !== "expired") {
+        return res.status(400).json({
+          message: "Solo se pueden eliminar enlaces revocados, completados o expirados. Revócalo primero.",
+        });
+      }
+
+      await db.delete(ineditoRetoTokens).where(eq(ineditoRetoTokens.id, id));
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("DELETE reto token", error);
+      return res.status(500).json({ message: "No se pudo eliminar" });
     }
   });
 }

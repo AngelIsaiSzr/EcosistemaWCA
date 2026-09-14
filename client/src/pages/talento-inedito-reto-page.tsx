@@ -10,6 +10,7 @@ import {
   Mail,
   Save,
   ShieldBan,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -166,16 +167,29 @@ export default function TalentoIneditoRetoPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/talento/reto/tokens/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/talento/reto/tokens"] });
+      toast({ title: "Enlace eliminado" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "No se pudo eliminar", description: error.message, variant: "destructive" });
+    },
+  });
+
   const emailCount = useMemo(
     () =>
-      [
-        ...new Set(
+      Array.from(
+        new Set(
           massEmails
             .split(/[\n,;]+/)
             .map((e) => e.trim().toLowerCase())
             .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
         ),
-      ].length,
+      ).length,
     [massEmails],
   );
 
@@ -207,8 +221,7 @@ export default function TalentoIneditoRetoPage() {
             </p>
             <h1 className="mt-1 font-heading text-4xl font-bold">Reto INÉDITO</h1>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Segunda etapa de selección de WCA | INÉDITO: enlaces personales, temporales y de un
-              solo uso para el vídeo del reto.
+              Enlaces temporales y de un solo uso para el vídeo del reto.
             </p>
           </div>
 
@@ -451,6 +464,24 @@ export default function TalentoIneditoRetoPage() {
                                 onClick={() => revokeMutation.mutate(t.id)}
                               >
                                 <ShieldBan className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : null}
+                            {t.status === "revoked" ||
+                            t.status === "completed" ||
+                            t.status === "expired" ? (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive"
+                                title="Eliminar"
+                                onClick={() => {
+                                  if (confirm("¿Eliminar este enlace de la lista?")) {
+                                    deleteMutation.mutate(t.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             ) : null}
                           </div>

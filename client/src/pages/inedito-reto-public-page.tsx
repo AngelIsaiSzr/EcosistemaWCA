@@ -36,7 +36,7 @@ export default function IneditoRetoPublicPage() {
         if (!res.ok) {
           setGate({
             kind: "blocked",
-            title: "Acceso cerrado",
+            title: "404",
             message: data.message || "Este enlace ya no está disponible.",
           });
           return;
@@ -125,10 +125,10 @@ export default function IneditoRetoPublicPage() {
     return (
       <>
         <Helmet>
-          <title>Reto cerrado | WCA INÉDITO</title>
+          <title>Ecosistema WCA</title>
         </Helmet>
         <div className="flex min-h-screen flex-col items-center justify-center bg-[#05070c] px-6 text-center text-white">
-          <ShieldAlert className="mb-4 h-10 w-10 text-amber-400/90" />
+          <ShieldAlert className="mb-4 h-10 w-10 text-red-500" />
           <h1 className="font-heading text-2xl font-bold tracking-tight">{gate.title}</h1>
           <p className="mt-3 max-w-md text-sm text-white/65">{gate.message}</p>
         </div>
@@ -154,9 +154,6 @@ export default function IneditoRetoPublicPage() {
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
               WCA | INÉDITO
             </p>
-            <h1 className="mt-1 font-heading text-xl font-bold tracking-tight sm:text-2xl">
-              Reto de acceso
-            </h1>
           </div>
           {gate.isTest ? (
             <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-amber-200">
@@ -166,9 +163,6 @@ export default function IneditoRetoPublicPage() {
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 py-8">
-          <p className="mb-4 text-center text-sm text-white/55">
-            Puedes pausar y retroceder. Al terminar el vídeo, este enlace se cerrará para siempre.
-          </p>
 
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-black/50">
             <video
@@ -195,17 +189,16 @@ export default function IneditoRetoPublicPage() {
             {away ? (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 px-6 text-center backdrop-blur-sm">
                 <ShieldAlert className="mb-3 h-8 w-8 text-amber-300" />
-                <p className="font-heading text-lg font-semibold">No abandones la misión</p>
+                <p className="font-heading text-lg font-semibold">No abandones el reto</p>
                 <p className="mt-2 max-w-sm text-sm text-white/65">
-                  Se detectó que saliste de esta ventana. Las capturas y grabaciones están
-                  restringidas en la medida de lo posible.
+                  Se detectó que saliste de esta ventana. Las capturas y grabaciones están restringidas. Si estás ocupado puedes pausar y continuar más tarde.
                 </p>
                 <button
                   type="button"
                   className="pointer-events-auto mt-5 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black"
                   onClick={() => {
                     setAway(false);
-                    void videoRef.current?.play();
+                    videoRef.current?.pause();
                   }}
                 >
                   Continuar
@@ -216,16 +209,11 @@ export default function IneditoRetoPublicPage() {
             {finishing ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/95 text-center">
                 <Loader2 className="mb-3 h-7 w-7 animate-spin text-white/70" />
-                <p className="font-heading text-lg font-semibold">Misión completada</p>
+                <p className="font-heading text-lg font-semibold">Visualización completada</p>
                 <p className="mt-2 text-sm text-white/60">Cerrando acceso…</p>
               </div>
             ) : null}
           </div>
-
-          <p className="mt-4 text-center text-[11px] text-white/35">
-            Protección best-effort: ningún sitio web puede bloquear al 100% capturas o grabaciones
-            del sistema operativo.
-          </p>
         </main>
       </div>
     </>
