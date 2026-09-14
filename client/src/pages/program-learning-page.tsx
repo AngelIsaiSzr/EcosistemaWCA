@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Course, Module, LiveCourseRegistration, ModuleProgress } from "@shared/schema";
-import { resolveLessonMedia, isGoogleDriveUrl, toGoogleDrivePreviewUrl } from "@shared/drive-media";
+import {
+  resolveLessonMedia,
+  resolvePresentationMedia,
+  isGoogleDriveUrl,
+  toGoogleOpenUrl,
+} from "@shared/drive-media";
 import { resolveMediaUrl } from "@shared/media-url";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -22,16 +27,23 @@ import {
   Presentation,
   ExternalLink,
   Trash2,
+  RefreshCw,
+  Flag,
+  Loader2,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { LiveCourseRegistrationForm } from "@/components/forms/LiveCourseRegistrationForm";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { LESSON_REPORT_REASONS, type LessonReportReasonId } from "@shared/lesson-reports";
 
 interface Enrollment {
   id: number;
@@ -52,10 +64,12 @@ type ModuleComment = {
   userImage: string | null;
 };
 
-type TabType = "description" | "presentation" | "resources" | "comments";
+type TabType = "description" | "presentation" | "resources" | "comments" | "report";
 
 function LessonPlayer({ url }: { url: string }) {
+  const [reloadKey, setReloadKey] = useState(0);
   const media = resolveLessonMedia(url);
+  const openUrl = toGoogleOpenUrl(url);
 
   if (media.kind === "empty") {
     return (
@@ -68,16 +82,45 @@ function LessonPlayer({ url }: { url: string }) {
     );
   }
 
-  if (media.kind === "drive-embed" || media.kind === "iframe") {
+  if (media.kind === "drive-embed" || media.kind === "slides-embed" || media.kind === "iframe") {
     return (
-      <div className="aspect-video bg-black">
-        <iframe
-          title="Contenido de la clase"
-          src={media.src}
-          className="w-full h-full border-0"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          allowFullScreen
-        />
+      <div className="space-y-0">
+        <div className="aspect-video bg-black">
+          <iframe
+            key={reloadKey}
+            title="Contenido de la clase"
+            src={media.src}
+            className="w-full h-full border-0"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+        {isGoogleDriveUrl(url) && (
+          <div className="bg-primary-900/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted border-t border-primary-700">
+            <span>
+              Si Drive muestra “falla temporal”, suele ser el procesamiento del archivo. Ábrelo
+              una vez en Drive y reintenta.
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setReloadKey((k) => k + 1)}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Reintentar
+              </Button>
+              <Button asChild variant="outline" size="sm" className="h-7 text-xs">
+                <a href={openUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  Abrir en Drive
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -106,46 +149,61 @@ function LessonPlayer({ url }: { url: string }) {
   );
 }
 
-function PresentationViewer({ url }: { url: string }) {
-  const trimmed = url.trim();
-  if (!trimmed) {
+function PresentationStage({ url }: { url: string }) {
+  const media = resolvePresentationMedia(url);
+  const openUrl = toGoogleOpenUrl(url);
+
+  if (media.kind === "empty") {
     return (
-      <p className="text-muted text-sm">
-        Todavía no hay presentación cargada para esta clase.
-      </p>
+      <div className="aspect-video bg-primary-900 flex flex-col items-center justify-center gap-3 text-center px-6">
+        <Presentation className="h-14 w-14 text-muted" />
+        <p className="text-muted text-sm">
+          Todavía no hay presentación cargada para esta clase.
+        </p>
+      </div>
     );
   }
 
-  const embed =
-    isGoogleDriveUrl(trimmed)
-      ? toGoogleDrivePreviewUrl(trimmed)
-      : /\.pdf(\?|$)/i.test(trimmed)
-        ? trimmed
-        : null;
-
-  if (embed) {
+  if (
+    media.kind === "slides-embed" ||
+    media.kind === "drive-embed" ||
+    media.kind === "iframe"
+  ) {
     return (
-      <div className="space-y-3">
-        <div className="rounded-lg overflow-hidden border border-primary-700 bg-black aspect-[4/3] md:aspect-video">
-          <iframe title="Presentación" src={embed} className="w-full h-full border-0" allowFullScreen />
+      <div className="space-y-0">
+        <div className="aspect-video bg-black">
+          <iframe
+            title="Presentación de la clase"
+            src={media.src}
+            className="w-full h-full border-0"
+            allowFullScreen
+            allow="fullscreen"
+          />
         </div>
-        <Button asChild variant="outline" size="sm">
-          <a href={trimmed} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Abrir en nueva pestaña
-          </a>
-        </Button>
+        <div className="bg-primary-900/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted border-t border-primary-700">
+          <span>Presentación embebida. Puedes ampliarla en pantalla completa o abrirla aparte.</span>
+          <Button asChild variant="outline" size="sm" className="h-7 text-xs shrink-0">
+            <a href={openUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+              Abrir presentación
+            </a>
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <Button asChild variant="outline">
-      <a href={trimmed} target="_blank" rel="noopener noreferrer">
-        <ExternalLink className="h-4 w-4 mr-2" />
-        Abrir presentación
-      </a>
-    </Button>
+    <div className="aspect-video bg-primary-900 flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <Presentation className="h-14 w-14 text-muted" />
+      <p className="text-muted text-sm">No se pudo incrustar. Ábrela en una pestaña nueva.</p>
+      <Button asChild variant="outline" size="sm">
+        <a href={openUrl} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Abrir presentación
+        </a>
+      </Button>
+    </div>
   );
 }
 
@@ -160,6 +218,8 @@ export default function ProgramLearningPage() {
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("description");
   const [commentDraft, setCommentDraft] = useState("");
+  const [reportReasons, setReportReasons] = useState<LessonReportReasonId[]>([]);
+  const [reportMessage, setReportMessage] = useState("");
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
   const {
@@ -244,6 +304,8 @@ export default function ProgramLearningPage() {
   useEffect(() => {
     setActiveTab("description");
     setCommentDraft("");
+    setReportReasons([]);
+    setReportMessage("");
   }, [activeModuleId]);
 
   const progressMutation = useMutation({
@@ -291,6 +353,41 @@ export default function ProgramLearningPage() {
       });
     },
   });
+
+  const reportMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeModuleId) throw new Error("Sin clase activa");
+      const res = await apiRequest("POST", `/api/modules/${activeModuleId}/report`, {
+        reasons: reportReasons,
+        message: reportMessage.trim(),
+        programSlug: program?.slug,
+        programTitle: program?.title,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setReportReasons([]);
+      setReportMessage("");
+      toast({
+        title: "Reporte enviado",
+        description: "Gracias. El equipo lo revisará por correo.",
+      });
+      setActiveTab("description");
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "No se pudo enviar el reporte",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleReportReason = (id: LessonReportReasonId) => {
+    setReportReasons((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+    );
+  };
 
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: number) => {
@@ -575,7 +672,11 @@ export default function ProgramLearningPage() {
                   </div>
 
                   <div className="bg-primary-800 rounded-xl overflow-hidden">
-                    <LessonPlayer url={activeModule.videoUrl || ""} />
+                    {activeTab === "presentation" ? (
+                      <PresentationStage url={activeModule.presentationUrl || ""} />
+                    ) : (
+                      <LessonPlayer url={activeModule.videoUrl || ""} />
+                    )}
                   </div>
 
                   <div className="bg-primary-800 rounded-xl p-4 md:p-6">
@@ -584,29 +685,42 @@ export default function ProgramLearningPage() {
                       onValueChange={(v) => setActiveTab(v as TabType)}
                       className="flex flex-col"
                     >
-                      <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 border-b border-primary-700 rounded-none bg-transparent p-0 pb-2">
-                        <TabsTrigger value="description" className="gap-2 data-[state=active]:bg-primary-700">
-                          <FileText className="h-4 w-4" />
-                          Descripción
-                        </TabsTrigger>
-                        <TabsTrigger value="presentation" className="gap-2 data-[state=active]:bg-primary-700">
-                          <Presentation className="h-4 w-4" />
-                          Presentación
-                        </TabsTrigger>
-                        <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-primary-700">
-                          <Download className="h-4 w-4" />
-                          Recursos
-                        </TabsTrigger>
-                        <TabsTrigger value="comments" className="gap-2 data-[state=active]:bg-primary-700">
-                          <MessageSquare className="h-4 w-4" />
-                          Comentarios
-                          {comments.length > 0 && (
-                            <span className="ml-1 bg-primary-700 text-xs px-1.5 py-0.5 rounded-full">
-                              {comments.length}
-                            </span>
+                      <div className="flex flex-wrap items-center gap-2 border-b border-primary-700 pb-2">
+                        <TabsList className="h-auto flex flex-wrap justify-start gap-1 rounded-none bg-transparent p-0 flex-1 min-w-0">
+                          <TabsTrigger value="description" className="gap-2 data-[state=active]:bg-primary-700">
+                            <FileText className="h-4 w-4" />
+                            Descripción
+                          </TabsTrigger>
+                          <TabsTrigger value="presentation" className="gap-2 data-[state=active]:bg-primary-700">
+                            <Presentation className="h-4 w-4" />
+                            Presentación
+                          </TabsTrigger>
+                          <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-primary-700">
+                            <Download className="h-4 w-4" />
+                            Recursos
+                          </TabsTrigger>
+                          <TabsTrigger value="comments" className="gap-2 data-[state=active]:bg-primary-700">
+                            <MessageSquare className="h-4 w-4" />
+                            Comentarios
+                            {comments.length > 0 && (
+                              <span className="ml-1 bg-primary-700 text-xs px-1.5 py-0.5 rounded-full">
+                                {comments.length}
+                              </span>
+                            )}
+                          </TabsTrigger>
+                        </TabsList>
+                        <TabsTrigger
+                          value="report"
+                          className={cn(
+                            "gap-2 shrink-0 rounded-md px-3 py-1.5 text-sm border border-red-500/60 text-red-400",
+                            "data-[state=active]:bg-red-500/15 data-[state=active]:text-red-300 data-[state=active]:border-red-400",
+                            "hover:bg-red-500/10 hover:text-red-300",
                           )}
+                        >
+                          <Flag className="h-4 w-4" />
+                          Reportar
                         </TabsTrigger>
-                      </TabsList>
+                      </div>
 
                       {nextModule && (
                         <div className="bg-primary-900/50 p-4 rounded-lg mt-4 flex items-center justify-between gap-3">
@@ -635,7 +749,10 @@ export default function ProgramLearningPage() {
                       </TabsContent>
 
                       <TabsContent value="presentation" className="pt-4 mt-0">
-                        <PresentationViewer url={activeModule.presentationUrl || ""} />
+                        <p className="text-sm text-muted">
+                          La presentación se muestra arriba. Usa pantalla completa del player o
+                          “Abrir presentación” si prefieres verla aparte.
+                        </p>
                       </TabsContent>
 
                       <TabsContent value="resources" className="pt-4 mt-0">
@@ -743,6 +860,74 @@ export default function ProgramLearningPage() {
                             ))}
                           </ul>
                         )}
+                      </TabsContent>
+
+                      <TabsContent value="report" className="pt-4 mt-0 space-y-5">
+                        <div>
+                          <h3 className="text-lg font-semibold text-red-300 flex items-center gap-2">
+                            <Flag className="h-5 w-5" />
+                            Reportar problema
+                          </h3>
+                          <p className="text-sm text-muted mt-1">
+                            Puedes marcar varios motivos. El reporte llega por correo al equipo
+                            de Ecosistema WCA con los datos de esta clase.
+                          </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {LESSON_REPORT_REASONS.map((reason) => {
+                            const checked = reportReasons.includes(reason.id);
+                            return (
+                              <label
+                                key={reason.id}
+                                htmlFor={`report-${reason.id}`}
+                                className={cn(
+                                  "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                  checked
+                                    ? "border-red-500/50 bg-red-500/10"
+                                    : "border-primary-700 hover:bg-primary-900/60",
+                                )}
+                              >
+                                <Checkbox
+                                  id={`report-${reason.id}`}
+                                  checked={checked}
+                                  onCheckedChange={() => toggleReportReason(reason.id)}
+                                  className="mt-0.5 border-red-400/70 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                                />
+                                <span className="text-sm leading-snug">{reason.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="report-message">Mensaje adicional (opcional)</Label>
+                          <Textarea
+                            id="report-message"
+                            value={reportMessage}
+                            onChange={(e) => setReportMessage(e.target.value)}
+                            placeholder="Cuéntanos qué pasó, en qué momento, captura mental, etc."
+                            className="min-h-[110px] bg-primary-900 border-primary-700 resize-none"
+                            maxLength={2000}
+                          />
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            variant="destructive"
+                            onClick={() => reportMutation.mutate()}
+                            disabled={
+                              reportReasons.length === 0 || reportMutation.isPending
+                            }
+                          >
+                            {reportMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Enviar reporte
+                          </Button>
+                        </div>
                       </TabsContent>
                     </Tabs>
                   </div>

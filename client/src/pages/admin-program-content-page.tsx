@@ -7,12 +7,13 @@ import {
   Check,
   ExternalLink,
   Film,
+  FolderOpen,
   Loader2,
   Presentation,
   Save,
 } from "lucide-react";
 import { Course, Module } from "@shared/schema";
-import { isGoogleDriveUrl } from "@shared/drive-media";
+import { isGoogleDriveUrl, isGoogleSlidesUrl } from "@shared/drive-media";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
@@ -22,7 +23,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Draft = {
   title: string;
@@ -42,22 +42,59 @@ function moduleToDraft(m: Module): Draft {
   };
 }
 
-function UrlHint({ url, kind }: { url: string; kind: "video" | "pdf" | "folder" }) {
+function UrlHint({ url, kind }: { url: string; kind: "video" | "slides" | "folder" }) {
   const trimmed = url.trim();
   if (!trimmed) return null;
-  const drive = isGoogleDriveUrl(trimmed);
+
+  if (kind === "slides") {
+    if (isGoogleSlidesUrl(trimmed)) {
+      return (
+        <p className="text-xs text-muted-foreground mt-1.5">
+          Google Slides detectado — se embeberá en el visor. Compártela como “Cualquier persona
+          con el enlace”.
+        </p>
+      );
+    }
+    return (
+      <p className="text-xs text-muted-foreground mt-1.5">
+        Pega el enlace de la presentación de Google (docs.google.com/presentation/…).
+      </p>
+    );
+  }
+
+  if (kind === "video" && isGoogleDriveUrl(trimmed)) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1.5">
+        Drive detectado. Debe estar en “Cualquier persona con el enlace”. Si Drive dice “falla
+        temporal”, suele ser el procesamiento del vídeo: ábrelo una vez en Drive y vuelve a
+        intentar.
+      </p>
+    );
+  }
+
+  if (kind === "folder" && isGoogleDriveUrl(trimmed)) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1.5">
+        Carpeta/archivo de Drive detectado. Comparte con “Cualquier persona con el enlace”.
+      </p>
+    );
+  }
+
   return (
     <p className="text-xs text-muted-foreground mt-1.5">
-      {drive
-        ? kind === "folder"
-          ? "Detectado enlace de Drive (carpeta o archivo)."
-          : "Detectado Google Drive — se incrustará en el visor."
-        : kind === "video"
-          ? "Se usará como vídeo directo o enlace externo."
-          : "Se abrirá / incrustará según el tipo de archivo."}{" "}
-      El archivo debe estar compartido como “Cualquier persona con el enlace”.
+      {kind === "video"
+        ? "Se usará como vídeo directo o enlace externo."
+        : "Se abrirá el enlace de recursos en una pestaña nueva."}
     </p>
   );
+}
+
+function materialStatus(m: Module) {
+  const hasVideo = !!(m.videoUrl || "").trim();
+  const hasSlides = !!(m.presentationUrl || "").trim();
+  const hasResources = !!(m.resourcesUrl || "").trim();
+  const count = [hasVideo, hasSlides, hasResources].filter(Boolean).length;
+  return { hasVideo, hasSlides, hasResources, count, ready: count > 0 };
 }
 
 export default function AdminProgramContentPage() {
@@ -95,7 +132,14 @@ export default function AdminProgramContentPage() {
   useEffect(() => {
     if (selected) setDraft(moduleToDraft(selected));
     else setDraft(null);
-  }, [selected?.id, selected?.videoUrl, selected?.presentationUrl, selected?.resourcesUrl, selected?.title, selected?.description]);
+  }, [
+    selected?.id,
+    selected?.videoUrl,
+    selected?.presentationUrl,
+    selected?.resourcesUrl,
+    selected?.title,
+    selected?.description,
+  ]);
 
   const dirty =
     !!selected &&
@@ -141,9 +185,9 @@ export default function AdminProgramContentPage() {
 
   if (!course) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center p-8">
+        <main className="container mx-auto px-4 pb-16 pt-24 flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold">Programa no encontrado</h1>
             <Button asChild variant="outline">
@@ -155,218 +199,264 @@ export default function AdminProgramContentPage() {
     );
   }
 
+  const readyCount = modules.filter((m) => materialStatus(m).ready).length;
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
         <title>Contenido · {course.title} | Admin WCA</title>
       </Helmet>
       <Navbar />
-      <main className="flex-1">
-        <div className="border-b bg-muted/30">
-          <div className="container max-w-6xl mx-auto px-4 py-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div className="space-y-2 min-w-0">
-                <Link
-                  href="/admin/programas"
-                  className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1.5"
+      <main className="container mx-auto px-4 pb-16 pt-24 flex-1 max-w-6xl">
+        <div className="mb-8 space-y-4">
+          <Link
+            href="/admin/programas"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1.5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Programas
+          </Link>
+
+          <div className="flex flex-col md:flex-row md:items-stretch gap-4">
+            <div className="flex-1 min-w-0 space-y-2">
+              <h1 className="text-2xl md:text-3xl font-heading font-bold">
+                Contenido del visor
+              </h1>
+              <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
+                Configura el vídeo de Drive, la presentación de Google Slides y los recursos de
+                cada clase. Esto alimenta{" "}
+                <a
+                  href={`/programs/${course.slug}/learn`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline-offset-2 hover:underline inline-flex items-center gap-1"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Programas
-                </Link>
-                <h1 className="text-2xl md:text-3xl font-heading font-bold truncate">
-                  Contenido del visor
-                </h1>
-                <p className="text-muted-foreground text-sm max-w-xl">
-                  Configura vídeo (Drive), presentación PDF y recursos por cada módulo/clase.
-                  Esto alimenta{" "}
+                  /programs/{course.slug}/learn
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl border bg-card p-3 md:p-4 shrink-0 self-start">
+              <div className="w-24 h-16 rounded-lg overflow-hidden border bg-muted">
+                <img
+                  src={course.image}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <p className="font-medium text-sm">{course.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {modules.length} clases · {readyCount} con material
+                </p>
+                <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs">
                   <a
                     href={`/programs/${course.slug}/learn`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline-offset-2 hover:underline inline-flex items-center gap-1"
                   >
-                    /programs/{course.slug}/learn
-                    <ExternalLink className="h-3 w-3" />
+                    Abrir visor
+                    <ExternalLink className="h-3 w-3 ml-1" />
                   </a>
-                  .
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="hidden sm:block w-20 h-14 rounded-md overflow-hidden border">
-                  <img src={course.image} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-sm">{course.title}</p>
-                  <p className="text-xs text-muted-foreground">{modules.length} clases</p>
-                </div>
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="container max-w-6xl mx-auto px-4 py-8">
-          {modules.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-10 text-center space-y-3">
-              <Film className="h-10 w-10 mx-auto text-muted-foreground" />
-              <p className="font-medium">Este programa aún no tiene módulos</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Crea los módulos desde la sección “Módulos” en Programas y vuelve aquí para
-                pegar los enlaces de cada clase.
-              </p>
-              <Button asChild variant="outline">
-                <Link href="/admin/programas">Ir a programas</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
-              <aside className="rounded-xl border bg-card overflow-hidden lg:sticky lg:top-24">
-                <div className="px-4 py-3 border-b bg-muted/40">
-                  <p className="text-sm font-medium">Clases / módulos</p>
-                </div>
-                <ScrollArea className="max-h-[50vh] lg:max-h-[70vh]">
-                  <div className="p-2 space-y-1">
-                    {modules.map((m, i) => {
-                      const ready = !!(m.videoUrl || m.presentationUrl || m.resourcesUrl);
-                      const isActive = m.id === selectedId;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            if (dirty && !window.confirm("Hay cambios sin guardar. ¿Descartarlos?")) {
-                              return;
-                            }
-                            setSelectedId(m.id);
-                          }}
-                          className={cn(
-                            "w-full text-left rounded-lg px-3 py-2.5 transition-colors",
-                            isActive
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-muted",
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium leading-snug">
-                              {i + 1}. {m.title}
-                            </span>
-                            {ready ? (
-                              <Check
-                                className={cn(
-                                  "h-4 w-4 shrink-0 mt-0.5",
-                                  isActive ? "opacity-90" : "text-green-600",
-                                )}
-                              />
-                            ) : null}
-                          </div>
-                          <p
+        {modules.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-10 text-center space-y-3">
+            <Film className="h-10 w-10 mx-auto text-muted-foreground" />
+            <p className="font-medium">Este programa aún no tiene módulos</p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Crea los módulos desde la sección “Módulos” en Programas y vuelve aquí para pegar
+              los enlaces de cada clase.
+            </p>
+            <Button asChild variant="outline">
+              <Link href="/admin/programas">Ir a programas</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start">
+            <aside className="rounded-xl border bg-card flex flex-col overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]">
+              <div className="px-4 py-3 border-b bg-muted/40 shrink-0">
+                <p className="text-sm font-medium">Clases / módulos</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {modules.length} en total
+                </p>
+              </div>
+              <div className="overflow-y-auto overscroll-contain p-2 space-y-1 max-h-[42vh] lg:max-h-none lg:flex-1">
+                {modules.map((m, i) => {
+                  const status = materialStatus(m);
+                  const isActive = m.id === selectedId;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        if (
+                          dirty &&
+                          !window.confirm("Hay cambios sin guardar. ¿Descartarlos?")
+                        ) {
+                          return;
+                        }
+                        setSelectedId(m.id);
+                      }}
+                      className={cn(
+                        "w-full text-left rounded-lg px-3 py-2.5 transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-medium leading-snug">
+                          {i + 1}. {m.title}
+                        </span>
+                        {status.ready ? (
+                          <Check
                             className={cn(
-                              "text-xs mt-1",
-                              isActive ? "text-primary-foreground/80" : "text-muted-foreground",
+                              "h-4 w-4 shrink-0 mt-0.5",
+                              isActive ? "opacity-90" : "text-green-600 dark:text-green-500",
                             )}
-                          >
-                            {ready ? "Con material" : "Sin enlaces"}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </aside>
-
-              <section className="rounded-xl border bg-card p-5 md:p-6 space-y-6">
-                {!draft || !selected ? (
-                  <p className="text-muted-foreground text-sm">Selecciona una clase.</p>
-                ) : (
-                  <>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h2 className="text-xl font-semibold">Editar clase</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Orden {selected.order} · {selected.duration}h · {selected.difficulty}
-                        </p>
+                          />
+                        ) : null}
                       </div>
-                      <Button
-                        onClick={() => saveMutation.mutate()}
-                        disabled={!dirty || saveMutation.isPending}
-                      >
-                        {saveMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
+                      <p
+                        className={cn(
+                          "text-xs mt-1",
+                          isActive ? "text-primary-foreground/75" : "text-muted-foreground",
                         )}
-                        Guardar clase
-                      </Button>
-                    </div>
+                      >
+                        {status.ready
+                          ? [
+                              status.hasVideo && "Vídeo",
+                              status.hasSlides && "Slides",
+                              status.hasResources && "Recursos",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          : "Sin enlaces"}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Título</Label>
-                      <Input
-                        id="title"
-                        value={draft.title}
-                        onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                      />
+            <section className="rounded-xl border bg-card overflow-hidden">
+              {!draft || !selected ? (
+                <p className="text-muted-foreground text-sm p-6">Selecciona una clase.</p>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 md:px-6 py-4 border-b bg-muted/20">
+                    <div className="min-w-0">
+                      <h2 className="text-lg md:text-xl font-semibold truncate">
+                        Editar clase
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Orden {selected.order} · {selected.duration}h · {selected.difficulty}
+                      </p>
                     </div>
+                    <Button
+                      onClick={() => saveMutation.mutate()}
+                      disabled={!dirty || saveMutation.isPending}
+                      className="shrink-0"
+                    >
+                      {saveMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Guardar clase
+                    </Button>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descripción</Label>
-                      <Textarea
-                        id="description"
-                        value={draft.description}
-                        onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                        className="min-h-[100px]"
-                      />
-                    </div>
-
-                    <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <Film className="h-4 w-4" />
-                        Vídeo de la clase
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="videoUrl">Enlace (Google Drive o MP4)</Label>
+                  <div className="p-5 md:p-6 space-y-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="title">Título</Label>
                         <Input
-                          id="videoUrl"
-                          placeholder="https://drive.google.com/file/d/…/view"
-                          value={draft.videoUrl}
-                          onChange={(e) => setDraft({ ...draft, videoUrl: e.target.value })}
+                          id="title"
+                          value={draft.title}
+                          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                         />
-                        <UrlHint url={draft.videoUrl} kind="video" />
                       </div>
-                    </div>
-
-                    <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <Presentation className="h-4 w-4" />
-                        Presentación (PDF)
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="presentationUrl">Enlace Drive / PDF</Label>
-                        <Input
-                          id="presentationUrl"
-                          placeholder="https://drive.google.com/file/d/…/view"
-                          value={draft.presentationUrl}
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="description">Descripción</Label>
+                        <Textarea
+                          id="description"
+                          value={draft.description}
                           onChange={(e) =>
-                            setDraft({ ...draft, presentationUrl: e.target.value })
+                            setDraft({ ...draft, description: e.target.value })
                           }
+                          className="min-h-[88px]"
                         />
-                        <UrlHint url={draft.presentationUrl} kind="pdf" />
                       </div>
                     </div>
 
-                    <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <ExternalLink className="h-4 w-4" />
-                        Recursos
+                    <div className="space-y-4">
+                      <div className="rounded-xl border p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Film className="h-4 w-4 text-primary" />
+                          Vídeo de la clase
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="videoUrl">Enlace (Google Drive o MP4)</Label>
+                          <Input
+                            id="videoUrl"
+                            placeholder="https://drive.google.com/file/d/…/view"
+                            value={draft.videoUrl}
+                            onChange={(e) =>
+                              setDraft({ ...draft, videoUrl: e.target.value })
+                            }
+                          />
+                          <UrlHint url={draft.videoUrl} kind="video" />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="resourcesUrl">Carpeta Drive o link de descarga</Label>
-                        <Input
-                          id="resourcesUrl"
-                          placeholder="https://drive.google.com/drive/folders/…"
-                          value={draft.resourcesUrl}
-                          onChange={(e) => setDraft({ ...draft, resourcesUrl: e.target.value })}
-                        />
-                        <UrlHint url={draft.resourcesUrl} kind="folder" />
+
+                      <div className="rounded-xl border p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Presentation className="h-4 w-4 text-primary" />
+                          Presentación (Google Slides)
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="presentationUrl">
+                            Enlace de Google Slides
+                          </Label>
+                          <Input
+                            id="presentationUrl"
+                            placeholder="https://docs.google.com/presentation/d/…/edit"
+                            value={draft.presentationUrl}
+                            onChange={(e) =>
+                              setDraft({ ...draft, presentationUrl: e.target.value })
+                            }
+                          />
+                          <UrlHint url={draft.presentationUrl} kind="slides" />
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <FolderOpen className="h-4 w-4 text-primary" />
+                          Recursos
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="resourcesUrl">
+                            Carpeta Drive o link de descarga
+                          </Label>
+                          <Input
+                            id="resourcesUrl"
+                            placeholder="https://drive.google.com/drive/folders/…"
+                            value={draft.resourcesUrl}
+                            onChange={(e) =>
+                              setDraft({ ...draft, resourcesUrl: e.target.value })
+                            }
+                          />
+                          <UrlHint url={draft.resourcesUrl} kind="folder" />
+                        </div>
                       </div>
                     </div>
 
@@ -375,12 +465,12 @@ export default function AdminProgramContentPage() {
                         Hay cambios sin guardar en esta clase.
                       </p>
                     )}
-                  </>
-                )}
-              </section>
-            </div>
-          )}
-        </div>
+                  </div>
+                </>
+              )}
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );

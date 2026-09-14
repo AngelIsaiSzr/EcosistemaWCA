@@ -445,19 +445,26 @@ export default function AdminPage({
 
   const createCourseMutation = useMutation({
     mutationFn: async (data: CourseFormValues) => {
-      const payload = { ...data, liveDetails: data.isLive ? data.liveDetails : undefined }; // Ajustar payload
+      const payload = {
+        ...data,
+        isLive: !!data.isLive,
+        liveDetails: data.isLive ? data.liveDetails : null,
+      };
       const res = await apiRequest("POST", "/api/programs", payload);
-      return res.json();
+      return res.json() as Promise<Course>;
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast({
         title: "Programa creado",
         description: "El programa se ha creado correctamente.",
       });
       courseForm.reset();
       setEditingCourse(null);
-      setShowLiveSettings(false); // Resetear estado
-      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      setShowLiveSettings(false);
+      queryClient.setQueryData<Course[]>(["/api/programs"], (old) =>
+        old ? [...old, created] : [created],
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     },
     onError: (error: Error) => {
       toast({
@@ -470,20 +477,26 @@ export default function AdminPage({
 
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CourseFormValues }) => {
-      const payload = { ...data, liveDetails: data.isLive ? data.liveDetails : undefined }; // Ajustar payload
+      const payload = {
+        ...data,
+        isLive: !!data.isLive,
+        liveDetails: data.isLive ? data.liveDetails : null,
+      };
       const res = await apiRequest("PATCH", `/api/programs/${id}`, payload);
-      return res.json();
+      return res.json() as Promise<Course>;
     },
-    onSuccess: () => {
+    onSuccess: (updated) => {
       toast({
         title: "Programa actualizado",
         description: "El programa se ha actualizado correctamente.",
       });
-      // Explicitly reset with empty values
       courseForm.reset(emptyCourseValues);
       setEditingCourse(null);
-      setShowLiveSettings(false); // Resetear estado
-      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      setShowLiveSettings(false);
+      queryClient.setQueryData<Course[]>(["/api/programs"], (old) =>
+        old ? old.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)) : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     },
     onError: (error: Error) => {
       toast({
