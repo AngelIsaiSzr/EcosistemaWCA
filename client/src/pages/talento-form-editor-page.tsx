@@ -76,7 +76,7 @@ export default function TalentoFormEditorPage({
       queryClient.invalidateQueries({ queryKey: ["/api/integration/public"] });
       toast({ title: "Formulario guardado" });
       if (updated?.slug && updated.slug !== formSlug) {
-        navigate(`/talento/${updated.slug}/editar`);
+        navigate(`/talento/formularios/${updated.slug}/editar`);
       }
     },
     onError: (error: Error) => {
@@ -97,7 +97,7 @@ export default function TalentoFormEditorPage({
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">Formulario no encontrado.</p>
         <Button asChild variant="outline">
-          <Link href="/talento">Volver</Link>
+          <Link href="/talento/formularios">Volver</Link>
         </Button>
       </div>
     );
@@ -114,7 +114,7 @@ export default function TalentoFormEditorPage({
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <Link
-                href={`/talento/${formSlug}`}
+                href={`/talento/formularios/${formSlug}`}
                 className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />

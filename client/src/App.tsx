@@ -24,6 +24,7 @@ import AdminCardEditorPage from "@/pages/admin-card-editor-page";
 import AdminEmailAutomationPage from "@/pages/admin-email-automation-page";
 import MyCardPage from "@/pages/my-card-page";
 import CardPublicPage from "@/pages/card-public-page";
+import TalentoHubPage from "@/pages/talento-hub-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
 import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
@@ -42,6 +43,19 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
 import ProgramLearningPage from "@/pages/program-learning-page";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+function SoftRedirect({ to }: { to: string }) {
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    navigate(to);
+  }, [navigate, to]);
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <LoadingSpinner size="lg" text="Redirigiendo..." />
+    </div>
+  );
+}
 
 function Router() {
   const [location] = useLocation();
@@ -69,6 +83,7 @@ function Router() {
             return null;
           }}
         </Route>
+        {/* Formularios públicos: no tocar */}
         <Route path="/integracion" component={IntegrationFormPage} />
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
@@ -81,10 +96,41 @@ function Router() {
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
-        <RoleProtectedRoute path="/talento/:slug/editar" component={TalentoFormEditorPage} roles={["talento"]} />
-        <RoleProtectedRoute path="/talento/editar" component={TalentoFormEditorPage} roles={["talento"]} />
-        <RoleProtectedRoute path="/talento/:slug" component={TalentoPage} roles={["talento"]} />
-        <RoleProtectedRoute path="/talento" component={TalentoDashboardPage} roles={["talento"]} />
+
+        {/* Talento: hub + formularios */}
+        <RoleProtectedRoute
+          path="/talento/formularios/:slug/editar"
+          component={TalentoFormEditorPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/formularios/editar"
+          component={TalentoFormEditorPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/formularios/:slug"
+          component={TalentoPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/formularios"
+          component={TalentoDashboardPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute path="/talento" component={TalentoHubPage} roles={["talento"]} />
+
+        {/* Compatibilidad con URLs antiguas de Talento */}
+        <Route path="/talento/:slug/editar">
+          {(params) => <SoftRedirect to={`/talento/formularios/${params.slug}/editar`} />}
+        </Route>
+        <Route path="/talento/editar">
+          {() => <SoftRedirect to="/talento/formularios/integracion/editar" />}
+        </Route>
+        <Route path="/talento/:slug">
+          {(params) => <SoftRedirect to={`/talento/formularios/${params.slug}`} />}
+        </Route>
+
         <Route path="/:slug" component={CardPublicPage} />
         <Route component={NotFound} />
       </Switch>

@@ -58,7 +58,7 @@ export default function TalentoDashboardPage() {
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
-      navigate(`/talento/${created.slug}/editar`);
+      navigate(`/talento/formularios/${created.slug}/editar`);
     },
     onError: (error: Error) => {
       toast({ title: "No se pudo crear", description: error.message, variant: "destructive" });
@@ -129,10 +129,16 @@ export default function TalentoDashboardPage() {
         <main className="container mx-auto px-4 pb-16 pt-24">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Inicio</p>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/talento" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                Formularios
+              </p>
               <h1 className="mt-1 font-heading text-4xl font-bold">Formularios</h1>
               <p className="mt-2 text-muted-foreground">
-                Panel de la Dirección de Talento y Bienestar. Crea, fija y gestiona tus formularios.
+                Crea, fija y gestiona los formularios de Talento y Bienestar.
               </p>
             </div>
             <Button
@@ -186,7 +192,7 @@ export default function TalentoDashboardPage() {
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                      onClick={() => navigate(`/talento/${form.slug}`)}
+                      onClick={() => navigate(`/talento/formularios/${form.slug}`)}
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#5b8fd4]/15 ring-1 ring-[#5b8fd4]/25">
                         <Globe2 className="h-5 w-5 text-[#5b8fd4]" />
@@ -231,10 +237,10 @@ export default function TalentoDashboardPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/talento/${form.slug}`}>Abrir respuestas</Link>
+                          <Link href={`/talento/formularios/${form.slug}`}>Abrir respuestas</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/talento/${form.slug}/editar`}>Editar</Link>
+                          <Link href={`/talento/formularios/${form.slug}/editar`}>Editar</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => pinMutation.mutate({ slug: form.slug, pinned: !pinned })}

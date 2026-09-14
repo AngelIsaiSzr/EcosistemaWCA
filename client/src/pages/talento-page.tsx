@@ -410,7 +410,7 @@ export default function TalentoPage({
       queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
       toast({ title: "Cambios guardados" });
       if (updated?.slug && updated.slug !== formSlug) {
-        navigate(`/talento/${updated.slug}`);
+        navigate(`/talento/formularios/${updated.slug}`);
       }
     },
     onError: (error: Error) => {
@@ -430,7 +430,7 @@ export default function TalentoPage({
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">Formulario no encontrado.</p>
-        <Button variant="outline" onClick={() => navigate("/talento")}>
+        <Button variant="outline" onClick={() => navigate("/talento/formularios")}>
           Volver a formularios
         </Button>
       </div>
@@ -470,6 +470,10 @@ export default function TalentoPage({
                   Inicio
                 </Link>
                 {" › "}
+                <Link href="/talento/formularios" className="hover:text-foreground">
+                  Formularios
+                </Link>
+                {" › "}
                 {form?.title || "Formulario"}
               </p>
               <h1 className="mt-1 font-heading text-4xl font-bold">{form?.title || "Formulario"}</h1>
@@ -480,7 +484,7 @@ export default function TalentoPage({
             <div className="flex flex-wrap gap-2">
               <Button
                 className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
-                onClick={() => navigate(`/talento/${formSlug}/editar`)}
+                onClick={() => navigate(`/talento/formularios/${formSlug}/editar`)}
               >
                 <Pencil className="h-4 w-4" />
                 Editar formulario
