@@ -15,6 +15,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useEffect, useState } from "react";
 import { usePageLoading } from "@/hooks/use-page-loading";
 import { getRandomQuote } from "@/utils/quotes";
+import { resolveLxpEnrollmentUrl } from "@shared/lxp-enrollment";
 
 export default function ProgramDetailPage() {
   const [, params] = useRoute("/programs/:slug");
@@ -104,6 +105,21 @@ export default function ProgramDetailPage() {
 
     enrollMutation.mutate();
   };
+
+  const isTechHuman = !!program?.techHumanSpecialization;
+  const lxpUrl = program ? resolveLxpEnrollmentUrl(program.lxpEnrollmentUrl) : "";
+  const openLxp = () => window.open(lxpUrl, "_blank", "noopener,noreferrer");
+  const showPlatformEnrollment = !!isEnrolled && !isTechHuman;
+
+  const accentButtonClass = program
+    ? program.popular
+      ? "bg-accent-blue hover:bg-accent-blue hover:opacity-90"
+      : program.new
+        ? "bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900"
+        : program.featured
+          ? "bg-accent-red hover:bg-accent-red hover:opacity-90"
+          : "bg-accent-blue hover:bg-accent-blue hover:opacity-90"
+    : "bg-accent-blue hover:bg-accent-blue hover:opacity-90";
 
   const { setLoading } = usePageLoading();
 
@@ -264,7 +280,7 @@ export default function ProgramDetailPage() {
 
                     <AnimateInView animation="fadeIn" delay={0.5}>
                       <div>
-                        {isEnrolled ? (
+                        {showPlatformEnrollment ? (
                           <>
                             <div className="mb-6 p-4 bg-primary-700 rounded-lg">
                               <blockquote className="italic text-muted">
@@ -285,17 +301,19 @@ export default function ProgramDetailPage() {
                               </blockquote>
                               <p className="text-sm text-muted mt-2">- {quote.author}</p>
                             </div>
-                            {program.isLive ? (
+                            {isTechHuman ? (
+                              <Button
+                                type="button"
+                                onClick={openLxp}
+                                className={`px-6 py-3 ${accentButtonClass}`}
+                                disabled={!!program.isDisabled || !!program.comingSoon}
+                              >
+                                {program.comingSoon ? "Próximamente" : "Descubre Más"}
+                              </Button>
+                            ) : program.isLive ? (
                               <Button
                                 onClick={() => window.location.href = `/programs/${program.slug}/learn`}
-                                className={`px-6 py-3 ${program.popular
-                                  ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                  : program.new
-                                    ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
-                                    : program.featured
-                                      ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
-                                      : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                  }`}
+                                className={`px-6 py-3 ${accentButtonClass}`}
                                 disabled={enrollMutation.isPending || isLoadingEnrollments || hasRegisteredForLiveProgram || !!program.isDisabled || !!program.comingSoon}
                               >
                                 {program.comingSoon ? (
@@ -309,14 +327,7 @@ export default function ProgramDetailPage() {
                             ) : (
                             <Button
                               onClick={handleEnroll}
-                              className={`px-6 py-3 ${program.popular
-                                ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                : program.new
-                                  ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
-                                  : program.featured
-                                    ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
-                                    : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                }`}
+                              className={`px-6 py-3 ${accentButtonClass}`}
                               disabled={enrollMutation.isPending || isLoadingEnrollments || !!program.isDisabled || !!program.comingSoon}
                             >
                               {program.comingSoon ? (
@@ -348,32 +359,23 @@ export default function ProgramDetailPage() {
                           <p className="text-muted mb-6">
                             {program.shortDescription}
                           </p>
-                          {isEnrolled ? (
-                            <Button
-                              className={`w-full ${program.popular
-                                ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                : program.new
-                                  ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
-                                  : program.featured
-                                    ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
-                                    : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                }`}
-                              asChild
-                            >
+                          {showPlatformEnrollment ? (
+                            <Button className={`w-full ${accentButtonClass}`} asChild>
                               <a href={`/programs/${program.slug}/learn`}>Comenzar a Aprender</a>
                             </Button>
-                          ) : (
-                            program.isLive ? (
+                          ) : isTechHuman ? (
+                            <Button
+                              type="button"
+                              onClick={openLxp}
+                              className={`w-full ${accentButtonClass}`}
+                              disabled={!!program.isDisabled || !!program.comingSoon}
+                            >
+                              {program.comingSoon ? "Próximamente" : "Descubre Más"}
+                            </Button>
+                          ) : program.isLive ? (
                               <Button
                                 onClick={() => window.location.href = `/programs/${program.slug}/learn`}
-                                className={`w-full ${program.popular
-                                  ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                  : program.new
-                                    ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
-                                    : program.featured
-                                      ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
-                                      : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                }`}
+                                className={`w-full ${accentButtonClass}`}
                                 disabled={enrollMutation.isPending || isLoadingEnrollments || hasRegisteredForLiveProgram || !!program.isDisabled || !!program.comingSoon}
                               >
                                 {program.comingSoon ? (
@@ -387,14 +389,7 @@ export default function ProgramDetailPage() {
                           ) : (
                             <Button
                               onClick={handleEnroll}
-                              className={`w-full ${program.popular
-                                ? 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                : program.new
-                                  ? 'bg-accent-yellow hover:bg-accent-yellow hover:opacity-90 text-primary-900'
-                                  : program.featured
-                                    ? 'bg-accent-red hover:bg-accent-red hover:opacity-90'
-                                    : 'bg-accent-blue hover:bg-accent-blue hover:opacity-90'
-                                }`}
+                              className={`w-full ${accentButtonClass}`}
                               disabled={enrollMutation.isPending || isLoadingEnrollments || !!program.isDisabled || !!program.comingSoon}
                             >
                               {program.comingSoon ? (
@@ -404,7 +399,6 @@ export default function ProgramDetailPage() {
                               ) : null}
                               {program.comingSoon ? "" : "Inscribirme Gratis"}
                             </Button>
-                            )
                           )}
                         </div>
                       </div>
@@ -415,6 +409,7 @@ export default function ProgramDetailPage() {
             </section>
           </AnimateInView>
 
+          {!isTechHuman && (
           <AnimateInView animation="fadeIn" delay={0.2}>
             <section id="modules" className="bg-primary-800 py-12">
               <div className="container mx-auto px-4">
@@ -451,6 +446,8 @@ export default function ProgramDetailPage() {
               </div>
             </section>
           </AnimateInView>
+          )}
+
         </main>
 
         <Footer />

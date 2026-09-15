@@ -56,6 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DEFAULT_LXP_ENROLLMENT_URL } from "@shared/lxp-enrollment";
 import {
   DEFAULT_TEAM_ROLE_COLOR,
   TEAM_ROLE_COLORS,
@@ -112,6 +113,8 @@ const courseFormSchema = insertCourseSchema.extend({
   }).optional(),
   isDisabled: z.boolean().optional().default(false),
   comingSoon: z.boolean().optional().default(false),
+  techHumanSpecialization: z.boolean().optional().default(false),
+  lxpEnrollmentUrl: z.string().optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
   if (data.isLive) {
     if (!data.liveDetails) {
@@ -159,7 +162,31 @@ const courseFormSchema = insertCourseSchema.extend({
       });
     }
   }
+  if (data.techHumanSpecialization && data.lxpEnrollmentUrl?.trim()) {
+    const raw = data.lxpEnrollmentUrl.trim();
+    const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      void new URL(candidate);
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ingresa una URL válida para la LXP (ej. https://lxp.ecosistemawca.com).",
+        path: ["lxpEnrollmentUrl"],
+      });
+    }
+  }
 });
+
+function coursePayloadFromForm(data: CourseFormValues) {
+  const techHuman = !!data.techHumanSpecialization;
+  return {
+    ...data,
+    isLive: techHuman ? false : !!data.isLive,
+    liveDetails: techHuman ? null : data.isLive ? data.liveDetails : null,
+    techHumanSpecialization: techHuman,
+    lxpEnrollmentUrl: techHuman ? data.lxpEnrollmentUrl?.trim() || null : null,
+  };
+}
 
 const teamFormSchema = insertTeamSchema.extend({
   name: z.string().min(3, "El nombre es requerido"),
@@ -395,8 +422,10 @@ export default function AdminPage({
     instructor: "",
     isLive: false,
     liveDetails: undefined,
-    isDisabled: false, // Nuevo campo
-    comingSoon: false, // Nuevo campo
+    isDisabled: false,
+    comingSoon: false,
+    techHumanSpecialization: false,
+    lxpEnrollmentUrl: "",
   };
 
   // Course form
@@ -424,8 +453,10 @@ export default function AdminPage({
         instructor: editingCourse.instructor,
         isLive: editingCourse.isLive || false,
         liveDetails: editingCourse.liveDetails || undefined,
-        isDisabled: editingCourse.isDisabled || false, // Cargar valor de isDisabled
-        comingSoon: editingCourse.comingSoon || false, // Cargar valor de comingSoon
+        isDisabled: editingCourse.isDisabled || false,
+        comingSoon: editingCourse.comingSoon || false,
+        techHumanSpecialization: editingCourse.techHumanSpecialization || false,
+        lxpEnrollmentUrl: editingCourse.lxpEnrollmentUrl || "",
       });
       // Si estamos editando un programa en vivo, mostrar las configuraciones
       if (editingCourse.isLive) {
@@ -437,19 +468,30 @@ export default function AdminPage({
   // Handle isLive checkbox change
   const handleIsLiveChange = (checked: boolean) => {
     courseForm.setValue("isLive", checked);
+    if (checked) {
+      courseForm.setValue("techHumanSpecialization", false);
+    }
     if (!checked) {
       setShowLiveSettings(false);
       courseForm.setValue('liveDetails', undefined); // Limpiar liveDetails si no es en vivo
     }
   };
 
+  const handleTechHumanChange = (checked: boolean) => {
+    courseForm.setValue("techHumanSpecialization", checked);
+    if (checked) {
+      courseForm.setValue("isLive", false);
+      setShowLiveSettings(false);
+      courseForm.setValue("liveDetails", undefined);
+      if (!courseForm.getValues("lxpEnrollmentUrl")?.trim()) {
+        courseForm.setValue("lxpEnrollmentUrl", DEFAULT_LXP_ENROLLMENT_URL);
+      }
+    }
+  };
+
   const createCourseMutation = useMutation({
     mutationFn: async (data: CourseFormValues) => {
-      const payload = {
-        ...data,
-        isLive: !!data.isLive,
-        liveDetails: data.isLive ? data.liveDetails : null,
-      };
+      const payload = coursePayloadFromForm(data);
       const res = await apiRequest("POST", "/api/programs", payload);
       return res.json() as Promise<Course>;
     },
@@ -477,11 +519,7 @@ export default function AdminPage({
 
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CourseFormValues }) => {
-      const payload = {
-        ...data,
-        isLive: !!data.isLive,
-        liveDetails: data.isLive ? data.liveDetails : null,
-      };
+      const payload = coursePayloadFromForm(data);
       const res = await apiRequest("PATCH", `/api/programs/${id}`, payload);
       return res.json() as Promise<Course>;
     },
@@ -1659,7 +1697,53 @@ export default function AdminPage({
                               </FormItem>
                             )}
                           />
+
+                          <FormField
+                            control={courseForm.control}
+                            name="techHumanSpecialization"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value || false}
+                                    onCheckedChange={handleTechHumanChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Programa de Especialización TechHuman</FormLabel>
+                                  <FormDescription>
+                                    Página informativa: CTA «Descubre Más» hacia la LXP, sin temario ni
+                                    inscripción clásica en la plataforma.
+                                  </FormDescription>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
                         </div>
+
+                        {courseForm.watch("techHumanSpecialization") && (
+                          <FormField
+                            control={courseForm.control}
+                            name="lxpEnrollmentUrl"
+                            render={({ field }) => (
+                              <FormItem className="mt-2 max-w-xl">
+                                <FormLabel>Enlace de la LXP (CTA «Descubre Más»)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={DEFAULT_LXP_ENROLLMENT_URL}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Personalizable por programa. Si lo dejas vacío se usa{" "}
+                                  {DEFAULT_LXP_ENROLLMENT_URL}.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
 
                         {courseForm.watch('isLive') && (
                           <Button
@@ -1858,6 +1942,12 @@ export default function AdminPage({
                                     Próximamente
                                   </span>
                                 )}
+
+                                {course.techHumanSpecialization && (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-800 dark:text-cyan-200">
+                                    TechHuman · LXP
+                                  </span>
+                                )}
                               </div>
 
                               <div className="flex flex-wrap gap-2 mt-4 border-t pt-3">
@@ -1923,6 +2013,8 @@ export default function AdminPage({
                                         liveDetails: (course.liveDetails || undefined) as CourseFormValues['liveDetails'],
                                         isDisabled: !(course.isDisabled as boolean),
                                         comingSoon: course.comingSoon as boolean,
+                                        techHumanSpecialization: course.techHumanSpecialization as boolean,
+                                        lxpEnrollmentUrl: (course.lxpEnrollmentUrl as string) || "",
                                       },
                                     });
                                   }}

@@ -35,6 +35,10 @@ export const courses = pgTable("courses", {
   liveDetails: jsonb("live_details"),
   isDisabled: boolean("is_disabled").default(false),
   comingSoon: boolean("coming_soon").default(false),
+  /** Especialización TechHuman: página informativa → LXP (sin temario ni inscripción clásica) */
+  techHumanSpecialization: boolean("tech_human_specialization").default(false),
+  /** Destino del CTA «Descubre Más»; vacío = DEFAULT_LXP_ENROLLMENT_URL */
+  lxpEnrollmentUrl: text("lxp_enrollment_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

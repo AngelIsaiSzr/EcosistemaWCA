@@ -53,6 +53,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { LxpTeaserModal } from "@/components/lxp-teaser-modal";
 import { LESSON_REPORT_REASONS, type LessonReportReasonId } from "@shared/lesson-reports";
 
 interface Enrollment {
@@ -212,6 +213,7 @@ export default function ProgramLearningPage() {
   } | null>(null);
   const [downloadingCert, setDownloadingCert] = useState(false);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
+  const [showLxpTeaser, setShowLxpTeaser] = useState(false);
 
   const {
     data: program,
@@ -307,6 +309,13 @@ export default function ProgramLearningPage() {
     setVideoReloadKey(0);
     setActiveVideoPart(0);
   }, [activeModuleId]);
+
+  // Cada vez que abren /learn de un programa
+  useEffect(() => {
+    if (!program?.id) return;
+    const timer = window.setTimeout(() => setShowLxpTeaser(true), 350);
+    return () => window.clearTimeout(timer);
+  }, [program?.id, slug]);
 
   const progressMutation = useMutation({
     mutationFn: async ({
@@ -1166,6 +1175,8 @@ export default function ProgramLearningPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LxpTeaserModal open={showLxpTeaser} onClose={() => setShowLxpTeaser(false)} />
     </div>
   );
 }

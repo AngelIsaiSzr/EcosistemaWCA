@@ -289,6 +289,17 @@ const updateSchema = async () => {
       `CREATE UNIQUE INDEX IF NOT EXISTS certificates_code_unique ON certificates (code);`,
     );
 
+    await runQuery(
+      client,
+      "columna courses.tech_human_specialization",
+      `ALTER TABLE courses ADD COLUMN IF NOT EXISTS tech_human_specialization boolean DEFAULT false;`,
+    );
+    await runQuery(
+      client,
+      "columna courses.lxp_enrollment_url",
+      `ALTER TABLE courses ADD COLUMN IF NOT EXISTS lxp_enrollment_url text;`,
+    );
+
     console.log("✅ Esquema actualizado");
   } catch (err) {
     console.error("❌ Error al actualizar el esquema:", err);
