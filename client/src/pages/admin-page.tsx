@@ -1654,28 +1654,6 @@ export default function AdminPage({
                             )}
                           />
 
-                          {/* Campo para programa en vivo */}
-                          <FormField
-                            control={courseForm.control}
-                            name="isLive"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value || false}
-                                    onCheckedChange={handleIsLiveChange}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel>Es un programa en vivo</FormLabel>
-                                  <FormDescription>
-                                    Marca si este programa tendrá sesiones en vivo.
-                                  </FormDescription>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-
                           {/* Campo para programa próximo */}
                           <FormField
                             control={courseForm.control}
@@ -1698,6 +1676,29 @@ export default function AdminPage({
                             )}
                           />
 
+                          {/* Campo para programa en vivo */}
+                          <FormField
+                            control={courseForm.control}
+                            name="isLive"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value || false}
+                                    onCheckedChange={handleIsLiveChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Es un programa en vivo</FormLabel>
+                                  <FormDescription>
+                                    Marca si este programa tendrá sesiones en vivo.
+                                  </FormDescription>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Campo para programa de Especialización TechHuman */}
                           <FormField
                             control={courseForm.control}
                             name="techHumanSpecialization"
