@@ -29,7 +29,7 @@ export const CARD_DIRECTIONS: {
   {
     id: "operaciones-logistica",
     label: "Dirección de Operaciones y Logística",
-    hsl: "355 100% 62%",
+    hsl: "0 100% 60%",
     swatchVar: "--accent-red",
   },
   {
@@ -59,7 +59,7 @@ export const CARD_DIRECTIONS: {
   {
     id: "estrategia-finanzas",
     label: "Dirección de Estrategia y Finanzas",
-    hsl: "355 75% 72%",
+    hsl: "355 100% 62%",
     swatchVar: "--accent-red-soft",
   },
   {

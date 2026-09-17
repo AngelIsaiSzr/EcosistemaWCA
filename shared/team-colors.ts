@@ -47,7 +47,7 @@ export const TEAM_ROLE_COLORS: {
     hint: "Rojo intenso",
     textClass: "accent-red",
     swatchVar: "--accent-red",
-    hsl: "355 100% 62%",
+    hsl: "0 100% 60%",
   },
   {
     id: "blue",
@@ -67,11 +67,11 @@ export const TEAM_ROLE_COLORS: {
   },
   {
     id: "red-soft",
-    label: "Rojo suave",
-    hint: "Rojo más bajito",
+    label: "Rojo medio",
+    hint: "Rojo de Estrategia y Finanzas",
     textClass: "accent-red-soft",
     swatchVar: "--accent-red-soft",
-    hsl: "355 75% 72%",
+    hsl: "355 100% 62%",
   },
   {
     id: "green",
