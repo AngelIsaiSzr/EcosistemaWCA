@@ -214,6 +214,7 @@ export const RESERVED_CARD_SLUGS = new Set([
   "sitemap.xml",
   "convocatoria",
   "reto",
+  "inedito",
 ]);
 
 export function normalizeCardSlug(raw: string): string {

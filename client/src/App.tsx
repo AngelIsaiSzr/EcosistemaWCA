@@ -30,6 +30,7 @@ import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
 import TalentoIneditoRetoPage from "@/pages/talento-inedito-reto-page";
 import IneditoRetoPublicPage from "@/pages/inedito-reto-public-page";
+import IneditoLandingPage from "@/pages/inedito-landing-page";
 import IntegrationFormPage from "@/pages/integration-form-page";
 import IntegrationFormBySlugPage from "@/pages/integration-form-by-slug-page";
 import ProfilePage from "@/pages/profile-page";
@@ -90,6 +91,7 @@ function Router() {
         <Route path="/integracion" component={IntegrationFormPage} />
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
         <Route path="/reto/:token" component={IneditoRetoPublicPage} />
+        <Route path="/inedito" component={IneditoLandingPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />

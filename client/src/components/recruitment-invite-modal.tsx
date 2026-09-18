@@ -33,6 +33,7 @@ function shouldHideOnPath(path: string) {
     path.startsWith("/admin") ||
     path === "/auth" ||
     path.startsWith("/convocatoria") ||
+    path === "/inedito" ||
     /^\/programs\/[^/]+\/learn$/.test(path) ||
     path.includes("registro-en-vivo") ||
     path.includes("live-course-registration")
