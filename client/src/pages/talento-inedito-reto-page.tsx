@@ -229,7 +229,11 @@ export default function TalentoIneditoRetoPage() {
                 Inicio
               </Link>
               {" › "}
-              Reto INÉDITO
+              <Link href="/talento/inedito" className="hover:text-foreground">
+                INÉDITO
+              </Link>
+              {" › "}
+              Reto
             </p>
             <h1 className="mt-1 font-heading text-4xl font-bold">Reto INÉDITO</h1>
             <p className="mt-2 max-w-2xl text-muted-foreground">

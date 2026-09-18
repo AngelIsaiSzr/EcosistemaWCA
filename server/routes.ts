@@ -10,6 +10,7 @@ import { registerCardRoutes } from "./routes-cards";
 import { registerEmailAutomationRoutes } from "./routes-email-automation";
 import { registerMediaProxyRoutes } from "./routes-media-proxy";
 import { registerIneditoRetoRoutes } from "./routes-inedito-reto";
+import { registerIneditoLandingRoutes } from "./routes-inedito-landing";
 import { registerLearningRoutes } from "./routes-learning";
 import { registerCertificateRoutes } from "./routes-certificates";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
@@ -76,6 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEmailAutomationRoutes(app);
   registerMediaProxyRoutes(app);
   registerIneditoRetoRoutes(app);
+  registerIneditoLandingRoutes(app);
   registerLearningRoutes(app);
   registerCertificateRoutes(app);
   ensureAdminAccount().catch((error) => {

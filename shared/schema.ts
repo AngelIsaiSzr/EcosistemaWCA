@@ -335,6 +335,14 @@ export const ineditoRetoTokens = pgTable("inedito_reto_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/** Visibilidad y ajustes de la landing pública /inedito */
+export const ineditoLandingSettings = pgTable("inedito_landing_settings", {
+  id: serial("id").primaryKey(),
+  /** Si es false, solo admin y talento pueden ver /inedito */
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -479,3 +487,4 @@ export type EmailWeekTemplate = typeof emailWeekTemplates.$inferSelect;
 export type EmailAutomationLog = typeof emailAutomationLogs.$inferSelect;
 export type IneditoRetoSettings = typeof ineditoRetoSettings.$inferSelect;
 export type IneditoRetoToken = typeof ineditoRetoTokens.$inferSelect;
+export type IneditoLandingSettings = typeof ineditoLandingSettings.$inferSelect;

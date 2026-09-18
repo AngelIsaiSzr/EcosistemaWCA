@@ -28,6 +28,8 @@ import TalentoHubPage from "@/pages/talento-hub-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
 import TalentoPage from "@/pages/talento-page";
 import TalentoFormEditorPage from "@/pages/talento-form-editor-page";
+import TalentoIneditoHubPage from "@/pages/talento-inedito-hub-page";
+import TalentoIneditoLandingPage from "@/pages/talento-inedito-landing-page";
 import TalentoIneditoRetoPage from "@/pages/talento-inedito-reto-page";
 import IneditoRetoPublicPage from "@/pages/inedito-reto-public-page";
 import IneditoLandingPage from "@/pages/inedito-landing-page";
@@ -104,10 +106,20 @@ function Router() {
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 
-        {/* Talento: hub + formularios */}
+        {/* Talento: hub + INÉDITO + formularios */}
         <RoleProtectedRoute
-          path="/talento/reto-inedito"
+          path="/talento/inedito/reto"
           component={TalentoIneditoRetoPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/inedito/landing"
+          component={TalentoIneditoLandingPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/inedito"
+          component={TalentoIneditoHubPage}
           roles={["talento"]}
         />
         <RoleProtectedRoute
@@ -133,6 +145,9 @@ function Router() {
         <RoleProtectedRoute path="/talento" component={TalentoHubPage} roles={["talento"]} />
 
         {/* Compatibilidad con URLs antiguas de Talento */}
+        <Route path="/talento/reto-inedito">
+          {() => <SoftRedirect to="/talento/inedito/reto" />}
+        </Route>
         <Route path="/talento/:slug/editar">
           {(params) => <SoftRedirect to={`/talento/formularios/${params.slug}/editar`} />}
         </Route>

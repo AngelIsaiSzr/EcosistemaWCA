@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -22,6 +23,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth } from "@/hooks/use-auth";
+import NotFound from "@/pages/not-found";
 import { SITE_URL } from "@/utils/titles";
 import { cn } from "@/lib/utils";
 
@@ -224,7 +228,7 @@ function StormSky({ reduce }: { reduce: boolean }) {
   );
 }
 
-function IneditoNav() {
+function IneditoNav({ offsetTop = false }: { offsetTop?: boolean }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -245,7 +249,8 @@ function IneditoNav() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
+        "fixed inset-x-0 z-50 transition-all duration-300",
+        offsetTop ? "top-10" : "top-0",
         scrolled ? "py-2" : "py-4",
       )}
     >
@@ -366,6 +371,7 @@ function IneditoFooter() {
 
 export default function IneditoLandingPage() {
   const reduce = useReducedMotion();
+  const { user, isLoading: authLoading } = useAuth();
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -374,9 +380,34 @@ export default function IneditoLandingPage() {
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "14%"]);
   const heroFade = useTransform(scrollYProgress, [0, 0.9], [1, 0.4]);
 
+  const landingQuery = useQuery<{ isEnabled: boolean }>({
+    queryKey: ["/api/inedito/landing"],
+    queryFn: async () => {
+      const res = await fetch("/api/inedito/landing", { credentials: "include" });
+      if (!res.ok) throw new Error("No se pudo cargar el estado");
+      return res.json();
+    },
+  });
+
   useEffect(() => {
     preloadAssets();
   }, []);
+
+  const canPreview = user?.role === "admin" || user?.role === "talento";
+  const isEnabled = landingQuery.data?.isEnabled ?? true;
+  const accessPending = authLoading || landingQuery.isLoading;
+
+  if (accessPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#020617]">
+        <LoadingSpinner size="lg" text="Cargando..." />
+      </div>
+    );
+  }
+
+  if (!isEnabled && !canPreview) {
+    return <NotFound />;
+  }
 
   return (
     <>
@@ -406,6 +437,19 @@ export default function IneditoLandingPage() {
         />
       </Helmet>
 
+      {!isEnabled && canPreview && (
+        <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-amber-950">
+          Vista previa · la landing está desactivada para el público.{" "}
+          {user?.role === "talento" ? (
+            <Link href="/talento/inedito/landing" className="underline underline-offset-2">
+              Activar en Talento
+            </Link>
+          ) : (
+            <span>Actívala desde una cuenta Talento.</span>
+          )}
+        </div>
+      )}
+
       <div
         className="inedito-landing flex min-h-screen flex-col overflow-x-hidden text-white antialiased"
         style={
@@ -417,7 +461,7 @@ export default function IneditoLandingPage() {
           } as CSSProperties
         }
       >
-        <IneditoNav />
+        <IneditoNav offsetTop={!isEnabled && canPreview} />
 
         <main className="flex-grow">
           {/* ——— Hero: brand + one shot + CTA ——— */}
