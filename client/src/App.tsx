@@ -90,8 +90,8 @@ function Router() {
         {/* Formularios públicos: no tocar */}
         <Route path="/integracion" component={IntegrationFormPage} />
         <Route path="/f/:slug" component={IntegrationFormBySlugPage} />
-        <Route path="/reto/:token" component={IneditoRetoPublicPage} />
         <Route path="/inedito" component={IneditoLandingPage} />
+        <Route path="/reto/:token" component={IneditoRetoPublicPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
