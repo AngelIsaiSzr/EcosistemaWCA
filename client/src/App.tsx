@@ -190,6 +190,7 @@ function App() {
   const pathSlug = location.replace(/^\//, "").split("/")[0] || "";
   const hideDonorbox =
     /^\/programs\/[^/]+\/learn$/.test(location) ||
+    location === "/inedito" ||
     location === "/integracion" ||
     location.startsWith("/f/") ||
     location.startsWith("/reto/") ||
