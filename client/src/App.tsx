@@ -50,6 +50,7 @@ import { AuthProvider } from "./hooks/use-auth";
 import ProgramLearningPage from "@/pages/program-learning-page";
 import AdminProgramContentPage from "@/pages/admin-program-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { GoogleAnalytics } from "@/components/layout/google-analytics";
 
 function SoftRedirect({ to }: { to: string }) {
   const [, navigate] = useLocation();
@@ -227,6 +228,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <PageLoader />
+            <GoogleAnalytics />
             <RecruitmentInviteModal />
             <Toaster />
             {!hideDonorbox && <DonorboxButton />}
