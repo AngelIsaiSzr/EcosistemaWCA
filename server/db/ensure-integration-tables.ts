@@ -14,6 +14,9 @@ export async function ensureIntegrationTables() {
       spreadsheet_id TEXT,
       spreadsheet_tab TEXT DEFAULT 'Respuestas',
       is_published BOOLEAN NOT NULL DEFAULT true,
+      access_mode TEXT NOT NULL DEFAULT 'public',
+      allowed_user_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      allow_multiple_submissions BOOLEAN NOT NULL DEFAULT false,
       pinned_at TIMESTAMP,
       view_count INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -27,6 +30,15 @@ export async function ensureIntegrationTables() {
     ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0
   `);
   await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS access_mode TEXT NOT NULL DEFAULT 'public'
+  `);
+  await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS allowed_user_ids JSONB NOT NULL DEFAULT '[]'::jsonb
+  `);
+  await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS allow_multiple_submissions BOOLEAN NOT NULL DEFAULT false
+  `);
+  await db.execute(sql`
     CREATE TABLE IF NOT EXISTS integration_responses (
       id SERIAL PRIMARY KEY,
       form_id INTEGER NOT NULL REFERENCES integration_forms(id) ON DELETE CASCADE,
@@ -35,9 +47,9 @@ export async function ensureIntegrationTables() {
       submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // Unicidad por correo se aplica en la API según allow_multiple_submissions
   await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS integration_responses_form_email_unique
-      ON integration_responses (form_id, email)
+    DROP INDEX IF EXISTS integration_responses_form_email_unique
   `);
   ensured = true;
 }

@@ -46,6 +46,12 @@ export default function AuthPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect");
+      if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+        navigate(redirect);
+        return;
+      }
       if (user.role === "talento") navigate("/talento");
       else if (user.role === "admin") navigate("/admin");
       else navigate("/");

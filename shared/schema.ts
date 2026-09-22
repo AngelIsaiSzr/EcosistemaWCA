@@ -226,6 +226,11 @@ export const integrationForms = pgTable("integration_forms", {
   spreadsheetId: text("spreadsheet_id"),
   spreadsheetTab: text("spreadsheet_tab").default("Respuestas"),
   isPublished: boolean("is_published").notNull().default(true),
+  /** public = cualquiera con el enlace; restricted = solo cuentas listadas (+ talento/admin) */
+  accessMode: text("access_mode").$type<"public" | "restricted">().notNull().default("public"),
+  allowedUserIds: jsonb("allowed_user_ids").$type<number[]>().notNull().default([]),
+  /** Si es true, el mismo correo puede enviar varias respuestas */
+  allowMultipleSubmissions: boolean("allow_multiple_submissions").notNull().default(false),
   pinnedAt: timestamp("pinned_at"),
   viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),

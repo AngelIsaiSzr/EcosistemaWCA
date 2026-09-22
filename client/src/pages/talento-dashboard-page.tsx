@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
-import { DEFAULT_INTEGRATION_SLUG } from "@shared/integration-form";
+import { DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_SLUG } from "@shared/integration-form";
 import { IntegrationForm } from "@shared/schema";
 
 type FormListItem = IntegrationForm & { responseCount: number };
@@ -255,7 +255,8 @@ export default function TalentoDashboardPage() {
                             </>
                           )}
                         </DropdownMenuItem>
-                        {form.slug !== DEFAULT_INTEGRATION_SLUG && (
+                        {form.slug !== DEFAULT_INTEGRATION_SLUG &&
+                          form.slug !== DEFAULT_MIEMBROS_SLUG && (
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => {

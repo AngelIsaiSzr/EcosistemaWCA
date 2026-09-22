@@ -112,12 +112,43 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   const [otherValues, setOtherValues] = useState<Record<string, string>>({});
 
   const section = sections[step];
-  const isLast = step === sections.length - 1;
+
+  const sectionIsActive = (index: number, currentAnswers: Answers) => {
+    const s = sections[index];
+    if (!s) return false;
+    if (s.isWelcome) return true;
+    return visibleFields(s.fields, currentAnswers).length > 0;
+  };
+
+  const findStep = (from: number, direction: 1 | -1, currentAnswers: Answers) => {
+    let i = from + direction;
+    while (i >= 0 && i < sections.length) {
+      if (sectionIsActive(i, currentAnswers)) return i;
+      i += direction;
+    }
+    return from;
+  };
+
+  const isLast =
+    step === sections.length - 1 ||
+    findStep(step, 1, answers) === step;
 
   const currentFields = useMemo(
     () => (section ? visibleFields(section.fields, answers) : []),
     [section, answers],
   );
+
+  useEffect(() => {
+    if (!section || section.isWelcome) return;
+    if (currentFields.length > 0) return;
+    const next = findStep(step, 1, answers);
+    if (next !== step) setStep(next);
+    else {
+      const prev = findStep(step, -1, answers);
+      if (prev !== step) setStep(prev);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react when visibility collapses
+  }, [step, answers, currentFields.length]);
 
   useEffect(() => {
     const scrollTop = () => {
@@ -152,12 +183,13 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
 
   const goNext = async () => {
     if (section?.isWelcome) {
-      setStep((s) => s + 1);
+      setStep((s) => findStep(s, 1, answers));
       return;
     }
     if (!validateSection()) return;
-    if (!isLast) {
-      setStep((s) => s + 1);
+    const next = findStep(step, 1, answers);
+    if (next !== step) {
+      setStep(next);
       return;
     }
     if (preview) {
@@ -183,6 +215,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       const res = await fetch(`/api/integration/public/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ answers: payload }),
       });
       const data = await res.json().catch(() => ({}));
@@ -310,7 +343,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         {step > 0 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => s - 1)}
+            onClick={() => setStep((s) => findStep(s, -1, answers))}
             className="inline-flex items-center gap-1 text-white/90 transition hover:text-white"
           >
             <ChevronLeft className="h-4 w-4" />

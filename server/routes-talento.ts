@@ -5,6 +5,7 @@ import { hashPassword } from "./auth";
 import {
   DEFAULT_INTEGRATION_FORM,
   DEFAULT_INTEGRATION_SLUG,
+  DEFAULT_MIEMBROS_SLUG,
   IntegrationFormDefinition,
   PHONE_COUNTRIES,
   buildSheetRow,
@@ -26,8 +27,10 @@ import { saveIntegrationRowToSheet, updateIntegrationCellInSheet } from "./servi
 import { ensureIntegrationTables } from "./db/ensure-integration-tables";
 import { sendTransactionalEmail } from "./services/email";
 import { DIRECTOR_EMAIL_CONTACT } from "@shared/director-emails";
+import type { IntegrationForm } from "@shared/schema";
 
 const TALENTO_ROLE = "talento";
+const RESERVED_FORM_SLUGS = new Set([DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_SLUG]);
 
 function requireTalento(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated() || !req.user || req.user.role !== TALENTO_ROLE) {
@@ -38,6 +41,18 @@ function requireTalento(req: Request, res: Response, next: NextFunction) {
 
 function asDefinition(schema: unknown): IntegrationFormDefinition {
   return schema as IntegrationFormDefinition;
+}
+
+function formAllowsMultiple(form: IntegrationForm) {
+  return Boolean(form.allowMultipleSubmissions);
+}
+
+function canAccessRestrictedForm(form: IntegrationForm, req: Request): boolean {
+  if (form.accessMode !== "restricted") return true;
+  if (!req.isAuthenticated() || !req.user) return false;
+  if (req.user.role === TALENTO_ROLE || req.user.role === "admin") return true;
+  const allowed = Array.isArray(form.allowedUserIds) ? form.allowedUserIds : [];
+  return allowed.includes(req.user.id);
 }
 
 function csvEscape(value: string) {
@@ -60,6 +75,9 @@ const updateFormSchema = z.object({
   isPublished: z.boolean().optional(),
   pinned: z.boolean().optional(),
   responseColumnWidths: z.record(z.number().positive()).optional(),
+  accessMode: z.enum(["public", "restricted"]).optional(),
+  allowedUserIds: z.array(z.number().int().positive()).optional(),
+  allowMultipleSubmissions: z.boolean().optional(),
 });
 
 const createFormSchema = z.object({
@@ -115,12 +133,12 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
     if (field.type === "number") {
       const num = Number(value);
       if (Number.isNaN(num) || !Number.isInteger(num)) {
-        errors[field.id] = "Ingresa una edad en números enteros.";
+        errors[field.id] = "Ingresa un número entero.";
       } else {
         const min = field.min ?? 0;
         const max = field.max ?? 100;
         if (num < min || num > max) {
-          errors[field.id] = `La edad debe estar entre ${min} y ${max} años.`;
+          errors[field.id] = `El valor debe estar entre ${min} y ${max}.`;
         }
       }
     }
@@ -170,7 +188,10 @@ async function uniqueFormSlug(baseTitle: string) {
   const base = slugify(baseTitle) || `formulario-${Date.now().toString(36)}`;
   let candidate = base;
   let n = 1;
-  while (await storage.getIntegrationFormBySlug(candidate)) {
+  while (
+    RESERVED_FORM_SLUGS.has(candidate) ||
+    (await storage.getIntegrationFormBySlug(candidate))
+  ) {
     n += 1;
     candidate = `${base}-${n}`;
   }
@@ -198,11 +219,11 @@ async function applyFormPatch(formId: number, currentSlug: string, body: unknown
   }
 
   if (typeof parsed.data.slug === "string") {
-    if (currentSlug === DEFAULT_INTEGRATION_SLUG) {
+    if (RESERVED_FORM_SLUGS.has(currentSlug)) {
       delete patch.slug;
     } else {
       patch.slug = slugify(parsed.data.slug) || currentSlug;
-      if (patch.slug === DEFAULT_INTEGRATION_SLUG) {
+      if (RESERVED_FORM_SLUGS.has(String(patch.slug))) {
         return { error: { status: 400 as const, message: "Ese enlace está reservado" } };
       }
       if (patch.slug !== currentSlug) {
@@ -263,16 +284,24 @@ export function registerTalentoRoutes(app: Express) {
   ensureIntegrationTables()
     .then(() => ensureTalentoAccount())
     .then(() => storage.getOrCreateDefaultIntegrationForm())
+    .then(() => storage.getOrCreateMiembrosForm())
     .catch((error) => {
       console.error("No se pudo inicializar Talento y Bienestar:", error);
     });
 
-  app.get("/api/integration/public", async (_req, res) => {
+  app.get("/api/integration/public", async (req, res) => {
     try {
       await ensureIntegrationTables();
       const form = await storage.getOrCreateDefaultIntegrationForm();
       if (!form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
+      }
+      if (!canAccessRestrictedForm(form, req)) {
+        return res.status(403).json({
+          message: "Este formulario requiere acceso autorizado",
+          code: "FORM_ACCESS_RESTRICTED",
+          requiresAuth: !req.isAuthenticated(),
+        });
       }
       void storage.incrementIntegrationFormViews(form.id);
       res.json(publicFormPayload(form));
@@ -289,6 +318,13 @@ export function registerTalentoRoutes(app: Express) {
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
       }
+      if (!canAccessRestrictedForm(form, req)) {
+        return res.status(403).json({
+          message: "Este formulario requiere acceso autorizado",
+          code: "FORM_ACCESS_RESTRICTED",
+          requiresAuth: !req.isAuthenticated(),
+        });
+      }
       void storage.incrementIntegrationFormViews(form.id);
       res.json(publicFormPayload(form));
     } catch (error) {
@@ -303,6 +339,13 @@ export function registerTalentoRoutes(app: Express) {
       const form = await resolveFormBySlugParam(req.params.slug);
       if (!form || !form.isPublished) {
         return res.status(404).json({ message: "Formulario no encontrado" });
+      }
+      if (!canAccessRestrictedForm(form, req)) {
+        return res.status(403).json({
+          message: "Este formulario requiere acceso autorizado",
+          code: "FORM_ACCESS_RESTRICTED",
+          requiresAuth: !req.isAuthenticated(),
+        });
       }
 
       const parsed = submitSchema.safeParse(req.body);
@@ -332,11 +375,14 @@ export function registerTalentoRoutes(app: Express) {
           errors: { email: "Ingresa un correo válido" },
         });
       }
-      const existing = await storage.getIntegrationResponseByEmail(form.id, email);
-      if (existing) {
-        return res.status(409).json({
-          message: "Este correo ya envió el formulario. Si necesitas actualizar tu postulación, escribe a Talento y Bienestar.",
-        });
+      if (!formAllowsMultiple(form)) {
+        const existing = await storage.getIntegrationResponseByEmail(form.id, email);
+        if (existing) {
+          return res.status(409).json({
+            message:
+              "Este correo ya envió el formulario. Si necesitas actualizar tu postulación, escribe a Talento y Bienestar.",
+          });
+        }
       }
 
       const response = await storage.createIntegrationResponse({
@@ -356,7 +402,7 @@ export function registerTalentoRoutes(app: Express) {
           .filter((x): x is { label: string; value: string } => x !== null);
 
         const textLines = [
-          `Nueva respuesta en el formulario de integración: ${form.title}`,
+          `Nueva respuesta en el formulario: ${form.title}`,
           `ID: ${response.id}`,
           `Correo: ${email}`,
           ``,
@@ -373,11 +419,11 @@ export function registerTalentoRoutes(app: Express) {
         await sendTransactionalEmail({
           to: DIRECTOR_EMAIL_CONTACT,
           replyTo: email,
-          subject: `Nueva postulación · ${form.title}`,
+          subject: `Nueva respuesta · ${form.title}`,
           text: textLines,
           html: `
             <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;max-width:640px;">
-              <h2 style="margin:0 0 8px;">Nueva postulación</h2>
+              <h2 style="margin:0 0 8px;">Nueva respuesta</h2>
               <p style="margin:0 0 16px;color:#6b7280;">Formulario: <strong>${form.title}</strong> · ID ${response.id}</p>
               <table style="width:100%;border-collapse:collapse;font-size:14px;">${htmlRows}</table>
             </div>
@@ -402,10 +448,10 @@ export function registerTalentoRoutes(app: Express) {
         }
       }
 
-      res.status(201).json({ message: "Postulación enviada", id: response.id });
+      res.status(201).json({ message: "Respuesta enviada", id: response.id });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "No se pudo enviar la postulación" });
+      res.status(500).json({ message: "No se pudo enviar la respuesta" });
     }
   });
 
@@ -413,6 +459,7 @@ export function registerTalentoRoutes(app: Express) {
     try {
       await ensureIntegrationTables();
       await storage.getOrCreateDefaultIntegrationForm();
+      await storage.getOrCreateMiembrosForm();
       const forms = await storage.listIntegrationForms();
       res.json(forms);
     } catch (error) {
@@ -482,8 +529,8 @@ export function registerTalentoRoutes(app: Express) {
     try {
       const form = await resolveFormBySlugParam(req.params.slug);
       if (!form) return res.status(404).json({ message: "Formulario no encontrado" });
-      if (form.slug === DEFAULT_INTEGRATION_SLUG) {
-        return res.status(400).json({ message: "El formulario de integración no se puede eliminar" });
+      if (RESERVED_FORM_SLUGS.has(form.slug)) {
+        return res.status(400).json({ message: "Este formulario no se puede eliminar" });
       }
       const ok = await storage.deleteIntegrationForm(form.id);
       if (!ok) return res.status(400).json({ message: "No se pudo eliminar" });
@@ -491,6 +538,16 @@ export function registerTalentoRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "No se pudo eliminar el formulario" });
+    }
+  });
+
+  app.get("/api/talento/users-basic", requireTalento, async (_req, res) => {
+    try {
+      const users = await storage.getUsersBasic();
+      res.json(users);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "No se pudieron cargar las cuentas" });
     }
   });
 

@@ -19,6 +19,8 @@ export interface IntegrationChoice {
 export interface IntegrationShowIf {
   field: string;
   equals?: string;
+  /** Si la respuesta es array (multiple_choice), exige que contenga este valor. */
+  includes?: string;
 }
 
 export interface IntegrationField {
@@ -492,12 +494,407 @@ export const DEFAULT_INTEGRATION_FORM: IntegrationFormDefinition = {
   ],
 };
 
+export const DEFAULT_MIEMBROS_SLUG = "miembros";
+
+/** Solicitudes de miembros de equipo (alta, cobertura de rol, retiro). */
+export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
+  version: 1,
+  title: "Solicitud de miembros",
+  subtitle: "Dirección de Talento y Bienestar",
+  description:
+    "Usa este formulario para pedir incorporación, cobertura de un rol o retiro de un integrante. Talento y Bienestar revisará el caso, hablará con las personas involucradas y tomará la decisión final con el proceso de la dirección.",
+  cta: "Iniciar solicitud",
+  ending: {
+    title: "Solicitud recibida",
+    message:
+      "Talento y Bienestar revisará el caso. Puede haber seguimiento para platicar con la dirección y con las personas involucradas antes de cualquier decisión. Gracias por documentar el contexto.",
+  },
+  theme: {
+    background: "midnight",
+    backgroundColor: "#0b1220",
+  },
+  sections: [
+    {
+      id: "welcome",
+      title: "Solicitud de miembros",
+      subtitle: "Alta · cobertura de rol · retiro",
+      isWelcome: true,
+      fields: [],
+    },
+    {
+      id: "solicitante",
+      title: "Quién solicita",
+      subtitle: "Datos de quien envía la solicitud a nombre de una dirección.",
+      fields: [
+        {
+          id: "requesterName",
+          type: "short_text",
+          label: "Tu nombre completo",
+          required: true,
+          maxLength: 120,
+        },
+        {
+          id: "email",
+          type: "email",
+          label: "Tu correo de contacto",
+          description: "Usaremos este correo para dar seguimiento a la solicitud.",
+          placeholder: "nombre@correo.com",
+          required: true,
+        },
+        {
+          id: "requesterPhone",
+          type: "phone",
+          label: "Teléfono (opcional)",
+          required: false,
+        },
+        {
+          id: "requesterRole",
+          type: "short_text",
+          label: "Tu cargo o rol en la dirección",
+          placeholder: "Ej. Director/a, Coordinación, Líder de área…",
+          required: true,
+          maxLength: 120,
+        },
+      ],
+    },
+    {
+      id: "direccion-tipo",
+      title: "Dirección y tipo de solicitud",
+      subtitle: "Una solicitud = un tipo de movimiento (puedes enviar otra si necesitas más de uno).",
+      fields: [
+        {
+          id: "direction",
+          type: "single_choice",
+          label: "Dirección que solicita",
+          required: true,
+          options: [
+            { value: "direccion-sede", label: "Dirección de Sede" },
+            { value: "operaciones-logistica", label: "Dirección de Operaciones y Logística" },
+            {
+              value: "academia-innovacion",
+              label: "Dirección de Academia e Innovación Educativa",
+            },
+            {
+              value: "comunicacion-experiencia",
+              label: "Dirección de Comunicación y Experiencia",
+            },
+            { value: "talento-bienestar", label: "Dirección de Talento y Bienestar" },
+            {
+              value: "desarrollo-tecnologico",
+              label: "Dirección de Desarrollo Tecnológico e Innovación",
+            },
+            { value: "estrategia-finanzas", label: "Dirección de Estrategia y Finanzas" },
+            {
+              value: "investigacion-informacion",
+              label: "Dirección de Investigación e Información",
+            },
+          ],
+        },
+        {
+          id: "requestType",
+          type: "single_choice",
+          label: "Tipo de solicitud",
+          required: true,
+          options: [
+            {
+              value: "incorporacion",
+              label: "Incorporación de nuevo(s) miembro(s)",
+              description: "Necesitas sumar a alguien al equipo (rol nuevo o plaza adicional).",
+            },
+            {
+              value: "cobertura",
+              label: "Cobertura / continuidad de un rol",
+              description:
+                "Alguien ya no sostiene el rol y necesitas que otra persona entre en su lugar (o cubra esa función).",
+            },
+            {
+              value: "retiro",
+              label: "Retiro de miembro(s) del equipo",
+              description:
+                "El equipo ya opera sin esa persona o el ajuste es no mantenerla en el equipo.",
+            },
+          ],
+        },
+        {
+          id: "urgency",
+          type: "single_choice",
+          label: "¿Qué tan urgente es?",
+          required: true,
+          options: [
+            { value: "urgente", label: "Urgente (esta semana)" },
+            { value: "2_semanas", label: "En las próximas 2 semanas" },
+            { value: "1_mes", label: "En el próximo mes" },
+            { value: "flexible", label: "Flexible / sin fecha dura" },
+          ],
+        },
+        {
+          id: "desiredDate",
+          type: "short_text",
+          label: "Fecha deseada (aprox.)",
+          description: "Ej. 15 de octubre, inicio de mes, cierre de trimestre…",
+          placeholder: "Opcional",
+          required: false,
+          maxLength: 80,
+        },
+      ],
+    },
+    {
+      id: "detalle-incorporacion",
+      title: "Detalle · Incorporación",
+      subtitle: "Perfil que necesitas y por qué.",
+      fields: [
+        {
+          id: "newRoleTitle",
+          type: "short_text",
+          label: "Rol o función que se necesita",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "incorporacion" },
+        },
+        {
+          id: "newHeadcount",
+          type: "number",
+          label: "¿Cuántas personas necesitas?",
+          required: true,
+          min: 1,
+          max: 10,
+          showIf: { field: "requestType", equals: "incorporacion" },
+        },
+        {
+          id: "newProfile",
+          type: "long_text",
+          label: "Perfil y responsabilidades esperadas",
+          description: "Qué haría día a día, skills mínimas y con quién colaboraría.",
+          required: true,
+          showIf: { field: "requestType", equals: "incorporacion" },
+        },
+        {
+          id: "newJustification",
+          type: "long_text",
+          label: "¿Por qué se necesita ahora?",
+          description: "Carga de trabajo, proyecto, hueco en el equipo, meta de la dirección…",
+          required: true,
+          showIf: { field: "requestType", equals: "incorporacion" },
+        },
+        {
+          id: "newHasCandidate",
+          type: "single_choice",
+          label: "¿Ya tienes a alguien en mente?",
+          required: true,
+          options: [
+            { value: "si", label: "Sí, tengo propuesta" },
+            { value: "no", label: "No, pedimos apoyo para buscar" },
+          ],
+          showIf: { field: "requestType", equals: "incorporacion" },
+        },
+        {
+          id: "newCandidateName",
+          type: "short_text",
+          label: "Nombre de la persona propuesta",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "newHasCandidate", equals: "si" },
+        },
+        {
+          id: "newCandidateContact",
+          type: "short_text",
+          label: "Contacto de la persona propuesta",
+          description: "Correo y/o número de teléfono.",
+          required: true,
+          maxLength: 160,
+          showIf: { field: "newHasCandidate", equals: "si" },
+        },
+      ],
+    },
+    {
+      id: "detalle-cobertura",
+      title: "Detalle · Cobertura de rol",
+      subtitle: "Quién deja de sostener el rol y cómo quieres cubrirlo.",
+      fields: [
+        {
+          id: "coverMemberName",
+          type: "short_text",
+          label: "Nombre de la persona cuyo rol hay que cubrir",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverMemberContact",
+          type: "short_text",
+          label: "Contacto de esa persona",
+          description: "Correo y/o número para que Talento pueda dar seguimiento.",
+          required: true,
+          maxLength: 160,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverMemberRole",
+          type: "short_text",
+          label: "Rol o función actual",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverSituation",
+          type: "long_text",
+          label: "¿Qué está pasando?",
+          description:
+            "Bajo compromiso, ausencia, cambio de foco, conflicto de carga… sin juicios: hechos y contexto.",
+          required: true,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverSameRole",
+          type: "single_choice",
+          label: "¿La cobertura mantiene el mismo rol?",
+          required: true,
+          options: [
+            { value: "mismo", label: "Sí, mismo rol / mismas responsabilidades" },
+            { value: "ajustado", label: "Rol ajustado (cambia el alcance)" },
+          ],
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverProposedName",
+          type: "short_text",
+          label: "Persona propuesta para cubrir (si hay)",
+          required: false,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
+          id: "coverProposedContact",
+          type: "short_text",
+          label: "Contacto de quien proponen para cubrir",
+          description: "Correo y/o número.",
+          required: false,
+          maxLength: 160,
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+      ],
+    },
+    {
+      id: "detalle-retiro",
+      title: "Detalle · Retiro",
+      subtitle: "Contexto para analizar el caso con cuidado.",
+      fields: [
+        {
+          id: "removeMemberName",
+          type: "short_text",
+          label: "Nombre de la persona",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeMemberContact",
+          type: "short_text",
+          label: "Contacto de esa persona",
+          description: "Correo y/o número.",
+          required: true,
+          maxLength: 160,
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeMemberRole",
+          type: "short_text",
+          label: "Rol o función actual",
+          required: true,
+          maxLength: 120,
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeReason",
+          type: "single_choice",
+          label: "Motivo principal",
+          required: true,
+          options: [
+            { value: "bajo_compromiso", label: "Bajo compromiso / falta de entrega" },
+            { value: "capacidad_cubierta", label: "El equipo ya cubre esa función" },
+            { value: "reestructura", label: "Reestructura o cambio de prioridades" },
+            { value: "conflicto", label: "Conflicto o dinámica de equipo" },
+            { value: "otro", label: "Otro" },
+          ],
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeTried",
+          type: "long_text",
+          label: "¿Qué se ha intentado antes?",
+          description: "Conversaciones, ajustes de rol, acompañamiento, acuerdos…",
+          required: true,
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeTalked",
+          type: "single_choice",
+          label: "¿Ya se habló con la persona sobre esta situación?",
+          required: true,
+          options: [
+            { value: "si", label: "Sí, de forma clara" },
+            { value: "parcial", label: "Parcialmente / solo indicios" },
+            { value: "no", label: "Todavía no" },
+          ],
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+        {
+          id: "removeLastDay",
+          type: "short_text",
+          label: "Fecha deseada de cierre (si aplica)",
+          placeholder: "Opcional",
+          required: false,
+          maxLength: 80,
+          showIf: { field: "requestType", equals: "retiro" },
+        },
+      ],
+    },
+    {
+      id: "contexto",
+      title: "Contexto para Talento",
+      subtitle: "Esto nos ayuda a priorizar y a acompañar bien el caso.",
+      fields: [
+        {
+          id: "impact",
+          type: "long_text",
+          label: "¿Qué impacto tiene en el equipo si no se atiende?",
+          description: "Operación, clima, plazos, calidad, carga sobre otras personas…",
+          required: true,
+        },
+        {
+          id: "extraComments",
+          type: "long_text",
+          label: "Comentarios adicionales",
+          description: "Cualquier detalle que no cupo arriba.",
+          required: false,
+        },
+        {
+          id: "processAck",
+          type: "checkbox",
+          label:
+            "Entiendo que la decisión final corresponde a Talento y Bienestar, y que puede haber conversaciones con las personas involucradas antes de cerrar el caso.",
+          required: true,
+        },
+      ],
+    },
+  ],
+};
+
 export function isFieldVisible(
   field: IntegrationField,
   answers: Record<string, unknown>,
 ): boolean {
   if (!field.showIf) return true;
-  return answers[field.showIf.field] === field.showIf.equals;
+  const raw = answers[field.showIf.field];
+  if (field.showIf.includes != null) {
+    if (Array.isArray(raw)) return raw.map(String).includes(field.showIf.includes);
+    return String(raw ?? "") === field.showIf.includes;
+  }
+  if (field.showIf.equals != null) {
+    return raw === field.showIf.equals;
+  }
+  return true;
 }
 
 export const FIELD_TYPE_LABELS: Record<IntegrationFieldType, string> = {

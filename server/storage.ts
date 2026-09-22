@@ -19,7 +19,7 @@ import {
 import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
 import { DEFAULT_CARD_THEME } from "@shared/card-directions";
 import type { PresentationCardLink, PresentationCardTheme } from "@shared/card-directions";
-import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, syncOfficialCopy } from "@shared/integration-form";
+import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_FORM, DEFAULT_MIEMBROS_SLUG, syncOfficialCopy } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import * as connectPgModule from "connect-pg-simple";
@@ -114,6 +114,7 @@ export interface IStorage {
   getLiveCourseRegistrationsByUserIdAndCourseId(userId: number, courseId: number): Promise<LiveCourseRegistration[]>;
 
   getOrCreateDefaultIntegrationForm(): Promise<IntegrationForm>;
+  getOrCreateMiembrosForm(): Promise<IntegrationForm>;
   listIntegrationForms(): Promise<Array<IntegrationForm & { responseCount: number }>>;
   createIntegrationForm(data: InsertIntegrationForm): Promise<IntegrationForm>;
   getIntegrationFormById(id: number): Promise<IntegrationForm | undefined>;
@@ -751,6 +752,35 @@ export class MemStorage implements IStorage {
       spreadsheetId: null,
       spreadsheetTab: "Respuestas",
       isPublished: true,
+      accessMode: "public",
+      allowedUserIds: [],
+      allowMultipleSubmissions: false,
+      pinnedAt: null,
+      viewCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.integrationForms.set(id, form);
+    return form;
+  }
+
+  async getOrCreateMiembrosForm(): Promise<IntegrationForm> {
+    const existing = Array.from(this.integrationForms.values()).find(
+      (form) => form.slug === DEFAULT_MIEMBROS_SLUG,
+    );
+    if (existing) return existing;
+    const id = this.currentIntegrationFormIds++;
+    const form: IntegrationForm = {
+      id,
+      title: DEFAULT_MIEMBROS_FORM.title,
+      slug: DEFAULT_MIEMBROS_SLUG,
+      schema: DEFAULT_MIEMBROS_FORM,
+      spreadsheetId: null,
+      spreadsheetTab: "Respuestas",
+      isPublished: true,
+      accessMode: "public",
+      allowedUserIds: [],
+      allowMultipleSubmissions: true,
       pinnedAt: null,
       viewCount: 0,
       createdAt: new Date(),
@@ -784,6 +814,9 @@ export class MemStorage implements IStorage {
       spreadsheetId: data.spreadsheetId ?? null,
       spreadsheetTab: data.spreadsheetTab ?? "Respuestas",
       isPublished: data.isPublished ?? true,
+      accessMode: data.accessMode ?? "public",
+      allowedUserIds: data.allowedUserIds ?? [],
+      allowMultipleSubmissions: data.allowMultipleSubmissions ?? false,
       pinnedAt: data.pinnedAt ?? null,
       viewCount: data.viewCount ?? 0,
       createdAt: new Date(),
@@ -811,7 +844,7 @@ export class MemStorage implements IStorage {
 
   async deleteIntegrationForm(id: number): Promise<boolean> {
     const form = this.integrationForms.get(id);
-    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG) return false;
+    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG || form.slug === DEFAULT_MIEMBROS_SLUG) return false;
     Array.from(this.integrationResponses.entries()).forEach(([rid, response]) => {
       if (response.formId === id) this.integrationResponses.delete(rid);
     });
@@ -1370,10 +1403,35 @@ export class DatabaseStorage implements IStorage {
       slug: DEFAULT_INTEGRATION_SLUG,
       schema: DEFAULT_INTEGRATION_FORM,
       isPublished: true,
+      accessMode: "public",
+      allowedUserIds: [],
+      allowMultipleSubmissions: false,
       spreadsheetTab: "Respuestas",
       viewCount: 0,
     }).returning();
-    return created;
+    return created!;
+  }
+
+  async getOrCreateMiembrosForm(): Promise<IntegrationForm> {
+    const [existing] = await db
+      .select()
+      .from(integrationForms)
+      .where(eq(integrationForms.slug, DEFAULT_MIEMBROS_SLUG))
+      .limit(1);
+    if (existing) return existing;
+
+    const [created] = await db.insert(integrationForms).values({
+      title: DEFAULT_MIEMBROS_FORM.title,
+      slug: DEFAULT_MIEMBROS_SLUG,
+      schema: DEFAULT_MIEMBROS_FORM,
+      isPublished: true,
+      accessMode: "public",
+      allowedUserIds: [],
+      allowMultipleSubmissions: true,
+      spreadsheetTab: "Respuestas",
+      viewCount: 0,
+    }).returning();
+    return created!;
   }
 
   async listIntegrationForms(): Promise<Array<IntegrationForm & { responseCount: number }>> {
@@ -1404,6 +1462,9 @@ export class DatabaseStorage implements IStorage {
       ...data,
       spreadsheetTab: data.spreadsheetTab ?? "Respuestas",
       isPublished: data.isPublished ?? true,
+      accessMode: data.accessMode ?? "public",
+      allowedUserIds: data.allowedUserIds ?? [],
+      allowMultipleSubmissions: data.allowMultipleSubmissions ?? false,
       viewCount: data.viewCount ?? 0,
     }).returning();
     if (!created) throw new Error("Failed to create integration form");
@@ -1431,7 +1492,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteIntegrationForm(id: number): Promise<boolean> {
     const form = await this.getIntegrationFormById(id);
-    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG) return false;
+    if (!form || form.slug === DEFAULT_INTEGRATION_SLUG || form.slug === DEFAULT_MIEMBROS_SLUG) return false;
     await db.delete(integrationForms).where(eq(integrationForms.id, id));
     return true;
   }
