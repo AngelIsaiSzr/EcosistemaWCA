@@ -83,20 +83,21 @@ export const ORG_SEED_MONTERREY: OrgSeedPerson[] = [
     email: "ana.lopez@ecosistemawca.com",
     sortOrder: 1,
   },
-  {
-    directionKey: "operaciones-logistica",
-    roleKind: "director",
-    name: "Alicia Sofía Bernadez Terrazas",
-    roleTitle: "Directora de Operaciones y Logística",
-    email: "alicia.bernadez@ecosistemawca.com",
-    sortOrder: 10,
-  },
+  // Extremos: Academia (izq) y Desarrollo Tecnológico (der) — nombres largos, más ancho en UI.
   {
     directionKey: "academia-innovacion",
     roleKind: "director",
     name: "Ricardo Alarcón Navarro",
     roleTitle: "Director de Academia e Innovación Educativa",
     email: "ricardo.alarcon@ecosistemawca.com",
+    sortOrder: 10,
+  },
+  {
+    directionKey: "operaciones-logistica",
+    roleKind: "director",
+    name: "Alicia Sofía Bernadez Terrazas",
+    roleTitle: "Directora de Operaciones y Logística",
+    email: "alicia.bernadez@ecosistemawca.com",
     sortOrder: 11,
   },
   {
@@ -116,20 +117,12 @@ export const ORG_SEED_MONTERREY: OrgSeedPerson[] = [
     sortOrder: 13,
   },
   {
-    directionKey: "desarrollo-tecnologico",
-    roleKind: "director",
-    name: "Paola Vanessa Cárdenas Gómez",
-    roleTitle: "Directora de Desarrollo Tecnológico e Innovación",
-    email: "paola.cardenas@ecosistemawca.com",
-    sortOrder: 14,
-  },
-  {
     directionKey: "estrategia-finanzas",
     roleKind: "director",
     name: "Rodrigo Flores Manriquez",
     roleTitle: "Director de Estrategia y Finanzas",
     email: "rodrigo.flores@ecosistemawca.com",
-    sortOrder: 15,
+    sortOrder: 14,
   },
   {
     directionKey: "investigacion-informacion",
@@ -137,6 +130,14 @@ export const ORG_SEED_MONTERREY: OrgSeedPerson[] = [
     name: "Alessia García Vázquez",
     roleTitle: "Directora de Investigación e Información",
     email: "alessia.garcia@ecosistemawca.com",
+    sortOrder: 15,
+  },
+  {
+    directionKey: "desarrollo-tecnologico",
+    roleKind: "director",
+    name: "Paola Vanessa Cárdenas Gómez",
+    roleTitle: "Directora de Desarrollo Tecnológico e Innovación",
+    email: "paola.cardenas@ecosistemawca.com",
     sortOrder: 16,
   },
   // —— Operaciones ——

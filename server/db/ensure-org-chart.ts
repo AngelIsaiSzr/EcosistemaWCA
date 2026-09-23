@@ -1,4 +1,4 @@
-import { sql, eq, asc } from "drizzle-orm";
+import { sql, eq, and, asc } from "drizzle-orm";
 import { db } from "../db";
 import { orgChartPeople } from "@shared/schema";
 import { ORG_SEED_MONTERREY, ORG_SEDE_ID, type OrgDirectionKey } from "@shared/org-chart";
@@ -43,9 +43,26 @@ export async function ensureOrgChartTables() {
     await seedMonterreyOrg();
   } else {
     await seedMissingMembers();
+    await syncLeaderSortOrders();
   }
 
   ensured = true;
+}
+
+/** Reaplica sort_order del seed (p. ej. Academia primero, Desarrollo al final). */
+async function syncLeaderSortOrders() {
+  for (const person of ORG_SEED_MONTERREY.filter((p) => p.roleKind !== "member")) {
+    await db
+      .update(orgChartPeople)
+      .set({ sortOrder: person.sortOrder, updatedAt: new Date() })
+      .where(
+        and(
+          eq(orgChartPeople.sedeId, ORG_SEDE_ID),
+          eq(orgChartPeople.directionKey, person.directionKey),
+          eq(orgChartPeople.roleKind, person.roleKind),
+        ),
+      );
+  }
 }
 
 async function seedMonterreyOrg() {

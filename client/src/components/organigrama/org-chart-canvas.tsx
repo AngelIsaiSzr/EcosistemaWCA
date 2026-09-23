@@ -55,7 +55,9 @@ type EdgeSegment = {
 
 /** Líderes (Director / Subdirectora / Directores de área): tarjeta vertical. */
 const LEADER_W = 268;
-const LEADER_H = 248;
+/** Extremos con nombre de dirección largo (Academia / Desarrollo Tecnológico). */
+const LEADER_W_WIDE = 312;
+const LEADER_H = 226;
 /** Integrantes: tarjeta horizontal más compacta. */
 const MEMBER_W = 292;
 const MEMBER_H = 112;
@@ -64,12 +66,20 @@ const GAP_Y = 92;
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 1.8;
 
+const WIDE_DIRECTION_KEYS = new Set<OrgDirectionKey>([
+  "academia-innovacion",
+  "desarrollo-tecnologico",
+]);
+
 function isLeader(person: OrgPerson) {
   return person.roleKind === "director" || person.roleKind === "subdirector";
 }
 
 function cardSize(person: OrgPerson) {
-  if (isLeader(person)) return { w: LEADER_W, h: LEADER_H };
+  if (isLeader(person)) {
+    const wide = WIDE_DIRECTION_KEYS.has(person.directionKey as OrgDirectionKey);
+    return { w: wide ? LEADER_W_WIDE : LEADER_W, h: LEADER_H };
+  }
   return { w: MEMBER_W, h: MEMBER_H };
 }
 
@@ -216,11 +226,11 @@ function PersonCard({
   return (
     <motion.button
       type="button"
-      // Sin `layout`: evita que las tarjetas se animen solas mientras las líneas saltan.
-      initial={{ opacity: 0, scale: 0.92, y: 10 }}
+      // Sin `layout`: evita desfase tarjetas/líneas. AnimatePresence maneja enter/exit.
+      initial={{ opacity: 0, scale: 0.88, y: 18 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.94, y: -8 }}
-      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, scale: 0.9, y: -12 }}
+      transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
       onClick={(e) => {
         if (node.hasChildren) onToggle(p.id);
         // Quita el “seleccionado” residual del navegador al abrir/cerrar
@@ -251,9 +261,9 @@ function PersonCard({
       )}
 
       {leader ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center px-3.5 pb-3 pt-3 text-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center px-3.5 pb-2.5 pt-2.5 text-center">
           <div
-            className="relative h-[3.75rem] w-[3.75rem] shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
+            className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
@@ -268,7 +278,7 @@ function PersonCard({
             )}
           </div>
 
-          <p className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
             {directionLabel}
           </p>
           <p className="mt-1 text-[14px] font-bold leading-snug text-slate-900">{p.name}</p>
@@ -276,7 +286,7 @@ function PersonCard({
             {p.roleTitle}
           </p>
 
-          <div className="mt-2 w-full space-y-0.5 text-[11px] leading-snug text-slate-500">
+          <div className="mt-1.5 w-full space-y-0.5 text-[11px] leading-snug text-slate-500">
             {p.email && (
               <p className="flex items-start justify-center gap-1.5" title={p.email}>
                 <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
@@ -466,10 +476,16 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
     });
   }, [bounds.w, bounds.h]);
 
+  // Solo ajustar una vez al cargar — no al expandir/colapsar (eso reseteaba el zoom a ~44%).
+  const didInitialFit = useRef(false);
   useEffect(() => {
-    const t = window.setTimeout(fit, 60);
+    if (didInitialFit.current || nodes.length === 0) return;
+    const t = window.setTimeout(() => {
+      fit();
+      didInitialFit.current = true;
+    }, 80);
     return () => window.clearTimeout(t);
-  }, [fit]);
+  }, [fit, nodes.length]);
 
   const toggleFullscreen = async () => {
     const el = shellRef.current;
@@ -569,16 +585,16 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.72 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  initial={{ opacity: 0, pathLength: 0 }}
+                  animate={{ opacity: 0.72, pathLength: 1 }}
+                  exit={{ opacity: 0, pathLength: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 />
               ))}
             </AnimatePresence>
           </svg>
 
-          <AnimatePresence initial={false}>
+          <AnimatePresence>
             {nodes.map((node) => (
               <PersonCard key={node.person.id} node={node} onToggle={toggle} />
             ))}
