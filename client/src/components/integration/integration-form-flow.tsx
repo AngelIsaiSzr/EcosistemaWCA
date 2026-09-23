@@ -20,6 +20,7 @@ import {
   countryFlagUrl,
   getAllFields,
   isFieldVisible,
+  isSectionVisible,
   isValidEmail,
   isValidHttpUrl,
   isValidPhoneNumber,
@@ -116,8 +117,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   const sectionIsActive = (index: number, currentAnswers: Answers) => {
     const s = sections[index];
     if (!s) return false;
-    if (s.isWelcome) return true;
-    return visibleFields(s.fields, currentAnswers).length > 0;
+    return isSectionVisible(s, currentAnswers);
   };
 
   const findStep = (from: number, direction: 1 | -1, currentAnswers: Answers) => {

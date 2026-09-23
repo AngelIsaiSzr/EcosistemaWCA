@@ -43,7 +43,13 @@ export interface IntegrationSection {
   id: string;
   title: string;
   subtitle?: string;
+  /** Si true, es el paso inicial sin preguntas (el copy real vive en definition.title/subtitle/…). */
   isWelcome?: boolean;
+  /**
+   * Condición de toda la sección: si no se cumple, el paso se salta.
+   * Útil para ramas (ej. «Tipo de solicitud = Incorporación» → sección de detalle).
+   */
+  showIf?: IntegrationShowIf;
   fields: IntegrationField[];
 }
 
@@ -642,6 +648,7 @@ export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
       id: "detalle-incorporacion",
       title: "Detalle · Incorporación",
       subtitle: "Perfil que necesitas y por qué.",
+      showIf: { field: "requestType", equals: "incorporacion" },
       fields: [
         {
           id: "newRoleTitle",
@@ -710,6 +717,7 @@ export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
       id: "detalle-cobertura",
       title: "Detalle · Cobertura de rol",
       subtitle: "Quién deja de sostener el rol y cómo quieres cubrirlo.",
+      showIf: { field: "requestType", equals: "cobertura" },
       fields: [
         {
           id: "coverMemberName",
@@ -779,6 +787,7 @@ export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
       id: "detalle-retiro",
       title: "Detalle · Retiro",
       subtitle: "Contexto para analizar el caso con cuidado.",
+      showIf: { field: "requestType", equals: "retiro" },
       fields: [
         {
           id: "removeMemberName",
@@ -881,20 +890,37 @@ export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
   ],
 };
 
+export function matchesShowIf(
+  showIf: IntegrationShowIf | undefined,
+  answers: Record<string, unknown>,
+): boolean {
+  if (!showIf) return true;
+  const raw = answers[showIf.field];
+  if (showIf.includes != null) {
+    if (Array.isArray(raw)) return raw.map(String).includes(showIf.includes);
+    return String(raw ?? "") === showIf.includes;
+  }
+  if (showIf.equals != null) {
+    return String(raw ?? "") === String(showIf.equals);
+  }
+  return true;
+}
+
 export function isFieldVisible(
   field: IntegrationField,
   answers: Record<string, unknown>,
 ): boolean {
-  if (!field.showIf) return true;
-  const raw = answers[field.showIf.field];
-  if (field.showIf.includes != null) {
-    if (Array.isArray(raw)) return raw.map(String).includes(field.showIf.includes);
-    return String(raw ?? "") === field.showIf.includes;
-  }
-  if (field.showIf.equals != null) {
-    return raw === field.showIf.equals;
-  }
-  return true;
+  return matchesShowIf(field.showIf, answers);
+}
+
+/** Una sección aparece si no es bienvenida-condicional y tiene al menos un campo visible. */
+export function isSectionVisible(
+  section: IntegrationSection,
+  answers: Record<string, unknown>,
+): boolean {
+  if (section.isWelcome) return true;
+  if (!matchesShowIf(section.showIf, answers)) return false;
+  return section.fields.some((field) => isFieldVisible(field, answers));
 }
 
 export const FIELD_TYPE_LABELS: Record<IntegrationFieldType, string> = {
