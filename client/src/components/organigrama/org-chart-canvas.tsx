@@ -53,16 +53,18 @@ type EdgeSegment = {
   color: string;
 };
 
+type AnchorPos = { id: number; x: number; y: number };
+
 /** Líderes (Director / Subdirectora / Directores de área): tarjeta vertical. */
 const LEADER_W = 268;
 /** Extremos con nombre de dirección largo (Academia / Desarrollo Tecnológico). */
 const LEADER_W_WIDE = 312;
-const LEADER_H = 226;
+const LEADER_H = 198;
 /** Integrantes: tarjeta horizontal más compacta. */
 const MEMBER_W = 292;
-const MEMBER_H = 112;
+const MEMBER_H = 108;
 const GAP_X = 40;
-const GAP_Y = 92;
+const GAP_Y = 88;
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 1.8;
 
@@ -83,16 +85,36 @@ function cardSize(person: OrgPerson) {
   return { w: MEMBER_W, h: MEMBER_H };
 }
 
+/** Ancho del subárbol (para empujar hermanos al expandir). */
+function measureWidth(
+  person: OrgPerson,
+  byParent: Map<number | null, OrgPerson[]>,
+  expanded: Set<number>,
+): number {
+  const { w } = cardSize(person);
+  const kids = byParent.get(person.id) ?? [];
+  if (!expanded.has(person.id) || kids.length === 0) return w;
+  const kidsW =
+    kids.reduce((sum, c) => sum + measureWidth(c, byParent, expanded), 0) +
+    GAP_X * Math.max(0, kids.length - 1);
+  return Math.max(w, kidsW);
+}
+
+/**
+ * Layout top-down: cada nodo se coloca en un centerX fijo del padre.
+ * Los hijos se centran bajo ese centerX y crecen a los lados.
+ */
 function layoutTree(
   person: OrgPerson,
   byParent: Map<number | null, OrgPerson[]>,
   expanded: Set<number>,
-  x: number,
+  centerX: number,
   y: number,
 ): LayoutNode {
   const kids = byParent.get(person.id) ?? [];
   const isExpanded = expanded.has(person.id);
   const { w, h } = cardSize(person);
+  const x = centerX - w / 2;
 
   if (!isExpanded || kids.length === 0) {
     return {
@@ -108,40 +130,35 @@ function layoutTree(
   }
 
   const childY = y + h + GAP_Y;
-  const centered: LayoutNode[] = [];
-  let walk = x;
-  for (const child of kids) {
-    const node = layoutTree(child, byParent, expanded, walk, childY);
-    centered.push(node);
-    walk += subtreeWidth(node) + GAP_X;
-  }
+  const widths = kids.map((c) => measureWidth(c, byParent, expanded));
+  const total =
+    widths.reduce((a, b) => a + b, 0) + GAP_X * Math.max(0, kids.length - 1);
+  let walk = centerX - total / 2;
+  const children: LayoutNode[] = [];
 
-  // Centrar al padre sobre el centro visual de las tarjetas hijas (no del ancho del subárbol).
-  // Así Director y Subdirección quedan en línea vertical recta.
-  const first = centered[0]!;
-  const last = centered[centered.length - 1]!;
-  const mid =
-    (first.x + first.width / 2 + last.x + last.width / 2) / 2;
-  const parentX = mid - w / 2;
+  for (let i = 0; i < kids.length; i++) {
+    const cw = widths[i]!;
+    const childCenter = walk + cw / 2;
+    children.push(layoutTree(kids[i]!, byParent, expanded, childCenter, childY));
+    walk += cw + GAP_X;
+  }
 
   return {
     person,
-    x: Math.max(0, parentX),
+    x,
     y,
     width: w,
     height: h,
-    children: centered,
+    children,
     hasChildren: true,
     expanded: true,
   };
 }
 
-function subtreeWidth(node: LayoutNode): number {
-  if (!node.expanded || node.children.length === 0) return node.width;
-  const kidsW =
-    node.children.reduce((sum, c) => sum + subtreeWidth(c), 0) +
-    GAP_X * Math.max(0, node.children.length - 1);
-  return Math.max(node.width, kidsW);
+function shiftTree(node: LayoutNode, dx: number, dy: number) {
+  node.x += dx;
+  node.y += dy;
+  for (const c of node.children) shiftTree(c, dx, dy);
 }
 
 function collectNodes(node: LayoutNode, out: LayoutNode[] = []): LayoutNode[] {
@@ -151,10 +168,10 @@ function collectNodes(node: LayoutNode, out: LayoutNode[] = []): LayoutNode[] {
 }
 
 /**
- * Colores de conexión:
- * - Bajada + bus horizontal: color del padre
- * - Stub vertical al hijo: color del hijo
- * - Un solo hijo: toda la línea en color del padre
+ * Colores:
+ * - Bajada + bus: color del padre
+ * - Stub al hijo: color del hijo
+ * - Un solo hijo: línea completa en color del padre
  */
 function collectEdgeSegments(node: LayoutNode, segments: EdgeSegment[] = []): EdgeSegment[] {
   if (!node.expanded || node.children.length === 0) return segments;
@@ -168,9 +185,14 @@ function collectEdgeSegments(node: LayoutNode, segments: EdgeSegment[] = []): Ed
     const child = node.children[0]!;
     const x2 = child.x + child.width / 2;
     const y2 = child.y;
+    // Misma X → línea recta; si no, ortogonal corta
+    const d =
+      Math.abs(x1 - x2) < 0.5
+        ? `M ${x1} ${y1} V ${y2}`
+        : `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
     segments.push({
       key: `link-${node.person.id}-${child.person.id}`,
-      d: `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`,
+      d,
       color: parentColor,
     });
     collectEdgeSegments(child, segments);
@@ -178,8 +200,8 @@ function collectEdgeSegments(node: LayoutNode, segments: EdgeSegment[] = []): Ed
   }
 
   const childCenters = node.children.map((c) => c.x + c.width / 2);
-  const minX = Math.min(...childCenters);
-  const maxX = Math.max(...childCenters);
+  const minX = Math.min(x1, ...childCenters);
+  const maxX = Math.max(x1, ...childCenters);
 
   segments.push({
     key: `drop-${node.person.id}`,
@@ -214,9 +236,11 @@ function clampScale(value: number) {
 function PersonCard({
   node,
   onToggle,
+  isNew,
 }: {
   node: LayoutNode;
   onToggle: (id: number) => void;
+  isNew: boolean;
 }) {
   const p = node.person;
   const color = orgColor(p.directionKey as OrgDirectionKey);
@@ -226,14 +250,13 @@ function PersonCard({
   return (
     <motion.button
       type="button"
-      // Sin `layout`: evita desfase tarjetas/líneas. AnimatePresence maneja enter/exit.
-      initial={{ opacity: 0, scale: 0.88, y: 18 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: -12 }}
-      transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
+      // Solo opacity: scale/y desfasaba el centro visual vs las líneas y causaba parpadeo.
+      initial={isNew ? { opacity: 0 } : false}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       onClick={(e) => {
         if (node.hasChildren) onToggle(p.id);
-        // Quita el “seleccionado” residual del navegador al abrir/cerrar
         (e.currentTarget as HTMLButtonElement).blur();
       }}
       onMouseDown={(e) => {
@@ -242,7 +265,7 @@ function PersonCard({
       className={cn(
         "absolute flex select-none flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.08)]",
         "outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
-        "hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]",
+        "hover:shadow-[0_14px_36px_rgba(15,23,42,0.11)]",
         "[&_*]:select-none",
         node.hasChildren ? "cursor-pointer" : "cursor-default",
       )}
@@ -257,13 +280,13 @@ function PersonCard({
       }}
     >
       {leader && (
-        <div className="h-2.5 w-full shrink-0" style={{ backgroundColor: color }} />
+        <div className="h-2 w-full shrink-0" style={{ backgroundColor: color }} />
       )}
 
       {leader ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center px-3.5 pb-2.5 pt-2.5 text-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 py-2 text-center">
           <div
-            className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
+            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
@@ -278,23 +301,23 @@ function PersonCard({
             )}
           </div>
 
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">
             {directionLabel}
           </p>
-          <p className="mt-1 text-[14px] font-bold leading-snug text-slate-900">{p.name}</p>
-          <p className="mt-1 text-[12px] font-medium leading-snug" style={{ color }}>
+          <p className="mt-0.5 text-[13px] font-bold leading-snug text-slate-900">{p.name}</p>
+          <p className="mt-0.5 text-[11px] font-medium leading-snug" style={{ color }}>
             {p.roleTitle}
           </p>
 
-          <div className="mt-1.5 w-full space-y-0.5 text-[11px] leading-snug text-slate-500">
+          <div className="mt-1 w-full space-y-0.5 text-[10px] leading-snug text-slate-500">
             {p.email && (
-              <p className="flex items-start justify-center gap-1.5" title={p.email}>
+              <p className="flex items-start justify-center gap-1" title={p.email}>
                 <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
                 <span className="break-all text-left">{p.email}</span>
               </p>
             )}
             {p.phone && (
-              <p className="flex items-start justify-center gap-1.5">
+              <p className="flex items-start justify-center gap-1">
                 <Phone className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
                 <span>{p.phone}</span>
               </p>
@@ -303,11 +326,11 @@ function PersonCard({
         </div>
       ) : (
         <div
-          className="flex h-full items-center gap-3 px-3.5 py-2.5"
+          className="flex h-full items-center gap-3 px-3 py-2"
           style={{ borderLeftWidth: 4, borderLeftColor: color }}
         >
           <div
-            className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
+            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
@@ -322,13 +345,13 @@ function PersonCard({
             )}
           </div>
 
-          <div className="min-w-0 flex-1 pr-6">
+          <div className="min-w-0 flex-1 pr-5">
             <p className="text-[13px] font-bold leading-snug text-slate-900">{p.name}</p>
             <p className="mt-0.5 text-[11px] font-medium leading-snug" style={{ color }}>
               {p.roleTitle}
             </p>
             {p.email && (
-              <p className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-slate-500" title={p.email}>
+              <p className="mt-0.5 flex items-start gap-1 text-[10px] leading-snug text-slate-500" title={p.email}>
                 <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
                 <span className="break-all">{p.email}</span>
               </p>
@@ -350,14 +373,15 @@ function PersonCard({
       )}
 
       {node.hasChildren && (
-        <motion.div
-          className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-white shadow"
+        <div
+          className={cn(
+            "absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-white shadow transition-transform duration-200",
+            node.expanded && "rotate-180",
+          )}
           style={{ backgroundColor: color }}
-          animate={{ rotate: node.expanded ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
         >
           <ChevronDown className="h-3.5 w-3.5" />
-        </motion.div>
+        </div>
       )}
     </motion.button>
   );
@@ -381,19 +405,60 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(defaultExpanded);
   useEffect(() => setExpanded(defaultExpanded), [defaultExpanded]);
 
+  const pendingAnchorRef = useRef<AnchorPos | null>(null);
+  const nodePosRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const knownIdsRef = useRef<Set<number>>(new Set());
+
   const tree = useMemo(() => {
     if (!root) return null;
-    return layoutTree(root, byParent, expanded, 48, 48);
+    const totalW = measureWidth(root, byParent, expanded);
+    const t = layoutTree(root, byParent, expanded, 48 + totalW / 2, 48);
+
+    // Mantener fija la tarjeta que se abrió/cerró; el resto se mueve a los lados.
+    const anchor = pendingAnchorRef.current;
+    if (anchor) {
+      const flat = collectNodes(t);
+      const n = flat.find((node) => node.person.id === anchor.id);
+      if (n) shiftTree(t, anchor.x - n.x, anchor.y - n.y);
+    }
+    return t;
   }, [root, byParent, expanded]);
 
   const nodes = useMemo(() => (tree ? collectNodes(tree) : []), [tree]);
   const edgeSegments = useMemo(() => (tree ? collectEdgeSegments(tree) : []), [tree]);
 
+  useEffect(() => {
+    // Limpiar ancla después del commit (Strict Mode puede recalcular el memo 2 veces).
+    pendingAnchorRef.current = null;
+  }, [tree]);
+
+  const newIds = useMemo(() => {
+    const fresh = new Set<number>();
+    for (const n of nodes) {
+      if (!knownIdsRef.current.has(n.person.id)) fresh.add(n.person.id);
+    }
+    return fresh;
+  }, [nodes]);
+
+  useEffect(() => {
+    const map = new Map<number, { x: number; y: number }>();
+    for (const n of nodes) {
+      map.set(n.person.id, { x: n.x, y: n.y });
+      knownIdsRef.current.add(n.person.id);
+    }
+    nodePosRef.current = map;
+  }, [nodes]);
+
   const bounds = useMemo(() => {
     if (nodes.length === 0) return { w: 1000, h: 700 };
+    const minX = Math.min(...nodes.map((n) => n.x));
+    const minY = Math.min(...nodes.map((n) => n.y));
     const maxX = Math.max(...nodes.map((n) => n.x + n.width));
     const maxY = Math.max(...nodes.map((n) => n.y + n.height));
-    return { w: maxX + 96, h: maxY + 96 };
+    return {
+      w: maxX - Math.min(0, minX) + 96,
+      h: maxY - Math.min(0, minY) + 96,
+    };
   }, [nodes]);
 
   const shellRef = useRef<HTMLDivElement>(null);
@@ -406,6 +471,8 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
   const drag = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   const toggle = useCallback((id: number) => {
+    const pos = nodePosRef.current.get(id);
+    if (pos) pendingAnchorRef.current = { id, x: pos.x, y: pos.y };
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -464,19 +531,24 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
 
   const fit = useCallback(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el || nodes.length === 0) return;
+    const minX = Math.min(...nodes.map((n) => n.x));
+    const minY = Math.min(...nodes.map((n) => n.y));
+    const maxX = Math.max(...nodes.map((n) => n.x + n.width));
+    const maxY = Math.max(...nodes.map((n) => n.y + n.height));
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
     const pad = 96;
-    const sx = (el.clientWidth - pad) / bounds.w;
-    const sy = (el.clientHeight - pad) / bounds.h;
+    const sx = (el.clientWidth - pad) / contentW;
+    const sy = (el.clientHeight - pad) / contentH;
     const next = clampScale(Math.min(0.95, Math.min(sx, sy)));
     setScale(next);
     setPan({
-      x: (el.clientWidth - bounds.w * next) / 2,
-      y: 28,
+      x: (el.clientWidth - contentW * next) / 2 - minX * next,
+      y: 28 - minY * next,
     });
-  }, [bounds.w, bounds.h]);
+  }, [nodes]);
 
-  // Solo ajustar una vez al cargar — no al expandir/colapsar (eso reseteaba el zoom a ~44%).
   const didInitialFit = useRef(false);
   useEffect(() => {
     if (didInitialFit.current || nodes.length === 0) return;
@@ -569,34 +641,35 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
             height: bounds.h,
           }}
         >
+          {/* Líneas estáticas: sin Framer (evita parpadeo / pathLength raro). */}
           <svg
             className="pointer-events-none absolute left-0 top-0 overflow-visible"
-            width={bounds.w}
-            height={bounds.h}
+            width={Math.max(bounds.w, 1)}
+            height={Math.max(bounds.h, 1)}
             aria-hidden
           >
-            <AnimatePresence>
-              {edgeSegments.map((seg) => (
-                <motion.path
-                  key={seg.key}
-                  d={seg.d}
-                  fill="none"
-                  stroke={seg.color}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  initial={{ opacity: 0, pathLength: 0 }}
-                  animate={{ opacity: 0.72, pathLength: 1 }}
-                  exit={{ opacity: 0, pathLength: 0 }}
-                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                />
-              ))}
-            </AnimatePresence>
+            {edgeSegments.map((seg) => (
+              <path
+                key={seg.key}
+                d={seg.d}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.72}
+              />
+            ))}
           </svg>
 
           <AnimatePresence>
             {nodes.map((node) => (
-              <PersonCard key={node.person.id} node={node} onToggle={toggle} />
+              <PersonCard
+                key={node.person.id}
+                node={node}
+                onToggle={toggle}
+                isNew={newIds.has(node.person.id)}
+              />
             ))}
           </AnimatePresence>
         </div>
