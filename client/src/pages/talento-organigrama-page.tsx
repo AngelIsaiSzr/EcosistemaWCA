@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
+import { ImageUrlInput } from "@/components/media/image-url-input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -312,12 +313,13 @@ export default function TalentoOrganigramaPage() {
                     </div>
                     <div>
                       <Label>URL de foto</Label>
-                      <Input
-                        className="mt-1"
-                        value={newMember.photoUrl}
-                        onChange={(e) => setNewMember((s) => ({ ...s, photoUrl: e.target.value }))}
-                        placeholder="https://…"
-                      />
+                      <div className="mt-1">
+                        <ImageUrlInput
+                          value={newMember.photoUrl}
+                          onChange={(v) => setNewMember((s) => ({ ...s, photoUrl: v }))}
+                          placeholder="https://…"
+                        />
+                      </div>
                     </div>
                   </div>
                   <Button
@@ -397,12 +399,13 @@ export default function TalentoOrganigramaPage() {
                     </div>
                     <div>
                       <Label>URL de foto</Label>
-                      <Input
-                        className="mt-1"
-                        value={draft.photoUrl}
-                        onChange={(e) => setDraft({ ...draft, photoUrl: e.target.value })}
-                        placeholder="https://…"
-                      />
+                      <div className="mt-1">
+                        <ImageUrlInput
+                          value={draft.photoUrl}
+                          onChange={(v) => setDraft({ ...draft, photoUrl: v })}
+                          placeholder="https://…"
+                        />
+                      </div>
                     </div>
                     <div>
                       <div className="mb-2 flex items-center justify-between">

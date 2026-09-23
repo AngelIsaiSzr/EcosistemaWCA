@@ -49,7 +49,7 @@ export default function AdminCardsPage() {
 
   const { data: cards = [], isLoading: cardsLoading } = useQuery<PresentationCard[]>({
     queryKey: ["/api/cards"],
-    enabled: user?.role === "admin",
+    enabled: user?.role === "talento",
   });
 
   const createMutation = useMutation({
@@ -66,7 +66,7 @@ export default function AdminCardsPage() {
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
-      navigate(`/admin/tarjetas/${created.id}/editar`);
+      navigate(`/talento/tarjetas/${created.id}/editar`);
     },
     onError: (error: Error) => {
       toast({ title: "No se pudo crear", description: error.message, variant: "destructive" });
@@ -129,7 +129,7 @@ export default function AdminCardsPage() {
     })).filter((g) => g.items.length > 0);
   }, [filtered]);
 
-  if (isLoading || !user || user.role !== "admin") {
+  if (isLoading || !user || user.role !== "talento") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <LoadingSpinner size="lg" text="Cargando..." />
@@ -148,8 +148,8 @@ export default function AdminCardsPage() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
-                <Link href="/admin" className="hover:text-foreground">
-                  Inicio
+                <Link href="/talento" className="hover:text-foreground">
+                  Talento
                 </Link>
                 {" › "}
                 Tarjetas
@@ -161,7 +161,7 @@ export default function AdminCardsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
-                <Link href="/admin">
+                <Link href="/talento">
                   <ArrowLeft className="h-4 w-4" />
                   Volver al panel
                 </Link>
@@ -243,7 +243,7 @@ export default function AdminCardsPage() {
                           <button
                             type="button"
                             className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                            onClick={() => navigate(`/admin/tarjetas/${card.id}/editar`)}
+                            onClick={() => navigate(`/talento/tarjetas/${card.id}/editar`)}
                           >
                             <div
                               className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1"
@@ -300,7 +300,7 @@ export default function AdminCardsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => navigate(`/admin/tarjetas/${card.id}/editar`)}
+                                onClick={() => navigate(`/talento/tarjetas/${card.id}/editar`)}
                               >
                                 Editar
                               </DropdownMenuItem>

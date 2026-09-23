@@ -19,6 +19,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
 import { CardPreview } from "@/components/cards/card-preview";
 import { FaIconPicker } from "@/components/cards/fa-icon-picker";
+import { ImageUrlInput } from "@/components/media/image-url-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -253,7 +254,7 @@ export function PresentationCardEditor({
           <p className="mt-2 text-muted-foreground">
             {(cardQuery.error as Error).message || "No se encontró la tarjeta."}
           </p>
-          <Button className="mt-6" variant="outline" onClick={() => navigate(mode === "admin" ? "/admin/tarjetas" : "/")}>
+          <Button className="mt-6" variant="outline" onClick={() => navigate(mode === "admin" ? "/talento/tarjetas" : "/")}>
             Volver
           </Button>
         </main>
@@ -295,11 +296,11 @@ export function PresentationCardEditor({
                 <p className="text-sm text-muted-foreground">
                   {mode === "admin" ? (
                     <>
-                      <Link href="/admin" className="hover:text-foreground">
-                        Inicio
+                      <Link href="/talento" className="hover:text-foreground">
+                        Talento
                       </Link>
                       {" › "}
-                      <Link href="/admin/tarjetas" className="hover:text-foreground">
+                      <Link href="/talento/tarjetas" className="hover:text-foreground">
                         Tarjetas
                       </Link>
                       {" › "}
@@ -378,9 +379,9 @@ export function PresentationCardEditor({
                 </div>
                 <div className="space-y-2">
                   <Label>URL de foto</Label>
-                  <Input
+                  <ImageUrlInput
                     value={state.image}
-                    onChange={(e) => updateField("image", e.target.value)}
+                    onChange={(v) => updateField("image", v)}
                     placeholder="https://..."
                   />
                 </div>
@@ -553,12 +554,12 @@ export function PresentationCardEditor({
                   <div className="space-y-3 rounded-xl border p-3">
                     <div className="space-y-2">
                       <Label>URL de imagen de fondo</Label>
-                      <Input
+                      <ImageUrlInput
                         value={state.theme.backgroundImage || ""}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           updateField("theme", {
                             ...state.theme,
-                            backgroundImage: e.target.value || undefined,
+                            backgroundImage: v || undefined,
                           })
                         }
                         placeholder="https://... o /media/..."

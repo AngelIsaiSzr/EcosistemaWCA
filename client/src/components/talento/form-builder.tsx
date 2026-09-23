@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ImageUrlInput } from "@/components/media/image-url-input";
 import {
   APPEARANCE_PRESETS,
   FIELD_TYPE_LABELS,
@@ -512,10 +513,17 @@ function AppearanceEditor({
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const isImage = /imagen|foto|logo|image/i.test(label);
   return (
     <div className="min-w-0">
       <Label>{label}</Label>
-      <Input className="mt-1 min-w-0 max-w-full" value={value} onChange={(e) => onChange(e.target.value)} />
+      {isImage ? (
+        <div className="mt-1">
+          <ImageUrlInput value={value} onChange={onChange} />
+        </div>
+      ) : (
+        <Input className="mt-1 min-w-0 max-w-full" value={value} onChange={(e) => onChange(e.target.value)} />
+      )}
     </div>
   );
 }

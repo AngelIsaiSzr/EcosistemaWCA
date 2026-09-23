@@ -21,6 +21,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/navbar";
+import { ImageUrlInput } from "@/components/media/image-url-input";
 
 import {
   Tabs,
@@ -263,18 +264,22 @@ type AdminSectionSlug = keyof typeof ADMIN_SECTIONS;
 
 export default function AdminPage({
   params,
+  portal = "admin",
 }: {
   params?: Record<string | number, string | undefined>;
+  /** En Talento solo se usa la sección Equipo. */
+  portal?: "admin" | "talento";
 }) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const sectionSlug = (params?.section || "programas") as string;
+  const sectionSlug = (params?.section || (portal === "talento" ? "equipo" : "programas")) as string;
   const sectionMeta =
     sectionSlug in ADMIN_SECTIONS
       ? ADMIN_SECTIONS[sectionSlug as AdminSectionSlug]
       : null;
   const activeTab = sectionMeta?.tab ?? "courses";
+  const isTalentoPortal = portal === "talento";
 
   // Estados para los diálogos de confirmación
   const [moduleToDelete, setModuleToDelete] = useState<number | null>(null);
@@ -284,25 +289,38 @@ export default function AdminPage({
   const [testimonialToDelete, setTestimonialToDelete] = useState<number | null>(null);
   const [showLiveSettings, setShowLiveSettings] = useState(false);
 
-  // Redirect if not authenticated or not admin
+  // Redirect if not authenticated or wrong role
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (!user) {
       navigate("/auth");
-    } else if (user.role !== "admin") {
-      navigate("/");
-      toast({
-        title: "Acceso denegado",
-        description: "No tienes permisos para acceder al panel de administración.",
-        variant: "destructive",
-      });
+      return;
     }
-  }, [user, navigate, toast]);
+    if (isTalentoPortal) {
+      if (user.role !== "talento") {
+        navigate("/");
+        toast({
+          title: "Acceso denegado",
+          description: "Esta sección pertenece al panel de Talento.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    if (user.role !== "admin") {
+      navigate("/auth");
+    }
+  }, [user, navigate, toast, isTalentoPortal]);
 
   useEffect(() => {
     if (!sectionMeta) {
-      navigate("/admin");
+      navigate(isTalentoPortal ? "/talento" : "/admin");
+      return;
     }
-  }, [sectionMeta, navigate]);
+    // Equipo ya no vive en Admin
+    if (!isTalentoPortal && sectionSlug === "equipo") {
+      navigate("/talento/equipo");
+    }
+  }, [sectionMeta, navigate, isTalentoPortal, sectionSlug]);
 
   // Fetch data
   const { data: courses, refetch: refetchCourses } = useQuery<Course[]>({
@@ -1317,21 +1335,21 @@ export default function AdminPage({
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
-                <Link href="/admin" className="hover:text-foreground">
-                  Inicio
+                <Link href={isTalentoPortal ? "/talento" : "/admin"} className="hover:text-foreground">
+                  {isTalentoPortal ? "Talento" : "Inicio"}
                 </Link>
                 {" › "}
-                {sectionMeta?.title ?? "Administración"}
+                {sectionMeta?.title ?? (isTalentoPortal ? "Talento" : "Administración")}
               </p>
               <h1 className="mt-1 font-heading text-4xl font-bold">
-                {sectionMeta?.title ?? "Administración"}
+                {sectionMeta?.title ?? (isTalentoPortal ? "Talento" : "Administración")}
               </h1>
               <p className="mt-2 text-muted-foreground">
                 {sectionMeta?.description ?? "Gestiona el contenido de la plataforma."}
               </p>
             </div>
             <Button variant="outline" asChild>
-              <Link href="/admin">
+              <Link href={isTalentoPortal ? "/talento" : "/admin"}>
                 <ArrowLeft className="h-4 w-4" />
                 Volver al panel
               </Link>
@@ -1580,9 +1598,10 @@ export default function AdminPage({
                             <FormItem>
                               <FormLabel>URL de la imagen</FormLabel>
                               <FormControl>
-                                <Input
+                                <ImageUrlInput
+                                  value={field.value || ""}
+                                  onChange={field.onChange}
                                   placeholder="https://example.com/image.jpg"
-                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -2613,7 +2632,11 @@ export default function AdminPage({
                             <FormItem>
                               <FormLabel>URL de la imagen</FormLabel>
                               <FormControl>
-                                <Input placeholder="https://example.com/image.jpg" {...field} />
+                                <ImageUrlInput
+                                  value={field.value || ""}
+                                  onChange={field.onChange}
+                                  placeholder="https://example.com/image.jpg"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -2851,9 +2874,10 @@ export default function AdminPage({
                             <FormItem>
                               <FormLabel>URL de la imagen</FormLabel>
                               <FormControl>
-                                <Input
+                                <ImageUrlInput
+                                  value={field.value || ""}
+                                  onChange={field.onChange}
                                   placeholder="https://example.com/image.jpg"
-                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />

@@ -18,9 +18,13 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated() || req.user.role !== "admin") {
-    return res.status(403).json({ message: "Unauthorized: Admin access required" });
+function isStaff(role: string) {
+  return role === "admin" || role === "talento";
+}
+
+function requireStaff(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated() || !isStaff(req.user.role)) {
+    return res.status(403).json({ message: "Unauthorized: se requiere Admin o Talento" });
   }
   next();
 }
@@ -128,7 +132,7 @@ export function registerCardRoutes(app: Express) {
     console.warn("No se pudo asegurar presentation_cards al inicio:", err);
   });
 
-  app.get("/api/users/list-basic", requireAdmin, async (_req, res) => {
+  app.get("/api/users/list-basic", requireStaff, async (_req, res) => {
     try {
       await ensurePresentationCardsTable();
       const users = await storage.getUsersBasic();
@@ -141,7 +145,7 @@ export function registerCardRoutes(app: Express) {
   app.get("/api/cards", requireAuth, async (req, res) => {
     try {
       await ensurePresentationCardsTable();
-      if (req.user!.role === "admin") {
+      if (isStaff(req.user!.role)) {
         const cards = await storage.getAllPresentationCards();
         return res.json(cards);
       }
@@ -187,7 +191,7 @@ export function registerCardRoutes(app: Express) {
       const id = parseInt(req.params.id, 10);
       const card = await storage.getPresentationCard(id);
       if (!card) return res.status(404).json({ message: "Card not found" });
-      const isAdmin = req.user!.role === "admin";
+      const isAdmin = isStaff(req.user!.role);
       const isOwner = card.assignedUserId === req.user!.id;
       if (!isAdmin && !isOwner) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -198,7 +202,7 @@ export function registerCardRoutes(app: Express) {
     }
   });
 
-  app.post("/api/cards", requireAdmin, async (req, res) => {
+  app.post("/api/cards", requireStaff, async (req, res) => {
     try {
       await ensurePresentationCardsTable();
       const body = req.body as Record<string, unknown>;
@@ -267,7 +271,7 @@ export function registerCardRoutes(app: Express) {
       const existing = await storage.getPresentationCard(id);
       if (!existing) return res.status(404).json({ message: "Card not found" });
 
-      const isAdmin = req.user!.role === "admin";
+      const isAdmin = isStaff(req.user!.role);
       const isOwner = existing.assignedUserId === req.user!.id;
       if (!isAdmin && !isOwner) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -307,7 +311,7 @@ export function registerCardRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/cards/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/cards/:id", requireStaff, async (req, res) => {
     try {
       await ensurePresentationCardsTable();
       const id = parseInt(req.params.id, 10);

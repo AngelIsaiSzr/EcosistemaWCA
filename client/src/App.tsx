@@ -53,6 +53,7 @@ import AdminProgramContentPage from "@/pages/admin-program-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { GoogleAnalytics } from "@/components/layout/google-analytics";
 import TalentoOrganigramaPage from "@/pages/talento-organigrama-page";
+import TalentoEquipoPage from "@/pages/talento-equipo-page";
 
 function SoftRedirect({ to }: { to: string }) {
   const [, navigate] = useLocation();
@@ -126,8 +127,13 @@ function Router() {
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
-        <RoleProtectedRoute path="/admin/tarjetas/:id/editar" component={AdminCardEditorPage} roles={["admin"]} />
-        <RoleProtectedRoute path="/admin/tarjetas" component={AdminCardsPage} roles={["admin"]} />
+        {/* Compat: Equipo y tarjetas pasaron a Talento */}
+        <Route path="/admin/tarjetas/:id/editar">
+          {(params) => <SoftRedirect to={`/talento/tarjetas/${params.id}/editar`} />}
+        </Route>
+        <Route path="/admin/tarjetas">{() => <SoftRedirect to="/talento/tarjetas" />}</Route>
+        <Route path="/admin/equipo">{() => <SoftRedirect to="/talento/equipo" />}</Route>
+
         <RoleProtectedRoute path="/admin/correos" component={AdminEmailAutomationPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
@@ -135,7 +141,8 @@ function Router() {
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 
-        {/* Talento: hub + organigrama + INÉDITO + formularios */}
+
+        {/* Talento: hub + miembros + organigrama + INÉDITO + formularios */}
         <RoleProtectedRoute
           path="/talento/inedito/reto"
           component={TalentoIneditoRetoPage}
@@ -154,6 +161,21 @@ function Router() {
         <RoleProtectedRoute
           path="/talento/organigrama"
           component={TalentoOrganigramaPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/equipo"
+          component={TalentoEquipoPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/tarjetas/:id/editar"
+          component={AdminCardEditorPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/tarjetas"
+          component={AdminCardsPage}
           roles={["talento"]}
         />
         <RoleProtectedRoute

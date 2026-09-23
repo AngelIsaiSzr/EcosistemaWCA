@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
+import { ImageUrlInput } from "@/components/media/image-url-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -34,7 +35,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const allyFormSchema = insertAllySchema.extend({
   name: z.string().min(1, "El nombre es requerido"),
-  image: z.string().url("Ingresa una URL válida de imagen"),
+  image: z.string().min(5, "Ingresa una URL o ruta de imagen"),
   order: z.number().min(1),
 });
 
@@ -269,7 +270,11 @@ export default function AdminAlliesPage() {
                         <FormItem>
                           <FormLabel>URL del logo</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://..." {...field} />
+                            <ImageUrlInput
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder="https://..."
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

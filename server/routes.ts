@@ -9,6 +9,7 @@ import { registerTalentoRoutes } from "./routes-talento";
 import { registerCardRoutes } from "./routes-cards";
 import { registerEmailAutomationRoutes } from "./routes-email-automation";
 import { registerMediaProxyRoutes } from "./routes-media-proxy";
+import { registerMediaLibraryRoutes } from "./routes-media-library";
 import { registerIneditoRetoRoutes } from "./routes-inedito-reto";
 import { registerIneditoLandingRoutes } from "./routes-inedito-landing";
 import { registerOrgChartRoutes } from "./routes-org-chart";
@@ -77,6 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCardRoutes(app);
   registerEmailAutomationRoutes(app);
   registerMediaProxyRoutes(app);
+  registerMediaLibraryRoutes(app);
   registerIneditoRetoRoutes(app);
   registerIneditoLandingRoutes(app);
   registerOrgChartRoutes(app);
@@ -542,8 +544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/team", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      if (!req.isAuthenticated() || (req.user.role !== "admin" && req.user.role !== "talento")) {
+        return res.status(403).json({ message: "Unauthorized: Admin o Talento requerido" });
       }
       await ensureTeamColumns();
       const teamMember = await storage.createTeamMember(req.body);
@@ -555,8 +557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/team/:id", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      if (!req.isAuthenticated() || (req.user.role !== "admin" && req.user.role !== "talento")) {
+        return res.status(403).json({ message: "Unauthorized: Admin o Talento requerido" });
       }
       
       await ensureTeamColumns();
@@ -575,8 +577,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/team/:id", async (req, res) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      if (!req.isAuthenticated() || (req.user.role !== "admin" && req.user.role !== "talento")) {
+        return res.status(403).json({ message: "Unauthorized: Admin o Talento requerido" });
       }
       
       const teamId = parseInt(req.params.id);

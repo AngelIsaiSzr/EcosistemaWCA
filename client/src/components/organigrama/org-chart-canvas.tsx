@@ -233,14 +233,26 @@ function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 }
 
+const CARD_MOTION = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 6 },
+  transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const },
+};
+
+const EDGE_MOTION = {
+  initial: { opacity: 0 },
+  animate: { opacity: 0.72 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+};
+
 function PersonCard({
   node,
   onToggle,
-  isNew,
 }: {
   node: LayoutNode;
   onToggle: (id: number) => void;
-  isNew: boolean;
 }) {
   const p = node.person;
   const color = orgColor(p.directionKey as OrgDirectionKey);
@@ -250,11 +262,11 @@ function PersonCard({
   return (
     <motion.button
       type="button"
-      // Solo opacity: scale/y desfasaba el centro visual vs las líneas y causaba parpadeo.
-      initial={isNew ? { opacity: 0 } : false}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
+      layout={false}
+      initial={CARD_MOTION.initial}
+      animate={CARD_MOTION.animate}
+      exit={CARD_MOTION.exit}
+      transition={CARD_MOTION.transition}
       onClick={(e) => {
         if (node.hasChildren) onToggle(p.id);
         (e.currentTarget as HTMLButtonElement).blur();
@@ -407,7 +419,6 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
 
   const pendingAnchorRef = useRef<AnchorPos | null>(null);
   const nodePosRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const knownIdsRef = useRef<Set<number>>(new Set());
 
   const tree = useMemo(() => {
     if (!root) return null;
@@ -432,19 +443,10 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
     pendingAnchorRef.current = null;
   }, [tree]);
 
-  const newIds = useMemo(() => {
-    const fresh = new Set<number>();
-    for (const n of nodes) {
-      if (!knownIdsRef.current.has(n.person.id)) fresh.add(n.person.id);
-    }
-    return fresh;
-  }, [nodes]);
-
   useEffect(() => {
     const map = new Map<number, { x: number; y: number }>();
     for (const n of nodes) {
       map.set(n.person.id, { x: n.x, y: n.y });
-      knownIdsRef.current.add(n.person.id);
     }
     nodePosRef.current = map;
   }, [nodes]);
@@ -641,35 +643,35 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
             height: bounds.h,
           }}
         >
-          {/* Líneas estáticas: sin Framer (evita parpadeo / pathLength raro). */}
+          {/* Líneas: solo fade de opacity (sin pathLength) para no parpadear. */}
           <svg
             className="pointer-events-none absolute left-0 top-0 overflow-visible"
             width={Math.max(bounds.w, 1)}
             height={Math.max(bounds.h, 1)}
             aria-hidden
           >
-            {edgeSegments.map((seg) => (
-              <path
-                key={seg.key}
-                d={seg.d}
-                fill="none"
-                stroke={seg.color}
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={0.72}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {edgeSegments.map((seg) => (
+                <motion.path
+                  key={seg.key}
+                  d={seg.d}
+                  fill="none"
+                  stroke={seg.color}
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={EDGE_MOTION.initial}
+                  animate={EDGE_MOTION.animate}
+                  exit={EDGE_MOTION.exit}
+                  transition={EDGE_MOTION.transition}
+                />
+              ))}
+            </AnimatePresence>
           </svg>
 
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {nodes.map((node) => (
-              <PersonCard
-                key={node.person.id}
-                node={node}
-                onToggle={toggle}
-                isNew={newIds.has(node.person.id)}
-              />
+              <PersonCard key={node.person.id} node={node} onToggle={toggle} />
             ))}
           </AnimatePresence>
         </div>

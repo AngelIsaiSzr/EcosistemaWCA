@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Network, Zap } from "lucide-react";
+import { FileText, Network, Zap, Users, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
@@ -29,6 +29,14 @@ export default function TalentoHubPage() {
     queryKey: ["/api/talento/forms"],
     enabled: user?.role === "talento",
   });
+  const { data: team } = useQuery<{ id: number }[]>({
+    queryKey: ["/api/team"],
+    enabled: user?.role === "talento",
+  });
+  const { data: cards } = useQuery<{ id: number }[]>({
+    queryKey: ["/api/cards"],
+    enabled: user?.role === "talento",
+  });
 
   if (isLoading || !user || user.role !== "talento") {
     return (
@@ -48,6 +56,24 @@ export default function TalentoHubPage() {
       icon: FileText,
       count: forms?.length ?? null,
       countLabel: "formularios",
+    },
+    {
+      id: "equipo",
+      title: "Equipo",
+      description: "Gestiona los perfiles del equipo que aparecen en el sitio público.",
+      href: "/talento/equipo",
+      icon: Users,
+      count: team?.length ?? null,
+      countLabel: "miembros",
+    },
+    {
+      id: "tarjetas",
+      title: "Tarjetas de presentación",
+      description: "Crea y administra tarjetas digitales estilo Linktree del equipo WCA.",
+      href: "/talento/tarjetas",
+      icon: CreditCard,
+      count: cards?.length ?? null,
+      countLabel: "tarjetas",
     },
     {
       id: "organigrama",

@@ -3,17 +3,15 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
-  CreditCard,
   Flag,
   Handshake,
   Mail,
   MessageSquareQuote,
-  Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
-import { Ally, Country, Course, PresentationCard, Team, Testimonial } from "@shared/schema";
+import { Ally, Country, Course, Testimonial } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 type AdminOption = {
@@ -35,10 +33,6 @@ export default function AdminDashboardPage() {
     queryKey: ["/api/programs"],
     enabled: user?.role === "admin",
   });
-  const { data: team } = useQuery<Team[]>({
-    queryKey: ["/api/team"],
-    enabled: user?.role === "admin",
-  });
   const { data: testimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials"],
     enabled: user?.role === "admin",
@@ -49,10 +43,6 @@ export default function AdminDashboardPage() {
   });
   const { data: countries } = useQuery<Country[]>({
     queryKey: ["/api/countries"],
-    enabled: user?.role === "admin",
-  });
-  const { data: cards } = useQuery<PresentationCard[]>({
-    queryKey: ["/api/cards"],
     enabled: user?.role === "admin",
   });
   const { data: emailStats } = useQuery<{ officialSent: number }>({
@@ -84,15 +74,6 @@ export default function AdminDashboardPage() {
       countLabel: "programas",
     },
     {
-      id: "equipo",
-      title: "Equipo",
-      description: "Gestiona los perfiles completos del equipo que aparecen en el sitio.",
-      href: "/admin/equipo",
-      icon: Users,
-      count: team?.length ?? null,
-      countLabel: "miembros",
-    },
-    {
       id: "testimonios",
       title: "Testimonios",
       description: "Administra reseñas y testimonios públicos de la comunidad.",
@@ -118,15 +99,6 @@ export default function AdminDashboardPage() {
       icon: Flag,
       count: countries?.length ?? null,
       countLabel: "países",
-    },
-    {
-      id: "tarjetas",
-      title: "Tarjetas de presentación",
-      description: "Crea y administra tarjetas digitales estilo Linktree del equipo WCA.",
-      href: "/admin/tarjetas",
-      icon: CreditCard,
-      count: cards?.length ?? null,
-      countLabel: "tarjetas",
     },
     {
       id: "correos",
