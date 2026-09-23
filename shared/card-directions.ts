@@ -215,6 +215,7 @@ export const RESERVED_CARD_SLUGS = new Set([
   "convocatoria",
   "reto",
   "inedito",
+  "organigrama",
 ]);
 
 export function normalizeCardSlug(raw: string): string {

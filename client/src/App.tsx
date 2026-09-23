@@ -33,6 +33,7 @@ import TalentoIneditoLandingPage from "@/pages/talento-inedito-landing-page";
 import TalentoIneditoRetoPage from "@/pages/talento-inedito-reto-page";
 import IneditoRetoPublicPage from "@/pages/inedito-reto-public-page";
 import IneditoLandingPage from "@/pages/inedito-landing-page";
+import OrganigramaPage from "@/pages/organigrama-page";
 import IntegrationFormPage from "@/pages/integration-form-page";
 import IntegrationFormBySlugPage from "@/pages/integration-form-by-slug-page";
 import ProfilePage from "@/pages/profile-page";
@@ -51,6 +52,7 @@ import ProgramLearningPage from "@/pages/program-learning-page";
 import AdminProgramContentPage from "@/pages/admin-program-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { GoogleAnalytics } from "@/components/layout/google-analytics";
+import TalentoOrganigramaPage from "@/pages/talento-organigrama-page";
 
 function SoftRedirect({ to }: { to: string }) {
   const [, navigate] = useLocation();
@@ -64,9 +66,34 @@ function SoftRedirect({ to }: { to: string }) {
   );
 }
 
+/** Subdominios comodín del mismo host (ej. organigrama.ecosistemawca.com). */
+function getAppSubdomain(): string | null {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname.toLowerCase();
+  if (host === "organigrama.ecosistemawca.com" || host === "organigrama.localhost") {
+    return "organigrama";
+  }
+  // organigrama.algo.local / preview
+  if (host.startsWith("organigrama.")) return "organigrama";
+  return null;
+}
+
 function Router() {
   const [location] = useLocation();
-  
+  const subdomain = getAppSubdomain();
+
+  if (subdomain === "organigrama") {
+    return (
+      <PageTransition id={`org-${location}`}>
+        <Switch location={location}>
+          <Route path="/" component={OrganigramaPage} />
+          <Route path="/organigrama" component={OrganigramaPage} />
+          <Route component={OrganigramaPage} />
+        </Switch>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition id={location}>
       <Switch location={location}>
@@ -82,6 +109,7 @@ function Router() {
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPage} />
         <Route path="/cookies" component={CookiesPage} />
+        <Route path="/organigrama" component={OrganigramaPage} />
         <Route path="/convocatoria/terminos">
           {() => {
             if (typeof window !== "undefined") {
@@ -107,7 +135,7 @@ function Router() {
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />
 
-        {/* Talento: hub + INÉDITO + formularios */}
+        {/* Talento: hub + organigrama + INÉDITO + formularios */}
         <RoleProtectedRoute
           path="/talento/inedito/reto"
           component={TalentoIneditoRetoPage}
@@ -121,6 +149,11 @@ function Router() {
         <RoleProtectedRoute
           path="/talento/inedito"
           component={TalentoIneditoHubPage}
+          roles={["talento"]}
+        />
+        <RoleProtectedRoute
+          path="/talento/organigrama"
+          component={TalentoOrganigramaPage}
           roles={["talento"]}
         />
         <RoleProtectedRoute
@@ -207,12 +240,14 @@ function App() {
   const hideDonorbox =
     /^\/programs\/[^/]+\/learn$/.test(location) ||
     location === "/inedito" ||
+    location === "/organigrama" ||
     location === "/integracion" ||
     location.startsWith("/f/") ||
     location.startsWith("/reto/") ||
     location.startsWith("/talento") ||
     location.startsWith("/admin") ||
     location === "/mi-tarjeta" ||
+    (typeof window !== "undefined" && window.location.hostname.toLowerCase().startsWith("organigrama.")) ||
     (!!pathSlug && !pathSlug.includes("/") && !isReservedCardSlug(pathSlug) && location === `/${pathSlug}`) ||
     location.includes("registro-en-vivo") ||
     location.includes("live-course-registration");

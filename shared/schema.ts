@@ -348,6 +348,25 @@ export const ineditoLandingSettings = pgTable("inedito_landing_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+/** Personas del organigrama oficial (Sede Monterrey y futuras sedes). */
+export const orgChartPeople = pgTable("org_chart_people", {
+  id: serial("id").primaryKey(),
+  sedeId: text("sede_id").notNull().default("monterrey"),
+  parentId: integer("parent_id"),
+  directionKey: text("direction_key").notNull(),
+  roleKind: text("role_kind").notNull().default("member"),
+  name: text("name").notNull(),
+  roleTitle: text("role_title").notNull().default(""),
+  email: text("email"),
+  phone: text("phone"),
+  photoUrl: text("photo_url"),
+  socialLinks: jsonb("social_links").$type<{ id: string; label: string; url: string }[]>().notNull().default([]),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -493,3 +512,4 @@ export type EmailAutomationLog = typeof emailAutomationLogs.$inferSelect;
 export type IneditoRetoSettings = typeof ineditoRetoSettings.$inferSelect;
 export type IneditoRetoToken = typeof ineditoRetoTokens.$inferSelect;
 export type IneditoLandingSettings = typeof ineditoLandingSettings.$inferSelect;
+export type OrgChartPerson = typeof orgChartPeople.$inferSelect;

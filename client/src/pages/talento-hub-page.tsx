@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Zap } from "lucide-react";
+import { FileText, Network, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
@@ -48,6 +48,14 @@ export default function TalentoHubPage() {
       icon: FileText,
       count: forms?.length ?? null,
       countLabel: "formularios",
+    },
+    {
+      id: "organigrama",
+      title: "Organigrama",
+      description:
+        "Estructura Organizativa Institucional · Sede Monterrey. Edita fichas y miembros por dirección.",
+      href: "/talento/organigrama",
+      icon: Network,
     },
     {
       id: "inedito",
