@@ -25,6 +25,12 @@ function preloadBackground() {
 }
 
 function shouldHideOnPath(path: string) {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    if (host === "organigrama.ecosistemawca.com" || host.startsWith("organigrama.")) {
+      return true;
+    }
+  }
   return (
     path === "/integracion" ||
     path.startsWith("/f/") ||

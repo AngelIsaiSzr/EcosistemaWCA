@@ -1,5 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mail, Phone, Minus, Plus, Maximize2, ChevronDown, Link2 } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Mail,
+  Phone,
+  Minus,
+  Plus,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
+  Link2,
+} from "lucide-react";
 import {
   ORG_DIRECTION_LABELS,
   buildOrgTree,
@@ -14,6 +32,7 @@ type Props = {
   people: OrgPerson[];
   title?: string;
   subtitle?: string;
+  /** @deprecated Ya no se muestra en el header */
   sedeLabel?: string;
 };
 
@@ -28,12 +47,21 @@ type LayoutNode = {
   expanded: boolean;
 };
 
-const CARD_W = 220;
-const CARD_H = 168;
-const DIR_CARD_W = 168;
-const DIR_CARD_H = 196;
-const GAP_X = 28;
-const GAP_Y = 72;
+type EdgeSegment = {
+  key: string;
+  d: string;
+  color: string;
+};
+
+/** Tarjetas más amplias para que nombres y correos quepan. */
+const CARD_W = 300;
+const CARD_H = 156;
+const DIR_CARD_W = 248;
+const DIR_CARD_H = 236;
+const GAP_X = 36;
+const GAP_Y = 88;
+const MIN_SCALE = 0.35;
+const MAX_SCALE = 1.8;
 
 function cardSize(person: OrgPerson) {
   if (person.roleKind === "director" && !person.directionKey.startsWith("sede")) {
@@ -106,12 +134,67 @@ function collectNodes(node: LayoutNode, out: LayoutNode[] = []): LayoutNode[] {
   return out;
 }
 
-function collectEdges(node: LayoutNode, edges: { from: LayoutNode; to: LayoutNode }[] = []) {
-  for (const c of node.children) {
-    edges.push({ from: node, to: c });
-    collectEdges(c, edges);
+/**
+ * Colores de conexión:
+ * - Tramo padre→hijo (bajada + bus horizontal): color del padre
+ * - Stub vertical hacia cada hijo: color del hijo (dirección)
+ * Un solo hijo: toda la línea en color del padre (p. ej. Director → Subdirección).
+ */
+function collectEdgeSegments(node: LayoutNode, segments: EdgeSegment[] = []): EdgeSegment[] {
+  if (!node.expanded || node.children.length === 0) return segments;
+
+  const parentColor = orgColor(node.person.directionKey as OrgDirectionKey);
+  const x1 = node.x + node.width / 2;
+  const y1 = node.y + node.height;
+  const midY = (y1 + node.children[0]!.y) / 2;
+
+  if (node.children.length === 1) {
+    const child = node.children[0]!;
+    const x2 = child.x + child.width / 2;
+    const y2 = child.y;
+    segments.push({
+      key: `link-${node.person.id}-${child.person.id}`,
+      d: `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`,
+      color: parentColor,
+    });
+    collectEdgeSegments(child, segments);
+    return segments;
   }
-  return edges;
+
+  const childCenters = node.children.map((c) => c.x + c.width / 2);
+  const minX = Math.min(...childCenters);
+  const maxX = Math.max(...childCenters);
+
+  // Bajada desde el padre hasta el bus
+  segments.push({
+    key: `drop-${node.person.id}`,
+    d: `M ${x1} ${y1} V ${midY}`,
+    color: parentColor,
+  });
+  // Bus horizontal (color del padre / Subdirección)
+  segments.push({
+    key: `bus-${node.person.id}`,
+    d: `M ${minX} ${midY} H ${maxX}`,
+    color: parentColor,
+  });
+
+  for (const child of node.children) {
+    const x2 = child.x + child.width / 2;
+    const y2 = child.y;
+    const childColor = orgColor(child.person.directionKey as OrgDirectionKey);
+    segments.push({
+      key: `stub-${node.person.id}-${child.person.id}`,
+      d: `M ${x2} ${midY} V ${y2}`,
+      color: childColor,
+    });
+    collectEdgeSegments(child, segments);
+  }
+
+  return segments;
+}
+
+function clampScale(value: number) {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 }
 
 function PersonCard({
@@ -128,12 +211,22 @@ function PersonCard({
   const directionLabel = ORG_DIRECTION_LABELS[p.directionKey as OrgDirectionKey];
 
   return (
-    <button
+    <motion.button
       type="button"
+      layout
+      initial={{ opacity: 0, scale: 0.86, y: 18 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: -12 }}
+      transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.7 }}
       onClick={() => node.hasChildren && onToggle(p.id)}
+      onMouseDown={(e) => {
+        // Evita selección de texto al hacer clic/arrastre sobre la tarjeta
+        if (e.detail > 1) e.preventDefault();
+      }}
       className={cn(
-        "absolute flex flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition",
+        "absolute flex select-none flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.08)]",
         "hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]",
+        "[&_*]:select-none",
         node.hasChildren ? "cursor-pointer" : "cursor-default",
       )}
       style={{
@@ -144,26 +237,28 @@ function PersonCard({
         borderColor: `${color}55`,
         borderLeftWidth: isDeptDirector ? 1 : 4,
         borderLeftColor: color,
+        WebkitUserSelect: "none",
+        userSelect: "none",
       }}
     >
       {isDeptDirector && (
-        <div className="h-2 w-full shrink-0" style={{ backgroundColor: color }} />
+        <div className="h-2.5 w-full shrink-0" style={{ backgroundColor: color }} />
       )}
       <div
         className={cn(
-          "flex flex-1 flex-col items-center px-3 pb-3 pt-3",
-          !isDeptDirector && "flex-row items-center gap-3",
+          "flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3",
+          isDeptDirector ? "items-center text-center" : "flex-row items-start gap-3.5",
         )}
       >
         <div
           className={cn(
             "relative shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2",
-            isDeptDirector ? "h-14 w-14" : "h-12 w-12",
+            isDeptDirector ? "h-16 w-16" : "h-14 w-14",
           )}
           style={{ ["--tw-ring-color" as string]: `${color}55` }}
         >
           {p.photoUrl ? (
-            <img src={p.photoUrl} alt="" className="h-full w-full object-cover" />
+            <img src={p.photoUrl} alt="" className="h-full w-full object-cover" draggable={false} />
           ) : (
             <div
               className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
@@ -174,38 +269,58 @@ function PersonCard({
           )}
         </div>
 
-        <div className={cn("min-w-0", isDeptDirector ? "mt-2 w-full text-center" : "flex-1")}>
+        <div className={cn("min-w-0 flex-1", isDeptDirector && "mt-2.5 w-full")}>
           {isDeptDirector && (
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               {directionLabel}
             </p>
           )}
-          <p className="truncate text-sm font-bold leading-snug text-slate-900">{p.name}</p>
-          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-snug" style={{ color }}>
+          <p className="text-[15px] font-bold leading-snug text-slate-900 break-words">{p.name}</p>
+          <p
+            className="mt-1 text-[12px] font-medium leading-snug break-words"
+            style={{ color }}
+          >
             {p.roleTitle}
           </p>
           <div
             className={cn(
-              "mt-2 space-y-0.5 text-[11px] text-slate-500",
-              isDeptDirector ? "text-center" : "",
+              "mt-2.5 space-y-1 text-[11px] leading-snug text-slate-500",
+              isDeptDirector && "mx-auto max-w-full",
             )}
           >
             {p.email && (
-              <p className="flex items-center gap-1 truncate" title={p.email}>
-                {!isDeptDirector && <Mail className="h-3 w-3 shrink-0" />}
-                <span className="truncate">{p.email}</span>
+              <p
+                className={cn(
+                  "flex items-start gap-1.5 break-all",
+                  isDeptDirector ? "justify-center" : "justify-start",
+                )}
+                title={p.email}
+              >
+                <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
+                <span className="break-all">{p.email}</span>
               </p>
             )}
             {p.phone && (
-              <p className="flex items-center gap-1 truncate">
-                {!isDeptDirector && <Phone className="h-3 w-3 shrink-0" />}
-                <span className="truncate">{p.phone}</span>
+              <p
+                className={cn(
+                  "flex items-start gap-1.5",
+                  isDeptDirector ? "justify-center" : "justify-start",
+                )}
+              >
+                <Phone className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
+                <span>{p.phone}</span>
               </p>
             )}
-            {p.socialLinks?.slice(0, 1).map((s) => (
-              <p key={s.id} className="flex items-center gap-1 truncate">
-                {!isDeptDirector && <Link2 className="h-3 w-3 shrink-0" />}
-                <span className="truncate">{s.label}</span>
+            {p.socialLinks?.slice(0, 2).map((s) => (
+              <p
+                key={s.id}
+                className={cn(
+                  "flex items-start gap-1.5",
+                  isDeptDirector ? "justify-center" : "justify-start",
+                )}
+              >
+                <Link2 className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
+                <span className="break-all">{s.label}</span>
               </p>
             ))}
           </div>
@@ -213,20 +328,20 @@ function PersonCard({
       </div>
 
       {node.hasChildren && (
-        <div
-          className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-white shadow"
+        <motion.div
+          className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full text-white shadow"
           style={{ backgroundColor: color }}
+          animate={{ rotate: node.expanded ? 180 : 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 24 }}
         >
-          <ChevronDown
-            className={cn("h-3.5 w-3.5 transition", node.expanded && "rotate-180")}
-          />
-        </div>
+          <ChevronDown className="h-3.5 w-3.5" />
+        </motion.div>
       )}
-    </button>
+    </motion.button>
   );
 }
 
-export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
+export function OrgChartCanvas({ people, title, subtitle }: Props) {
   const byParent = useMemo(() => buildOrgTree(people), [people]);
   const roots = byParent.get(null) ?? [];
   const root = roots[0];
@@ -246,22 +361,26 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
 
   const tree = useMemo(() => {
     if (!root) return null;
-    return layoutTree(root, byParent, expanded, 40, 40);
+    return layoutTree(root, byParent, expanded, 48, 48);
   }, [root, byParent, expanded]);
 
   const nodes = useMemo(() => (tree ? collectNodes(tree) : []), [tree]);
-  const edges = useMemo(() => (tree ? collectEdges(tree) : []), [tree]);
+  const edgeSegments = useMemo(() => (tree ? collectEdgeSegments(tree) : []), [tree]);
 
   const bounds = useMemo(() => {
-    if (nodes.length === 0) return { w: 800, h: 600 };
+    if (nodes.length === 0) return { w: 1000, h: 700 };
     const maxX = Math.max(...nodes.map((n) => n.x + n.width));
     const maxY = Math.max(...nodes.map((n) => n.y + n.height));
-    return { w: maxX + 80, h: maxY + 80 };
+    return { w: maxX + 96, h: maxY + 96 };
   }, [nodes]);
 
+  const shellRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.85);
+  const [scale, setScale] = useState(0.78);
   const [pan, setPan] = useState({ x: 40, y: 20 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [editingZoom, setEditingZoom] = useState(false);
+  const [zoomDraft, setZoomDraft] = useState("78");
   const drag = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   const toggle = useCallback((id: number) => {
@@ -273,13 +392,17 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
     });
   }, []);
 
-  const onPointerDown = (e: React.PointerEvent) => {
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("[data-org-ui]")) return;
     if ((e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
     drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
-  const onPointerMove = (e: React.PointerEvent) => {
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;
+    window.getSelection()?.removeAllRanges();
     setPan({
       x: drag.current.panX + (e.clientX - drag.current.x),
       y: drag.current.panY + (e.clientY - drag.current.y),
@@ -295,34 +418,83 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.06 : 0.06;
-      setScale((s) => Math.min(1.8, Math.max(0.35, s + delta)));
+      setScale((s) => clampScale(s + delta));
     };
+    const onSelectStart = (e: Event) => e.preventDefault();
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener("selectstart", onSelectStart);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("selectstart", onSelectStart);
+    };
   }, []);
 
-  const fit = () => {
+  useEffect(() => {
+    const sync = () => {
+      const fsEl = document.fullscreenElement;
+      setIsFullscreen(!!fsEl && (fsEl === shellRef.current || shellRef.current?.contains(fsEl)));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  const fit = useCallback(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const pad = 80;
+    const pad = 96;
     const sx = (el.clientWidth - pad) / bounds.w;
     const sy = (el.clientHeight - pad) / bounds.h;
-    const next = Math.min(1, Math.max(0.35, Math.min(sx, sy)));
+    const next = clampScale(Math.min(0.95, Math.min(sx, sy)));
     setScale(next);
     setPan({
       x: (el.clientWidth - bounds.w * next) / 2,
-      y: 24,
+      y: 28,
     });
-  };
-
-  useEffect(() => {
-    const t = window.setTimeout(fit, 50);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bounds.w, bounds.h]);
 
+  useEffect(() => {
+    const t = window.setTimeout(fit, 60);
+    return () => window.clearTimeout(t);
+  }, [fit]);
+
+  const toggleFullscreen = async () => {
+    const el = shellRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await el.requestFullscreen();
+      }
+    } catch {
+      // Algunos entornos (iframe / permisos) bloquean Fullscreen API
+      fit();
+    }
+  };
+
+  const commitZoomDraft = () => {
+    const raw = zoomDraft.replace("%", "").trim();
+    const pct = Number(raw);
+    if (!Number.isFinite(pct)) {
+      setZoomDraft(String(Math.round(scale * 100)));
+      setEditingZoom(false);
+      return;
+    }
+    setScale(clampScale(pct / 100));
+    setEditingZoom(false);
+  };
+
+  const onZoomSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    commitZoomDraft();
+  };
+
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#f4f7fb]">
+    <div
+      ref={shellRef}
+      className="relative flex h-[100dvh] select-none flex-col overflow-hidden bg-[#f4f7fb]"
+      style={{ WebkitUserSelect: "none", userSelect: "none" }}
+    >
       <div
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{
@@ -332,40 +504,36 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
         }}
       />
 
-      <header className="relative z-20 flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur-md">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4086E7]">
-            {sedeLabel ?? "Sede Monterrey"}
-          </p>
-          <h1 className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+      <header className="relative z-20 flex items-center justify-between gap-4 border-b border-slate-200/80 bg-white/85 px-5 py-3.5 backdrop-blur-md">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
             {title ?? "Organigrama Oficial"}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-0.5 text-sm text-slate-500">
             {subtitle ?? "Estructura Organizativa Institucional del Ecosistema WCA"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center self-center">
           <img
-            src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png"
+            src="/media/logo-wca-oficial-transparent.png"
             alt="Ecosistema WCA"
-            className="h-10 w-10"
+            className="h-11 w-auto object-contain sm:h-12 md:h-14"
+            draggable={false}
           />
-          <span className="hidden font-heading text-lg font-bold text-[#4086E7] sm:inline">
-            Ecosistema WCA
-          </span>
         </div>
       </header>
 
       <div
         ref={viewportRef}
-        className="relative z-10 flex-1 cursor-grab touch-none active:cursor-grabbing"
+        className="relative z-10 flex-1 cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onDragStart={(e) => e.preventDefault()}
       >
         <div
-          className="absolute left-0 top-0 origin-top-left will-change-transform"
+          className="absolute left-0 top-0 origin-top-left will-change-transform select-none"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             width: bounds.w,
@@ -378,50 +546,83 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
             height={bounds.h}
             aria-hidden
           >
-            {edges.map(({ from, to }) => {
-              const x1 = from.x + from.width / 2;
-              const y1 = from.y + from.height;
-              const x2 = to.x + to.width / 2;
-              const y2 = to.y;
-              const midY = (y1 + y2) / 2;
-              const color = orgColor(to.person.directionKey as OrgDirectionKey);
-              return (
-                <path
-                  key={`${from.person.id}-${to.person.id}`}
-                  d={`M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`}
+            <AnimatePresence>
+              {edgeSegments.map((seg) => (
+                <motion.path
+                  key={seg.key}
+                  d={seg.d}
                   fill="none"
-                  stroke={color}
+                  stroke={seg.color}
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  opacity={0.55}
+                  initial={{ opacity: 0, pathLength: 0 }}
+                  animate={{ opacity: 0.7, pathLength: 1 }}
+                  exit={{ opacity: 0, pathLength: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
                 />
-              );
-            })}
+              ))}
+            </AnimatePresence>
           </svg>
 
-          {nodes.map((node) => (
-            <PersonCard key={node.person.id} node={node} onToggle={toggle} />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {nodes.map((node) => (
+              <PersonCard key={node.person.id} node={node} onToggle={toggle} />
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
-      <div className="absolute bottom-5 right-5 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur">
+      <div
+        data-org-ui
+        className="absolute bottom-5 right-5 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur"
+      >
         <button
           type="button"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
-          onClick={() => setScale((s) => Math.max(0.35, s - 0.1))}
+          onClick={() => setScale((s) => clampScale(s - 0.1))}
           aria-label="Alejar"
         >
           <Minus className="h-4 w-4" />
         </button>
-        <span className="min-w-[3.25rem] text-center text-xs font-semibold text-slate-600">
-          {Math.round(scale * 100)}%
-        </span>
+
+        {editingZoom ? (
+          <form onSubmit={onZoomSubmit} className="flex items-center">
+            <input
+              autoFocus
+              inputMode="numeric"
+              aria-label="Porcentaje de zoom"
+              value={zoomDraft}
+              onChange={(e) => setZoomDraft(e.target.value.replace(/[^\d.]/g, ""))}
+              onBlur={commitZoomDraft}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setZoomDraft(String(Math.round(scale * 100)));
+                  setEditingZoom(false);
+                }
+              }}
+              className="h-8 w-14 rounded-md border border-slate-200 bg-white px-1 text-center text-xs font-semibold text-slate-700 outline-none ring-2 ring-[#4086E7]/30"
+            />
+            <span className="pr-1 text-xs font-semibold text-slate-500">%</span>
+          </form>
+        ) : (
+          <button
+            type="button"
+            title="Clic para editar zoom"
+            className="min-w-[3.25rem] rounded-md px-1 py-1 text-center text-xs font-semibold text-slate-600 hover:bg-slate-100"
+            onClick={() => {
+              setZoomDraft(String(Math.round(scale * 100)));
+              setEditingZoom(true);
+            }}
+          >
+            {Math.round(scale * 100)}%
+          </button>
+        )}
+
         <button
           type="button"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
-          onClick={() => setScale((s) => Math.min(1.8, s + 0.1))}
+          onClick={() => setScale((s) => clampScale(s + 0.1))}
           aria-label="Acercar"
         >
           <Plus className="h-4 w-4" />
@@ -429,15 +630,16 @@ export function OrgChartCanvas({ people, title, subtitle, sedeLabel }: Props) {
         <button
           type="button"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
-          onClick={fit}
-          aria-label="Ajustar a pantalla"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
         >
-          <Maximize2 className="h-4 w-4" />
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
       </div>
 
-      <p className="pointer-events-none absolute bottom-5 left-5 z-20 text-xs text-slate-400">
-        Arrastra para mover · scroll para zoom · clic en una tarjeta para abrir su equipo
+      <p className="pointer-events-none absolute bottom-5 left-5 z-20 select-none text-xs text-slate-400">
+        Arrastra para mover · scroll para zoom · clic en % para editar · clic en tarjeta para abrir equipo
       </p>
     </div>
   );
