@@ -233,6 +233,24 @@ function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 }
 
+/** Cache en memoria de fotos del organigrama (el navegador también las guarda). */
+const photoWarmCache = new Set<string>();
+
+function warmPhotoCache(urls: Array<string | null | undefined>) {
+  for (const raw of urls) {
+    const url = (raw || "").trim();
+    if (!url || photoWarmCache.has(url)) continue;
+    photoWarmCache.add(url);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  }
+}
+
+function touchDistance(a: Touch, b: Touch) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
 const CARD_MOTION = {
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
@@ -302,7 +320,14 @@ function PersonCard({
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
-              <img src={p.photoUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+              <img
+                src={p.photoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+                loading="eager"
+                decoding="async"
+              />
             ) : (
               <div
                 className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
@@ -346,7 +371,14 @@ function PersonCard({
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
-              <img src={p.photoUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+              <img
+                src={p.photoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+                loading="eager"
+                decoding="async"
+              />
             ) : (
               <div
                 className="flex h-full w-full items-center justify-center text-xs font-bold text-white"
@@ -471,6 +503,24 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
   const [editingZoom, setEditingZoom] = useState(false);
   const [zoomDraft, setZoomDraft] = useState("78");
   const drag = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const activePointers = useRef(new Set<number>());
+  const pinch = useRef<{
+    startDist: number;
+    startScale: number;
+    originMidX: number;
+    originMidY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
+  const scaleRef = useRef(scale);
+  const panRef = useRef(pan);
+  scaleRef.current = scale;
+  panRef.current = pan;
+
+  // Precargar fotos en caché al recibir el organigrama
+  useEffect(() => {
+    warmPhotoCache(people.map((p) => p.photoUrl));
+  }, [people]);
 
   const toggle = useCallback((id: number) => {
     const pos = nodePosRef.current.get(id);
@@ -486,12 +536,27 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("[data-org-ui]")) return;
     if ((e.target as HTMLElement).closest("button")) return;
+    activePointers.current.add(e.pointerId);
+    // Con 2+ dedos no iniciar arrastre (lo maneja el pinch)
+    if (activePointers.current.size > 1 || pinch.current) {
+      drag.current = null;
+      return;
+    }
     e.preventDefault();
     window.getSelection()?.removeAllRanges();
-    drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: panRef.current.x,
+      panY: panRef.current.y,
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (pinch.current || activePointers.current.size > 1) {
+      drag.current = null;
+      return;
+    }
     if (!drag.current) return;
     window.getSelection()?.removeAllRanges();
     setPan({
@@ -499,24 +564,75 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
       y: drag.current.panY + (e.clientY - drag.current.y),
     });
   };
-  const onPointerUp = () => {
-    drag.current = null;
+  const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size === 0) drag.current = null;
   };
 
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.06 : 0.06;
       setScale((s) => clampScale(s + delta));
     };
     const onSelectStart = (ev: Event) => ev.preventDefault();
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        drag.current = null;
+        const a = e.touches[0]!;
+        const b = e.touches[1]!;
+        pinch.current = {
+          startDist: Math.max(1, touchDistance(a, b)),
+          startScale: scaleRef.current,
+          originMidX: (a.clientX + b.clientX) / 2,
+          originMidY: (a.clientY + b.clientY) / 2,
+          panX: panRef.current.x,
+          panY: panRef.current.y,
+        };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinch.current) {
+        e.preventDefault();
+        const a = e.touches[0]!;
+        const b = e.touches[1]!;
+        const p = pinch.current;
+        const next = clampScale(p.startScale * (touchDistance(a, b) / p.startDist));
+        const cx = (p.originMidX - p.panX) / p.startScale;
+        const cy = (p.originMidY - p.panY) / p.startScale;
+        const midX = (a.clientX + b.clientX) / 2;
+        const midY = (a.clientY + b.clientY) / 2;
+        setScale(next);
+        setPan({
+          x: midX - cx * next,
+          y: midY - cy * next,
+        });
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinch.current = null;
+    };
+
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("selectstart", onSelectStart);
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
     return () => {
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("selectstart", onSelectStart);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
     };
   }, []);
 
@@ -607,16 +723,16 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
         }}
       />
 
-      <header className="relative z-20 flex items-center justify-between gap-4 border-b border-slate-200/80 bg-white/85 px-5 py-3.5 backdrop-blur-md">
+      <header className="relative z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur-md md:gap-4 md:px-5 md:py-3.5">
         <div className="min-w-0 flex-1">
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+          <h1 className="font-heading text-lg font-bold tracking-tight text-slate-900 sm:text-xl md:text-2xl lg:text-3xl">
             {title ?? "Organigrama Oficial"}
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 hidden text-sm text-slate-500 md:block">
             {subtitle ?? "Estructura Organizativa Institucional del Ecosistema WCA"}
           </p>
         </div>
-        <div className="flex shrink-0 items-center self-center">
+        <div className="hidden shrink-0 items-center self-center md:flex">
           <img
             src="/media/logo-wca-oficial-transparent.png"
             alt="Ecosistema WCA"
@@ -742,7 +858,7 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
         </button>
       </div>
 
-      <p className="pointer-events-none absolute bottom-5 left-5 z-20 select-none text-xs text-slate-400">
+      <p className="pointer-events-none absolute bottom-5 left-5 z-20 hidden select-none text-xs text-slate-400 md:block">
         Arrastra para mover · scroll para zoom · clic en % para editar · clic en tarjeta para abrir equipo
       </p>
     </div>

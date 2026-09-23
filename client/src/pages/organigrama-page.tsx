@@ -46,7 +46,19 @@ export default function OrganigramaPage() {
           name="description"
           content="Estructura Organizativa Institucional del Ecosistema WCA — Sede Monterrey."
         />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
         <link rel="canonical" href="https://organigrama.ecosistemawca.com" />
+        {data.people
+          .map((p) => p.photoUrl)
+          .filter((url): url is string => !!url?.trim())
+          .filter((url, i, arr) => arr.indexOf(url) === i)
+          .slice(0, 24)
+          .map((url) => (
+            <link key={url} rel="preload" as="image" href={url} />
+          ))}
       </Helmet>
       <OrgChartCanvas
         people={data.people}
