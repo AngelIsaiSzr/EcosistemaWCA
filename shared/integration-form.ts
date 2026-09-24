@@ -765,21 +765,32 @@ export const DEFAULT_MIEMBROS_FORM: IntegrationFormDefinition = {
           showIf: { field: "requestType", equals: "cobertura" },
         },
         {
+          id: "coverHasCandidate",
+          type: "single_choice",
+          label: "¿Tienes a una persona propuesta para cubrir?",
+          required: true,
+          options: [
+            { value: "si", label: "Sí, tengo propuesta" },
+            { value: "no", label: "No, pedimos apoyo para buscar" },
+          ],
+          showIf: { field: "requestType", equals: "cobertura" },
+        },
+        {
           id: "coverProposedName",
           type: "short_text",
-          label: "Persona propuesta para cubrir (si hay)",
-          required: false,
+          label: "Nombre de la persona propuesta",
+          required: true,
           maxLength: 120,
-          showIf: { field: "requestType", equals: "cobertura" },
+          showIf: { field: "coverHasCandidate", equals: "si" },
         },
         {
           id: "coverProposedContact",
           type: "short_text",
           label: "Contacto de quien proponen para cubrir",
-          description: "Correo y/o número.",
-          required: false,
+          description: "Correo y/o número de teléfono.",
+          required: true,
           maxLength: 160,
-          showIf: { field: "requestType", equals: "cobertura" },
+          showIf: { field: "coverHasCandidate", equals: "si" },
         },
       ],
     },
@@ -978,6 +989,108 @@ export function syncOfficialCopy(definition: IntegrationFormDefinition): Integra
     ...definition,
     theme: definition.theme ?? DEFAULT_INTEGRATION_FORM.theme,
   };
+}
+
+/**
+ * Parche quirúrgico: gate sí/no para persona propuesta en Cobertura.
+ * No sustituye el schema completo; solo inserta/ajusta esos campos si existen.
+ */
+export function ensureMiembrosCoberturaCandidateGate(
+  definition: IntegrationFormDefinition,
+): IntegrationFormDefinition {
+  const sectionIndex = definition.sections.findIndex(
+    (section) =>
+      section.id === "detalle-cobertura" ||
+      section.fields.some(
+        (field) => field.id === "coverProposedName" || field.id === "coverProposedContact",
+      ),
+  );
+  if (sectionIndex < 0) return definition;
+
+  const section = definition.sections[sectionIndex]!;
+  const fields = [...section.fields];
+  let changed = false;
+
+  const gateField: IntegrationField = {
+    id: "coverHasCandidate",
+    type: "single_choice",
+    label: "¿Tienes a una persona propuesta para cubrir?",
+    required: true,
+    options: [
+      { value: "si", label: "Sí, tengo propuesta" },
+      { value: "no", label: "No, pedimos apoyo para buscar" },
+    ],
+    showIf: { field: "requestType", equals: "cobertura" },
+  };
+
+  const hasGate = fields.some((field) => field.id === "coverHasCandidate");
+  if (!hasGate) {
+    const insertAt = fields.findIndex(
+      (field) => field.id === "coverProposedName" || field.id === "coverProposedContact",
+    );
+    if (insertAt >= 0) fields.splice(insertAt, 0, gateField);
+    else fields.push(gateField);
+    changed = true;
+  }
+
+  for (let i = 0; i < fields.length; i++) {
+    const field = fields[i]!;
+    if (field.id === "coverHasCandidate") {
+      const next: IntegrationField = {
+        ...field,
+        type: "single_choice",
+        label: gateField.label,
+        required: true,
+        options: gateField.options,
+        showIf: gateField.showIf,
+      };
+      if (JSON.stringify(field) !== JSON.stringify(next)) {
+        fields[i] = next;
+        changed = true;
+      }
+      continue;
+    }
+    if (field.id === "coverProposedName") {
+      const next: IntegrationField = {
+        ...field,
+        type: "short_text",
+        label:
+          field.label.includes("(si hay)") || field.label === "Persona propuesta para cubrir (si hay)"
+            ? "Nombre de la persona propuesta"
+            : field.label,
+        required: true,
+        maxLength: field.maxLength ?? 120,
+        showIf: { field: "coverHasCandidate", equals: "si" },
+      };
+      if (JSON.stringify(field) !== JSON.stringify(next)) {
+        fields[i] = next;
+        changed = true;
+      }
+      continue;
+    }
+    if (field.id === "coverProposedContact") {
+      const next: IntegrationField = {
+        ...field,
+        // short_text: correo y/o teléfono; nunca forzar validación de email
+        type: "short_text",
+        required: true,
+        maxLength: field.maxLength ?? 160,
+        description: field.description?.trim() || "Correo y/o número de teléfono.",
+        showIf: { field: "coverHasCandidate", equals: "si" },
+      };
+      if (JSON.stringify(field) !== JSON.stringify(next)) {
+        fields[i] = next;
+        changed = true;
+      }
+    }
+  }
+
+  if (!changed) return definition;
+
+  const sections = definition.sections.map((s, idx) =>
+    idx === sectionIndex ? { ...s, fields } : s,
+  );
+  return { ...definition, sections };
 }
 
 export function getSheetHeaders(definition: IntegrationFormDefinition): string[] {

@@ -19,7 +19,7 @@ import {
 import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
 import { DEFAULT_CARD_THEME } from "@shared/card-directions";
 import type { PresentationCardLink, PresentationCardTheme } from "@shared/card-directions";
-import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_FORM, DEFAULT_MIEMBROS_SLUG, syncOfficialCopy } from "@shared/integration-form";
+import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_FORM, DEFAULT_MIEMBROS_SLUG, ensureMiembrosCoberturaCandidateGate, syncOfficialCopy, type IntegrationFormDefinition } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import * as connectPgModule from "connect-pg-simple";
@@ -768,7 +768,20 @@ export class MemStorage implements IStorage {
     const existing = Array.from(this.integrationForms.values()).find(
       (form) => form.slug === DEFAULT_MIEMBROS_SLUG,
     );
-    if (existing) return existing;
+    if (existing) {
+      const current = (existing.schema ?? DEFAULT_MIEMBROS_FORM) as IntegrationFormDefinition;
+      const patched = ensureMiembrosCoberturaCandidateGate(current);
+      if (JSON.stringify(current) !== JSON.stringify(patched)) {
+        const updated: IntegrationForm = {
+          ...existing,
+          schema: patched,
+          updatedAt: new Date(),
+        };
+        this.integrationForms.set(existing.id, updated);
+        return updated;
+      }
+      return existing;
+    }
     const id = this.currentIntegrationFormIds++;
     const form: IntegrationForm = {
       id,
@@ -1418,7 +1431,19 @@ export class DatabaseStorage implements IStorage {
       .from(integrationForms)
       .where(eq(integrationForms.slug, DEFAULT_MIEMBROS_SLUG))
       .limit(1);
-    if (existing) return existing;
+    if (existing) {
+      const current = (existing.schema ?? DEFAULT_MIEMBROS_FORM) as IntegrationFormDefinition;
+      const patched = ensureMiembrosCoberturaCandidateGate(current);
+      if (JSON.stringify(current) !== JSON.stringify(patched)) {
+        const [updated] = await db
+          .update(integrationForms)
+          .set({ schema: patched, updatedAt: new Date() })
+          .where(eq(integrationForms.id, existing.id))
+          .returning();
+        return updated ?? { ...existing, schema: patched };
+      }
+      return existing;
+    }
 
     const [created] = await db.insert(integrationForms).values({
       title: DEFAULT_MIEMBROS_FORM.title,

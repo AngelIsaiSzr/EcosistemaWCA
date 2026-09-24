@@ -67,6 +67,7 @@ function validateField(field: IntegrationField, value: unknown): string | null {
     value === undefined ||
     value === null ||
     value === "" ||
+    (typeof value === "string" && !value.trim()) ||
     (Array.isArray(value) && value.length === 0);
 
   if (field.type === "checkbox") {
@@ -102,17 +103,92 @@ function validateField(field: IntegrationField, value: unknown): string | null {
   return null;
 }
 
+type DraftPayload = {
+  answers: Answers;
+  step: number;
+  otherValues: Record<string, string>;
+  savedAt: number;
+};
+
+function draftStorageKey(slug: string) {
+  return `integration-form-draft:v1:${slug}`;
+}
+
+function readDraft(slug: string): DraftPayload | null {
+  try {
+    const raw = localStorage.getItem(draftStorageKey(slug));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DraftPayload;
+    if (!parsed || typeof parsed !== "object" || !parsed.answers) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(slug: string, payload: Omit<DraftPayload, "savedAt">) {
+  try {
+    localStorage.setItem(
+      draftStorageKey(slug),
+      JSON.stringify({ ...payload, savedAt: Date.now() }),
+    );
+  } catch {
+    // quota / private mode
+  }
+}
+
+function clearDraft(slug: string) {
+  try {
+    localStorage.removeItem(draftStorageKey(slug));
+  } catch {
+    // ignore
+  }
+}
+
+function initialAnswers(definition: IntegrationFormDefinition, slug: string, preview?: boolean): Answers {
+  const base = emptyAnswers(definition);
+  if (preview) return base;
+  const draft = readDraft(slug);
+  if (!draft?.answers) return base;
+  return { ...base, ...draft.answers };
+}
+
+function initialStep(definition: IntegrationFormDefinition, slug: string, preview?: boolean): number {
+  if (preview) return 0;
+  const draft = readDraft(slug);
+  if (!draft || typeof draft.step !== "number") return 0;
+  const max = Math.max(0, definition.sections.length - 1);
+  return Math.min(Math.max(0, Math.floor(draft.step)), max);
+}
+
+function initialOtherValues(slug: string, preview?: boolean): Record<string, string> {
+  if (preview) return {};
+  const draft = readDraft(slug);
+  return draft?.otherValues && typeof draft.otherValues === "object" ? draft.otherValues : {};
+}
+
 export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFormFlowProps) {
   const sections = definition.sections;
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>(() => emptyAnswers(definition));
+  const [step, setStep] = useState(() => initialStep(definition, slug, preview));
+  const [answers, setAnswers] = useState<Answers>(() => initialAnswers(definition, slug, preview));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [otherValues, setOtherValues] = useState<Record<string, string>>({});
+  const [otherValues, setOtherValues] = useState<Record<string, string>>(() =>
+    initialOtherValues(slug, preview),
+  );
 
   const section = sections[step];
+
+  // Persistir progreso en caché local (sirve sin cuenta; con cuenta sigue siendo por dispositivo).
+  useEffect(() => {
+    if (preview || submitted) return;
+    const timer = window.setTimeout(() => {
+      writeDraft(slug, { answers, step, otherValues });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [answers, step, otherValues, slug, preview, submitted]);
 
   const sectionIsActive = (index: number, currentAnswers: Answers) => {
     const s = sections[index];
@@ -228,6 +304,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
         setSubmitError(data.message || "No se pudo enviar. Revisa los campos.");
         return;
       }
+      clearDraft(slug);
       setSubmitted(true);
     } catch {
       setSubmitError("Hubo un problema de conexión. Inténtalo de nuevo.");
@@ -419,7 +496,9 @@ function FieldControl({
         )}
         {field.type === "email" && (
           <Input
-            type="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}

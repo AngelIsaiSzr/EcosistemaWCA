@@ -94,6 +94,7 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
       value === undefined ||
       value === null ||
       value === "" ||
+      (typeof value === "string" && !value.trim()) ||
       (Array.isArray(value) && value.length === 0);
 
     if (field.type === "checkbox") {
