@@ -19,7 +19,7 @@ import {
 import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
 import { DEFAULT_CARD_THEME } from "@shared/card-directions";
 import type { PresentationCardLink, PresentationCardTheme } from "@shared/card-directions";
-import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_FORM, DEFAULT_MIEMBROS_SLUG, ensureMiembrosCoberturaCandidateGate, syncOfficialCopy, type IntegrationFormDefinition } from "@shared/integration-form";
+import { DEFAULT_INTEGRATION_FORM, DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_FORM, DEFAULT_MIEMBROS_SLUG, ensureMiembrosCoberturaCandidateGate, promoteSharedFieldShowIfToSections, syncOfficialCopy, type IntegrationFormDefinition } from "@shared/integration-form";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import * as connectPgModule from "connect-pg-simple";
@@ -770,7 +770,9 @@ export class MemStorage implements IStorage {
     );
     if (existing) {
       const current = (existing.schema ?? DEFAULT_MIEMBROS_FORM) as IntegrationFormDefinition;
-      const patched = ensureMiembrosCoberturaCandidateGate(current);
+      const patched = promoteSharedFieldShowIfToSections(
+        ensureMiembrosCoberturaCandidateGate(current),
+      );
       if (JSON.stringify(current) !== JSON.stringify(patched)) {
         const updated: IntegrationForm = {
           ...existing,
@@ -1433,7 +1435,9 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     if (existing) {
       const current = (existing.schema ?? DEFAULT_MIEMBROS_FORM) as IntegrationFormDefinition;
-      const patched = ensureMiembrosCoberturaCandidateGate(current);
+      const patched = promoteSharedFieldShowIfToSections(
+        ensureMiembrosCoberturaCandidateGate(current),
+      );
       if (JSON.stringify(current) !== JSON.stringify(patched)) {
         const [updated] = await db
           .update(integrationForms)

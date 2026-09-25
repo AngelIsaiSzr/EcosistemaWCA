@@ -1093,6 +1093,32 @@ export function ensureMiembrosCoberturaCandidateGate(
   return { ...definition, sections };
 }
 
+/**
+ * Si todos los campos de una sección comparten la misma condición y la sección
+ * no tiene showIf propio, lo sube a nivel sección (misma lógica en las 3 ramas).
+ */
+export function promoteSharedFieldShowIfToSections(
+  definition: IntegrationFormDefinition,
+): IntegrationFormDefinition {
+  let changed = false;
+  const sections = definition.sections.map((section) => {
+    if (section.isWelcome || section.showIf?.field) return section;
+    if (section.fields.length === 0) return section;
+    const first = section.fields[0]?.showIf;
+    if (!first?.field) return section;
+    const same = section.fields.every(
+      (f) =>
+        f.showIf?.field === first.field &&
+        (f.showIf.equals ?? "") === (first.equals ?? "") &&
+        (f.showIf.includes ?? "") === (first.includes ?? ""),
+    );
+    if (!same) return section;
+    changed = true;
+    return { ...section, showIf: { ...first } };
+  });
+  return changed ? { ...definition, sections } : definition;
+}
+
 export function getSheetHeaders(definition: IntegrationFormDefinition): string[] {
   const fieldHeaders = getAllFields(definition).map((field) => field.label);
   return ["Fecha de envío", "ID de envío", ...fieldHeaders];

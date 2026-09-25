@@ -1,15 +1,18 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   ChevronUp,
   Flag,
   GitBranch,
   GripVertical,
+  LayoutGrid,
   Link2,
+  Palette,
   Plus,
   Settings2,
   Sparkles,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +46,8 @@ import {
   newFieldId,
 } from "@shared/integration-form";
 
+type BuilderMode = "campos" | "diseno" | "logica";
+
 type Selection =
   | { kind: "settings" }
   | { kind: "welcome" }
@@ -51,6 +56,10 @@ type Selection =
   | { kind: "field"; sectionIndex: number; fieldIndex: number };
 
 type DragPayload = { sectionIndex: number; fieldIndex: number };
+
+type LogicTarget =
+  | { kind: "section"; sectionIndex: number }
+  | { kind: "field"; sectionIndex: number; fieldIndex: number };
 
 function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list;
@@ -99,7 +108,7 @@ function getSectionCondition(section: IntegrationSection): IntegrationShowIf | u
   return same ? first : undefined;
 }
 
-function formatCondition(
+function formatConditionShort(
   showIf: IntegrationShowIf | undefined,
   sections: IntegrationSection[],
 ): string | null {
@@ -109,7 +118,7 @@ function formatCondition(
   const raw = showIf.equals ?? showIf.includes ?? "";
   const opt = trigger?.options?.find((o) => o.value === raw);
   const valueLabel = opt?.label || raw || "…";
-  return `Si «${triggerLabel}» = ${valueLabel}`;
+  return `${triggerLabel} → ${valueLabel}`;
 }
 
 function slugifyOptionValue(label: string): string {
@@ -123,6 +132,12 @@ function slugifyOptionValue(label: string): string {
   return base || newFieldId("opcion");
 }
 
+function fieldTypeIcon(type: IntegrationFieldType) {
+  if (type === "single_choice" || type === "multiple_choice" || type === "checkbox") return GitBranch;
+  if (type === "email" || type === "phone" || type === "url") return Link2;
+  return Type;
+}
+
 export function IntegrationFormBuilder({
   value,
   onChange,
@@ -130,7 +145,9 @@ export function IntegrationFormBuilder({
   value: IntegrationFormDefinition;
   onChange: (next: IntegrationFormDefinition) => void;
 }) {
-  const [selection, setSelection] = useState<Selection>({ kind: "settings" });
+  const [mode, setMode] = useState<BuilderMode>("campos");
+  const [selection, setSelection] = useState<Selection>({ kind: "welcome" });
+  const [logicFocus, setLogicFocus] = useState<LogicTarget | null>(null);
   const [dragging, setDragging] = useState<DragPayload | null>(null);
   const [dropHint, setDropHint] = useState<string | null>(null);
 
@@ -154,6 +171,18 @@ export function IntegrationFormBuilder({
     onChange({ ...value, sections });
   };
 
+  const setSectionBranch = (sectionIndex: number, showIf: IntegrationShowIf | undefined) => {
+    const section = value.sections[sectionIndex];
+    if (!section) return;
+    updateSection(sectionIndex, {
+      showIf,
+      fields: section.fields.map((f) => ({
+        ...f,
+        showIf: showIf ? { ...showIf } : undefined,
+      })),
+    });
+  };
+
   const addSection = () => {
     const section: IntegrationSection = {
       id: newFieldId("seccion"),
@@ -162,6 +191,7 @@ export function IntegrationFormBuilder({
       fields: [],
     };
     onChange({ ...value, sections: [...value.sections, section] });
+    setMode("campos");
     setSelection({ kind: "section", sectionIndex: value.sections.length });
   };
 
@@ -177,6 +207,7 @@ export function IntegrationFormBuilder({
       i === sectionIndex ? { ...section, fields: [...section.fields, field] } : section,
     );
     onChange({ ...value, sections });
+    setMode("campos");
     setSelection({ kind: "field", sectionIndex, fieldIndex: sections[sectionIndex].fields.length - 1 });
   };
 
@@ -194,153 +225,285 @@ export function IntegrationFormBuilder({
     setDropHint(null);
   };
 
+  const openLogic = (target: LogicTarget) => {
+    setLogicFocus(target);
+    setMode("logica");
+    if (target.kind === "section") setSelection({ kind: "section", sectionIndex: target.sectionIndex });
+    else setSelection({ kind: "field", sectionIndex: target.sectionIndex, fieldIndex: target.fieldIndex });
+  };
+
+  const logicRules = useMemo(() => {
+    const rules: Array<{
+      id: string;
+      target: LogicTarget;
+      title: string;
+      subtitle: string;
+      showIf: IntegrationShowIf;
+    }> = [];
+
+    value.sections.forEach((section, sectionIndex) => {
+      if (section.isWelcome) return;
+      const sectionCond = getSectionCondition(section);
+      if (sectionCond?.field) {
+        rules.push({
+          id: `section-${section.id}`,
+          target: { kind: "section", sectionIndex },
+          title: section.title || "Sección",
+          subtitle: "Sección completa",
+          showIf: sectionCond,
+        });
+      }
+      section.fields.forEach((field, fieldIndex) => {
+        if (!field.showIf?.field) return;
+        // Si la sección ya tiene la misma condición compartida, no duplicar cada pregunta
+        if (
+          sectionCond?.field === field.showIf.field &&
+          (sectionCond.equals ?? "") === (field.showIf.equals ?? "") &&
+          (sectionCond.includes ?? "") === (field.showIf.includes ?? "")
+        ) {
+          return;
+        }
+        rules.push({
+          id: `field-${field.id}`,
+          target: { kind: "field", sectionIndex, fieldIndex },
+          title: field.label || "Pregunta",
+          subtitle: section.title || "Sección",
+          showIf: field.showIf,
+        });
+      });
+    });
+    return rules;
+  }, [value.sections]);
+
   return (
-    <div className="grid w-full min-w-0 max-w-full items-start gap-4 overflow-x-hidden sm:gap-6 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-      <aside className="min-w-0 max-w-full space-y-3 overflow-hidden rounded-2xl border bg-card p-3 sm:p-4 xl:sticky xl:top-24">
-        <NavButton active={selection.kind === "settings"} onClick={() => setSelection({ kind: "settings" })}>
-          <Settings2 className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">Configuración y apariencia</span>
-        </NavButton>
-        <NavButton active={selection.kind === "welcome"} onClick={() => setSelection({ kind: "welcome" })}>
-          <Sparkles className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">Pantalla de bienvenida</span>
-        </NavButton>
-        <NavButton active={selection.kind === "ending"} onClick={() => setSelection({ kind: "ending" })}>
-          <Flag className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">Pantalla final</span>
-        </NavButton>
-        <div className="flex items-center justify-between gap-2 pt-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Secciones</p>
-          <Button size="sm" variant="ghost" className="shrink-0" onClick={addSection}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Las ramas (qué sección aparece según una respuesta) se configuran en cada sección o pregunta.
-        </p>
-        <div className="min-w-0 space-y-2">
-          {value.sections.map((section, sectionIndex) => {
-            if (section.isWelcome) return null;
-            const sectionCond = formatCondition(getSectionCondition(section), value.sections);
-            return (
-            <div
-              key={section.id}
-              className={cn(
-                "min-w-0 overflow-hidden rounded-xl border",
-                dropHint === `section-${sectionIndex}` && "border-[#5b8fd4] bg-[#5b8fd4]/10",
-              )}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDropHint(`section-${sectionIndex}`);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                applyDrop({ sectionIndex, fieldIndex: section.fields.length });
-              }}
-            >
-              <div className="flex min-w-0 items-center gap-0.5 p-1">
-                <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex - 1) })}>
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-                <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex + 1) })}>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelection({ kind: "section", sectionIndex })}
-                  className={cn(
-                    "min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm font-medium",
-                    selection.kind === "section" && selection.sectionIndex === sectionIndex && "bg-[#5b8fd4]/15 text-[#5b8fd4]",
-                  )}
-                >
-                  {section.title || "Sin título"}
-                </button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => addField(sectionIndex)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {sectionCond && (
-                <p className="flex items-start gap-1 px-2 pb-1 text-[10px] leading-snug text-[#5b8fd4]">
-                  <GitBranch className="mt-0.5 h-3 w-3 shrink-0" />
-                  <span className="min-w-0">{sectionCond}</span>
-                </p>
-              )}
-              <div className="min-w-0 space-y-1 px-2 pb-2">
-                {section.fields.map((field, fieldIndex) => {
-                  const fieldCond = formatCondition(field.showIf, value.sections);
-                  return (
+    <div className="flex w-full min-w-0 max-w-full overflow-hidden rounded-2xl border bg-card">
+      {/* Rail estilo forms.app */}
+      <nav className="flex w-[72px] shrink-0 flex-col items-center gap-1 border-r bg-muted/30 py-3">
+        <ModeTab
+          active={mode === "campos"}
+          icon={LayoutGrid}
+          label="Campos"
+          onClick={() => setMode("campos")}
+        />
+        <ModeTab
+          active={mode === "diseno"}
+          icon={Palette}
+          label="Diseño"
+          onClick={() => {
+            setMode("diseno");
+            setSelection({ kind: "settings" });
+          }}
+        />
+        <ModeTab
+          active={mode === "logica"}
+          icon={GitBranch}
+          label="Lógica"
+          onClick={() => setMode("logica")}
+          badge={logicRules.length > 0 ? logicRules.length : undefined}
+        />
+      </nav>
+
+      {/* Panel lateral */}
+      <aside className="flex w-full max-w-[300px] shrink-0 flex-col border-r bg-card sm:max-w-[320px]">
+        {mode === "campos" && (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+            <NavButton active={selection.kind === "welcome"} onClick={() => setSelection({ kind: "welcome" })}>
+              <Sparkles className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Bienvenida</span>
+            </NavButton>
+            <NavButton active={selection.kind === "ending"} onClick={() => setSelection({ kind: "ending" })}>
+              <Flag className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Pantalla final</span>
+            </NavButton>
+
+            <div className="flex items-center justify-between gap-2 pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Secciones
+              </p>
+              <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 p-0" onClick={addSection}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="min-w-0 space-y-1.5">
+              {value.sections.map((section, sectionIndex) => {
+                if (section.isWelcome) return null;
+                const hasBranch = Boolean(getSectionCondition(section)?.field);
+                return (
                   <div
-                    key={field.id}
-                    draggable
-                    onDragStart={() => setDragging({ sectionIndex, fieldIndex })}
-                    onDragEnd={() => {
-                      setDragging(null);
-                      setDropHint(null);
-                    }}
+                    key={section.id}
+                    className={cn(
+                      "min-w-0 overflow-hidden rounded-xl border",
+                      dropHint === `section-${sectionIndex}` && "border-[#5b8fd4] bg-[#5b8fd4]/10",
+                    )}
                     onDragOver={(e) => {
                       e.preventDefault();
-                      e.stopPropagation();
-                      setDropHint(`field-${sectionIndex}-${fieldIndex}`);
+                      setDropHint(`section-${sectionIndex}`);
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
-                      e.stopPropagation();
-                      applyDrop({ sectionIndex, fieldIndex });
+                      applyDrop({ sectionIndex, fieldIndex: section.fields.length });
                     }}
-                    className={cn(
-                      "flex min-w-0 cursor-grab items-center gap-1 active:cursor-grabbing",
-                      dropHint === `field-${sectionIndex}-${fieldIndex}` && "rounded-lg ring-1 ring-[#5b8fd4]",
-                    )}
                   >
-                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <button
-                      type="button"
-                      onClick={() => setSelection({ kind: "field", sectionIndex, fieldIndex })}
-                      className={cn(
-                        "min-w-0 flex-1 truncate rounded-lg px-2 py-1 text-left text-xs",
-                        selection.kind === "field" &&
-                          selection.sectionIndex === sectionIndex &&
-                          selection.fieldIndex === fieldIndex &&
-                          "bg-[#5b8fd4]/15 text-[#5b8fd4]",
+                    <div className="flex min-w-0 items-center gap-0.5 p-1">
+                      <button
+                        type="button"
+                        className="shrink-0 p-1 text-muted-foreground"
+                        onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex - 1) })}
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="shrink-0 p-1 text-muted-foreground"
+                        onClick={() => update({ sections: moveItem(value.sections, sectionIndex, sectionIndex + 1) })}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelection({ kind: "section", sectionIndex })}
+                        className={cn(
+                          "min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm font-medium",
+                          selection.kind === "section" &&
+                            selection.sectionIndex === sectionIndex &&
+                            "bg-[#5b8fd4]/15 text-[#5b8fd4]",
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          {hasBranch && <GitBranch className="h-3 w-3 shrink-0 text-[#5b8fd4]" />}
+                          <span className="truncate">{section.title || "Sin título"}</span>
+                        </span>
+                      </button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => addField(sectionIndex)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="min-w-0 space-y-0.5 px-1.5 pb-1.5">
+                      {section.fields.map((field, fieldIndex) => {
+                        const Icon = fieldTypeIcon(field.type);
+                        const fieldHasLogic = Boolean(field.showIf?.field);
+                        return (
+                          <div
+                            key={field.id}
+                            draggable
+                            onDragStart={() => setDragging({ sectionIndex, fieldIndex })}
+                            onDragEnd={() => {
+                              setDragging(null);
+                              setDropHint(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDropHint(`field-${sectionIndex}-${fieldIndex}`);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              applyDrop({ sectionIndex, fieldIndex });
+                            }}
+                            className={cn(
+                              "flex min-w-0 cursor-grab items-center gap-1 active:cursor-grabbing",
+                              dropHint === `field-${sectionIndex}-${fieldIndex}` &&
+                                "rounded-lg ring-1 ring-[#5b8fd4]",
+                            )}
+                          >
+                            <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                            <button
+                              type="button"
+                              onClick={() => setSelection({ kind: "field", sectionIndex, fieldIndex })}
+                              className={cn(
+                                "min-w-0 flex-1 truncate rounded-lg px-2 py-1 text-left text-xs",
+                                selection.kind === "field" &&
+                                  selection.sectionIndex === sectionIndex &&
+                                  selection.fieldIndex === fieldIndex &&
+                                  "bg-[#5b8fd4]/15 text-[#5b8fd4]",
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5 truncate">
+                                <Icon className="h-3 w-3 shrink-0 opacity-50" />
+                                {fieldHasLogic && <Link2 className="h-3 w-3 shrink-0 text-[#5b8fd4]" />}
+                                <span className="truncate">{field.label}</span>
+                              </span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {section.fields.length === 0 && (
+                        <p className="px-2 py-1 text-[11px] text-muted-foreground">Sin preguntas</p>
                       )}
-                      title={fieldCond || field.label}
-                    >
-                      <span className="flex items-center gap-1 truncate">
-                        {fieldCond && <Link2 className="h-3 w-3 shrink-0 opacity-70" />}
-                        <span className="truncate">{field.label}</span>
-                      </span>
-                    </button>
-                    <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex - 1) })}>
-                      <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button type="button" className="shrink-0 p-1 text-muted-foreground" onClick={() => updateSection(sectionIndex, { fields: moveItem(section.fields, fieldIndex, fieldIndex + 1) })}>
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
+                    </div>
                   </div>
-                  );
-                })}
-                {section.fields.length === 0 && (
-                  <p className="px-2 pb-1 text-[11px] text-muted-foreground">Suelta aquí una pregunta</p>
-                )}
-              </div>
+                );
+              })}
             </div>
-            );
-          })}
-        </div>
+          </div>
+        )}
+
+        {mode === "diseno" && (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Apariencia
+            </p>
+            <NavButton active onClick={() => setSelection({ kind: "settings" })}>
+              <Settings2 className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Tema y colores</span>
+            </NavButton>
+            <p className="px-1 text-xs leading-relaxed text-muted-foreground">
+              Plantillas y personalización del fondo del formulario.
+            </p>
+          </div>
+        )}
+
+        {mode === "logica" && (
+          <LogicSidebar
+            rules={logicRules}
+            sections={value.sections}
+            focus={logicFocus}
+            onFocus={setLogicFocus}
+            onSelectTarget={(target) => {
+              setLogicFocus(target);
+              if (target.kind === "section") {
+                setSelection({ kind: "section", sectionIndex: target.sectionIndex });
+              } else {
+                setSelection({
+                  kind: "field",
+                  sectionIndex: target.sectionIndex,
+                  fieldIndex: target.fieldIndex,
+                });
+              }
+            }}
+          />
+        )}
       </aside>
 
-      <section className="h-fit min-w-0 max-w-full overflow-hidden rounded-2xl border bg-card p-4 sm:p-5">
-        {selection.kind === "settings" && (
+      {/* Lienzo / editor */}
+      <section className="min-h-[520px] min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        {mode === "diseno" && (
           <AppearanceEditor theme={value.theme} onChange={updateTheme} />
         )}
 
-        {selection.kind === "welcome" && (
+        {mode === "logica" && (
+          <LogicCanvas
+            value={value}
+            focus={logicFocus}
+            onFocus={setLogicFocus}
+            onSetSectionBranch={setSectionBranch}
+            onUpdateField={updateField}
+          />
+        )}
+
+        {mode === "campos" && selection.kind === "welcome" && (
           <div className="space-y-4">
             <div>
               <h2 className="font-heading text-xl font-semibold">Pantalla de bienvenida</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Este es el único lugar para editar el inicio del formulario (título, texto e Iniciar).
-                Ya no hace falta marcar una sección como bienvenida.
+                Título, texto e Iniciar. Es el único lugar para editar el inicio.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -356,52 +519,118 @@ export function IntegrationFormBuilder({
           </div>
         )}
 
-        {selection.kind === "ending" && (
+        {mode === "campos" && selection.kind === "ending" && (
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="font-heading text-xl font-semibold">Pantalla final</h2>
-              <Field label="Título" value={value.ending.title} onChange={(title) => update({ ending: { ...value.ending, title } })} />
+              <Field
+                label="Título"
+                value={value.ending.title}
+                onChange={(title) => update({ ending: { ...value.ending, title } })}
+              />
             </div>
-            <Area label="Mensaje" value={value.ending.message} onChange={(message) => update({ ending: { ...value.ending, message } })} />
+            <Area
+              label="Mensaje"
+              value={value.ending.message}
+              onChange={(message) => update({ ending: { ...value.ending, message } })}
+            />
           </div>
         )}
 
-        {selection.kind === "section" && value.sections[selection.sectionIndex] && (
+        {mode === "campos" && selection.kind === "section" && value.sections[selection.sectionIndex] && (
           <SectionEditor
             section={value.sections[selection.sectionIndex]}
             sections={value.sections}
             onChange={(patch) => updateSection(selection.sectionIndex, patch)}
             onDelete={() => {
               onChange({ ...value, sections: value.sections.filter((_, i) => i !== selection.sectionIndex) });
-              setSelection({ kind: "settings" });
+              setSelection({ kind: "welcome" });
             }}
             onAddField={() => addField(selection.sectionIndex)}
+            onOpenLogic={() => openLogic({ kind: "section", sectionIndex: selection.sectionIndex })}
           />
         )}
 
-        {selection.kind === "field" && value.sections[selection.sectionIndex]?.fields[selection.fieldIndex] && (
-          <FieldEditor
-            field={value.sections[selection.sectionIndex].fields[selection.fieldIndex]}
-            sectionIndex={selection.sectionIndex}
-            sections={value.sections}
-            onChange={(patch) => updateField(selection.sectionIndex, selection.fieldIndex, patch)}
-            onMove={(targetSection) => {
-              const from = { sectionIndex: selection.sectionIndex, fieldIndex: selection.fieldIndex };
-              const destIndex = value.sections[targetSection].fields.length;
-              const sections = moveField(value.sections, from, { sectionIndex: targetSection, fieldIndex: destIndex });
-              onChange({ ...value, sections });
-              setSelection({ kind: "field", sectionIndex: targetSection, fieldIndex: sections[targetSection].fields.length - 1 });
-            }}
-            onDelete={() => {
-              updateSection(selection.sectionIndex, {
-                fields: value.sections[selection.sectionIndex].fields.filter((_, i) => i !== selection.fieldIndex),
-              });
-              setSelection({ kind: "section", sectionIndex: selection.sectionIndex });
-            }}
-          />
+        {mode === "campos" &&
+          selection.kind === "field" &&
+          value.sections[selection.sectionIndex]?.fields[selection.fieldIndex] && (
+            <FieldEditor
+              field={value.sections[selection.sectionIndex].fields[selection.fieldIndex]}
+              sectionIndex={selection.sectionIndex}
+              sections={value.sections}
+              onChange={(patch) => updateField(selection.sectionIndex, selection.fieldIndex, patch)}
+              onMove={(targetSection) => {
+                const from = { sectionIndex: selection.sectionIndex, fieldIndex: selection.fieldIndex };
+                const destIndex = value.sections[targetSection].fields.length;
+                const sections = moveField(value.sections, from, {
+                  sectionIndex: targetSection,
+                  fieldIndex: destIndex,
+                });
+                onChange({ ...value, sections });
+                setSelection({
+                  kind: "field",
+                  sectionIndex: targetSection,
+                  fieldIndex: sections[targetSection].fields.length - 1,
+                });
+              }}
+              onDelete={() => {
+                updateSection(selection.sectionIndex, {
+                  fields: value.sections[selection.sectionIndex].fields.filter(
+                    (_, i) => i !== selection.fieldIndex,
+                  ),
+                });
+                setSelection({ kind: "section", sectionIndex: selection.sectionIndex });
+              }}
+              onOpenLogic={() =>
+                openLogic({
+                  kind: "field",
+                  sectionIndex: selection.sectionIndex,
+                  fieldIndex: selection.fieldIndex,
+                })
+              }
+            />
+          )}
+
+        {mode === "campos" && selection.kind === "settings" && (
+          <AppearanceEditor theme={value.theme} onChange={updateTheme} />
         )}
       </section>
     </div>
+  );
+}
+
+function ModeTab({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+  badge,
+}: {
+  active: boolean;
+  icon: typeof LayoutGrid;
+  label: string;
+  onClick: () => void;
+  badge?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative flex w-[60px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-medium transition",
+        active
+          ? "bg-[#5b8fd4]/20 text-[#5b8fd4]"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      <Icon className="h-5 w-5" />
+      <span>{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5b8fd4] px-1 text-[9px] text-white">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -428,6 +657,342 @@ function NavButton({
   );
 }
 
+function LogicSidebar({
+  rules,
+  sections,
+  focus,
+  onFocus,
+  onSelectTarget,
+}: {
+  rules: Array<{
+    id: string;
+    target: LogicTarget;
+    title: string;
+    subtitle: string;
+    showIf: IntegrationShowIf;
+  }>;
+  sections: IntegrationSection[];
+  focus: LogicTarget | null;
+  onFocus: (t: LogicTarget) => void;
+  onSelectTarget: (t: LogicTarget) => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Condiciones
+        </p>
+        <span className="text-[11px] text-muted-foreground">{rules.length}</span>
+      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Si → entonces mostrar. Elige una regla o una sección/pregunta desde Campos.
+      </p>
+
+      {rules.length === 0 && (
+        <div className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">
+          Aún no hay condiciones. Abre una sección o pregunta y pulsa «Lógica».
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        {rules.map((rule) => {
+          const active =
+            focus &&
+            ((focus.kind === "section" &&
+              rule.target.kind === "section" &&
+              focus.sectionIndex === rule.target.sectionIndex) ||
+              (focus.kind === "field" &&
+                rule.target.kind === "field" &&
+                focus.sectionIndex === rule.target.sectionIndex &&
+                focus.fieldIndex === rule.target.fieldIndex));
+          const summary = formatConditionShort(rule.showIf, sections);
+          return (
+            <button
+              key={rule.id}
+              type="button"
+              onClick={() => {
+                onFocus(rule.target);
+                onSelectTarget(rule.target);
+              }}
+              className={cn(
+                "w-full rounded-xl border px-3 py-2.5 text-left transition",
+                active ? "border-[#5b8fd4] bg-[#5b8fd4]/10" : "hover:bg-muted/60",
+              )}
+            >
+              <p className="truncate text-sm font-medium">{rule.title}</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{rule.subtitle}</p>
+              {summary && (
+                <p className="mt-1.5 flex items-start gap-1 text-[11px] leading-snug text-[#5b8fd4]">
+                  <GitBranch className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span className="min-w-0">{summary}</span>
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 border-t pt-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Añadir a…
+        </p>
+        <div className="max-h-48 space-y-1 overflow-y-auto">
+          {sections.map((section, sectionIndex) => {
+            if (section.isWelcome) return null;
+            return (
+              <div key={section.id} className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => onSelectTarget({ kind: "section", sectionIndex })}
+                  className="w-full truncate rounded-lg px-2 py-1.5 text-left text-xs font-medium hover:bg-muted"
+                >
+                  Sección: {section.title || "Sin título"}
+                </button>
+                {section.fields.map((field, fieldIndex) => (
+                  <button
+                    key={field.id}
+                    type="button"
+                    onClick={() => onSelectTarget({ kind: "field", sectionIndex, fieldIndex })}
+                    className="w-full truncate rounded-lg px-2 py-1 pl-4 text-left text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    {field.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogicCanvas({
+  value,
+  focus,
+  onFocus,
+  onSetSectionBranch,
+  onUpdateField,
+}: {
+  value: IntegrationFormDefinition;
+  focus: LogicTarget | null;
+  onFocus: (t: LogicTarget | null) => void;
+  onSetSectionBranch: (sectionIndex: number, showIf: IntegrationShowIf | undefined) => void;
+  onUpdateField: (sectionIndex: number, fieldIndex: number, patch: Partial<IntegrationField>) => void;
+}) {
+  if (!focus) {
+    return (
+      <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-3 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#5b8fd4]/15 text-[#5b8fd4]">
+          <GitBranch className="h-7 w-7" />
+        </div>
+        <div>
+          <h2 className="font-heading text-xl font-semibold">Lógica del formulario</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            Elige una condición a la izquierda, o una sección/pregunta, y define cuándo se muestra.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (focus.kind === "section") {
+    const section = value.sections[focus.sectionIndex];
+    if (!section) return null;
+    const condition = getSectionCondition(section);
+    return (
+      <div className="mx-auto max-w-xl space-y-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[#5b8fd4]">Sección</p>
+            <h2 className="font-heading text-xl font-semibold">{section.title || "Sin título"}</h2>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => onFocus(null)}>
+            Cerrar
+          </Button>
+        </div>
+        <ShowIfEditor
+          label="Mostrar esta sección solo si…"
+          showIf={condition}
+          sections={value.sections}
+          excludeFieldId={undefined}
+          onChange={(showIf) => onSetSectionBranch(focus.sectionIndex, showIf)}
+        />
+      </div>
+    );
+  }
+
+  const field = value.sections[focus.sectionIndex]?.fields[focus.fieldIndex];
+  if (!field) return null;
+  return (
+    <div className="mx-auto max-w-xl space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-[#5b8fd4]">Pregunta</p>
+          <h2 className="font-heading text-xl font-semibold">{field.label || "Sin título"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {value.sections[focus.sectionIndex]?.title}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onFocus(null)}>
+          Cerrar
+        </Button>
+      </div>
+      <ShowIfEditor
+        label="Mostrar esta pregunta solo si…"
+        showIf={field.showIf}
+        sections={value.sections}
+        excludeFieldId={field.id}
+        onChange={(showIf) => onUpdateField(focus.sectionIndex, focus.fieldIndex, { showIf })}
+      />
+    </div>
+  );
+}
+
+/** Editor compacto Si → Entonces (sin muros de texto). */
+function ShowIfEditor({
+  label,
+  showIf,
+  sections,
+  excludeFieldId,
+  onChange,
+}: {
+  label: string;
+  showIf: IntegrationShowIf | undefined;
+  sections: IntegrationSection[];
+  excludeFieldId?: string;
+  onChange: (showIf: IntegrationShowIf | undefined) => void;
+}) {
+  const triggerFields = sections
+    .flatMap((s) => s.fields)
+    .filter(
+      (f) =>
+        f.id !== excludeFieldId &&
+        (f.type === "single_choice" || f.type === "multiple_choice" || f.type === "checkbox"),
+    );
+  const allTriggers = sections
+    .flatMap((s) => s.fields)
+    .filter((f) => f.id !== excludeFieldId);
+
+  const trigger = showIf?.field ? findFieldById(sections, showIf.field) : undefined;
+  const triggerOptions = trigger?.options ?? [];
+  const triggerIsChoice =
+    trigger?.type === "single_choice" ||
+    trigger?.type === "multiple_choice" ||
+    trigger?.type === "checkbox";
+
+  return (
+    <div className="space-y-4 rounded-2xl border p-4">
+      <div className="flex items-center gap-2">
+        <GitBranch className="h-4 w-4 text-[#5b8fd4]" />
+        <p className="text-sm font-semibold">{label}</p>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <Label className="text-xs text-muted-foreground">Si responden…</Label>
+          <Select
+            value={showIf?.field ?? "siempre"}
+            onValueChange={(next) => {
+              if (next === "siempre") {
+                onChange(undefined);
+                return;
+              }
+              const src = findFieldById(sections, next);
+              const firstOpt = src?.options?.[0]?.value ?? "";
+              onChange(
+                src?.type === "multiple_choice"
+                  ? { field: next, includes: firstOpt }
+                  : { field: next, equals: firstOpt || showIf?.equals || "" },
+              );
+            }}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="siempre">Siempre visible</SelectItem>
+              {(triggerFields.length > 0 ? triggerFields : allTriggers).map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {showIf?.field && (
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              {trigger?.type === "multiple_choice"
+                ? "…y eligen (incluye)"
+                : triggerIsChoice
+                  ? "…y eligen"
+                  : "…y el valor es"}
+            </Label>
+            {triggerOptions.length > 0 ? (
+              <Select
+                value={showIf.equals ?? showIf.includes ?? ""}
+                onValueChange={(val) =>
+                  onChange(
+                    trigger?.type === "multiple_choice"
+                      ? { field: showIf.field, includes: val }
+                      : { field: showIf.field, equals: val },
+                  )
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Elige la opción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {triggerOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : trigger?.type === "checkbox" ? (
+              <Select
+                value={showIf.equals ?? "true"}
+                onValueChange={(val) => onChange({ field: showIf.field, equals: val })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Marcada (sí)</SelectItem>
+                  <SelectItem value="false">Sin marcar (no)</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                className="mt-1"
+                value={showIf.equals ?? ""}
+                onChange={(e) => onChange({ field: showIf.field, equals: e.target.value })}
+                placeholder="Valor exacto"
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {showIf?.field && (
+        <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Entonces: </span>
+          se muestra si {formatConditionShort(showIf, sections)?.replace(" → ", " = ") ?? "…"}
+        </p>
+      )}
+
+      {showIf?.field && (
+        <Button variant="outline" size="sm" onClick={() => onChange(undefined)}>
+          Quitar condición
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function AppearanceEditor({
   theme,
   onChange,
@@ -444,11 +1009,8 @@ function AppearanceEditor({
   return (
     <div className="min-w-0 max-w-full space-y-5 overflow-hidden">
       <div className="min-w-0">
-        <h2 className="font-heading text-xl font-semibold">Apariencia</h2>
-        <p className="mt-1 break-words text-sm text-muted-foreground">
-          Elige un estilo de marca WCA. El color base siempre se puede ajustar; las opciones de imagen
-          solo aparecen con «Imagen propia».
-        </p>
+        <h2 className="font-heading text-xl font-semibold">Diseño</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Plantillas y personalización del fondo.</p>
       </div>
       <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {APPEARANCE_PRESETS.map((item) => (
@@ -485,9 +1047,6 @@ function AppearanceEditor({
               placeholder="#0b1220"
             />
           </div>
-          <p className="mt-1 break-words text-xs text-muted-foreground">
-            Color base del formulario. Luces y efectos del tema se mantienen encima.
-          </p>
         </div>
 
         <div className="min-w-0">
@@ -498,11 +1057,8 @@ function AppearanceEditor({
             max={100}
             step={1}
             value={[theme?.overlayOpacity ?? 0]}
-            onValueChange={([value]) => onChange({ overlayOpacity: value ?? 0 })}
+            onValueChange={([v]) => onChange({ overlayOpacity: v ?? 0 })}
           />
-          <p className="mt-1 break-words text-xs text-muted-foreground">
-            Oscurece un poco el fondo para mejorar el contraste del texto.
-          </p>
         </div>
 
         {isCustom && (
@@ -516,46 +1072,68 @@ function AppearanceEditor({
             </div>
             <div className="min-w-0">
               <Label>Encaje</Label>
-              <Select value={theme?.imageFit ?? "cover"} onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+              <Select
+                value={theme?.imageFit ?? "cover"}
+                onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cover">Cubrir (cover)</SelectItem>
-                  <SelectItem value="contain">Contener (contain)</SelectItem>
+                  <SelectItem value="cover">Cubrir</SelectItem>
+                  <SelectItem value="contain">Contener</SelectItem>
                   <SelectItem value="auto">Tamaño original</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="min-w-0">
               <Label>Posición</Label>
-              <Select value={theme?.imagePosition ?? "center"} onValueChange={(imagePosition) => onChange({ imagePosition: imagePosition as IntegrationImagePosition })}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+              <Select
+                value={theme?.imagePosition ?? "center"}
+                onValueChange={(imagePosition) =>
+                  onChange({ imagePosition: imagePosition as IntegrationImagePosition })
+                }
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="center">Centro</SelectItem>
                   <SelectItem value="top">Arriba</SelectItem>
                   <SelectItem value="bottom">Abajo</SelectItem>
                   <SelectItem value="left">Izquierda</SelectItem>
                   <SelectItem value="right">Derecha</SelectItem>
-                  <SelectItem value="top left">Arriba izquierda</SelectItem>
-                  <SelectItem value="top right">Arriba derecha</SelectItem>
-                  <SelectItem value="bottom left">Abajo izquierda</SelectItem>
-                  <SelectItem value="bottom right">Abajo derecha</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="min-w-0">
               <Label>Anclaje</Label>
-              <Select value={theme?.imageAttachment ?? "fixed"} onValueChange={(imageAttachment) => onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+              <Select
+                value={theme?.imageAttachment ?? "fixed"}
+                onValueChange={(imageAttachment) =>
+                  onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })
+                }
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fixed">Fijo (no se mueve al hacer scroll)</SelectItem>
-                  <SelectItem value="scroll">Se mueve con el contenido</SelectItem>
+                  <SelectItem value="fixed">Fijo</SelectItem>
+                  <SelectItem value="scroll">Con el scroll</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="min-w-0">
               <Label>Repetición</Label>
-              <Select value={theme?.imageRepeat ?? "no-repeat"} onValueChange={(imageRepeat) => onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+              <Select
+                value={theme?.imageRepeat ?? "no-repeat"}
+                onValueChange={(imageRepeat) =>
+                  onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })
+                }
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="no-repeat">Sin repetir</SelectItem>
                   <SelectItem value="repeat">Repetir</SelectItem>
@@ -570,12 +1148,9 @@ function AppearanceEditor({
                 max={100}
                 step={1}
                 value={[theme?.imageOpacity ?? 28]}
-                onValueChange={([value]) => onChange({ imageOpacity: value ?? 0 })}
+                onValueChange={([v]) => onChange({ imageOpacity: v ?? 0 })}
               />
             </div>
-            <p className="break-words text-xs text-muted-foreground md:col-span-2">
-              Sube el archivo a <code>client/public/</code> (por ejemplo <code>/fondo-integracion.jpg</code>) o pega una URL https.
-            </p>
           </>
         )}
       </div>
@@ -614,44 +1189,40 @@ function SectionEditor({
   onChange,
   onDelete,
   onAddField,
+  onOpenLogic,
 }: {
   section: IntegrationSection;
   sections: IntegrationSection[];
   onChange: (patch: Partial<IntegrationSection>) => void;
   onDelete: () => void;
   onAddField: () => void;
+  onOpenLogic: () => void;
 }) {
   const condition = getSectionCondition(section);
-  const triggerFields = sections
-    .flatMap((s) => s.fields)
-    .filter((f) => f.type === "single_choice" || f.type === "multiple_choice" || f.type === "checkbox");
-  const trigger = condition?.field ? findFieldById(sections, condition.field) : undefined;
-  const triggerOptions = trigger?.options ?? [];
-
-  const setSectionBranch = (showIf: IntegrationShowIf | undefined) => {
-    onChange({
-      showIf,
-      // Aplica la misma condición a todos los campos para mantener consistencia
-      fields: section.fields.map((f) => ({
-        ...f,
-        showIf: showIf ? { ...showIf } : undefined,
-      })),
-    });
-  };
+  const summary = formatConditionShort(condition, sections);
 
   return (
     <div className="min-w-0 space-y-5">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-heading text-xl font-semibold">Sección</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Un paso del formulario. Si defines una rama abajo, todo el paso se salta cuando la condición no se cumple.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Un paso del formulario.</p>
         </div>
-        <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onDelete}>
-          <Trash2 className="h-4 w-4" />
-          Eliminar
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="shrink-0" onClick={onOpenLogic}>
+            <GitBranch className="h-4 w-4" />
+            Lógica
+            {summary && (
+              <span className="ml-1 hidden max-w-[140px] truncate text-xs text-[#5b8fd4] sm:inline">
+                · activa
+              </span>
+            )}
+          </Button>
+          <Button variant="outline" className="shrink-0" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </Button>
+        </div>
       </div>
 
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
@@ -659,101 +1230,16 @@ function SectionEditor({
         <Field label="Subtítulo" value={section.subtitle ?? ""} onChange={(subtitle) => onChange({ subtitle })} />
       </div>
 
-      <div className="space-y-3 rounded-2xl border border-[#5b8fd4]/25 bg-[#5b8fd4]/5 p-4">
-        <div className="flex items-start gap-2">
-          <GitBranch className="mt-0.5 h-4 w-4 shrink-0 text-[#5b8fd4]" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">¿Cuándo aparece esta sección?</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Ejemplo (formulario de miembros): si «Tipo de solicitud» = Incorporación, se muestra
-              «Detalle · Incorporación». Las otras ramas (Cobertura / Retiro) se saltan solas.
-              Si agregas una 4.ª opción, crea otra sección y enlázala aquí a ese valor.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div>
-            <Label>Depende de la pregunta</Label>
-            <Select
-              value={condition?.field ?? "siempre"}
-              onValueChange={(next) => {
-                if (next === "siempre") {
-                  setSectionBranch(undefined);
-                  return;
-                }
-                const src = findFieldById(sections, next);
-                const firstOpt = src?.options?.[0]?.value ?? "";
-                setSectionBranch(
-                  src?.type === "multiple_choice"
-                    ? { field: next, includes: firstOpt }
-                    : { field: next, equals: firstOpt },
-                );
-              }}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="siempre">Siempre (sin rama)</SelectItem>
-                {triggerFields.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {condition?.field && (
-            <div>
-              <Label>
-                {trigger?.type === "multiple_choice" ? "Cuando incluye la opción" : "Cuando eligen la opción"}
-              </Label>
-              {triggerOptions.length > 0 ? (
-                <Select
-                  value={condition.equals ?? condition.includes ?? ""}
-                  onValueChange={(val) =>
-                    setSectionBranch(
-                      trigger?.type === "multiple_choice"
-                        ? { field: condition.field, includes: val }
-                        : { field: condition.field, equals: val },
-                    )
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Elige una opción" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {triggerOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  className="mt-1"
-                  value={condition.equals ?? condition.includes ?? ""}
-                  onChange={(e) =>
-                    setSectionBranch({ field: condition.field, equals: e.target.value })
-                  }
-                  placeholder="Valor exacto de la respuesta"
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {condition?.field && (
-          <p className="rounded-lg bg-background/80 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Resumen: </span>
-            {formatCondition(condition, sections) || "Configura la opción"}
-            . Si no se cumple, esta sección no se muestra en el flujo.
-          </p>
-        )}
-      </div>
+      {summary && (
+        <button
+          type="button"
+          onClick={onOpenLogic}
+          className="flex w-full items-center gap-2 rounded-xl border border-[#5b8fd4]/30 bg-[#5b8fd4]/5 px-3 py-2 text-left text-xs text-[#5b8fd4] transition hover:bg-[#5b8fd4]/10"
+        >
+          <GitBranch className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 truncate">Se muestra si {summary.replace(" → ", " = ")}</span>
+        </button>
+      )}
 
       <Button className="w-full sm:w-auto" onClick={onAddField}>
         <Plus className="h-4 w-4" />
@@ -770,6 +1256,7 @@ function FieldEditor({
   onChange,
   onMove,
   onDelete,
+  onOpenLogic,
 }: {
   field: IntegrationField;
   sectionIndex: number;
@@ -777,23 +1264,23 @@ function FieldEditor({
   onChange: (patch: Partial<IntegrationField>) => void;
   onMove: (sectionIndex: number) => void;
   onDelete: () => void;
+  onOpenLogic: () => void;
 }) {
   const isChoice = field.type === "single_choice" || field.type === "multiple_choice";
-  const triggerCandidates = sections
-    .flatMap((s) => s.fields)
-    .filter((item) => item.id !== field.id);
-  const trigger = field.showIf?.field ? findFieldById(sections, field.showIf.field) : undefined;
-  const triggerIsChoice =
-    trigger?.type === "single_choice" || trigger?.type === "multiple_choice" || trigger?.type === "checkbox";
-  const triggerOptions = trigger?.options ?? [];
+  const summary = formatConditionShort(field.showIf, sections);
 
   return (
     <div className="min-w-0 max-w-full space-y-5 overflow-hidden">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="font-heading text-xl font-semibold">Pregunta</h2>
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onOpenLogic}>
+            <GitBranch className="h-4 w-4" />
+            Lógica
+            {summary && <span className="ml-1 text-xs text-[#5b8fd4]">· activa</span>}
+          </Button>
           <Select value={String(sectionIndex)} onValueChange={(next) => onMove(Number(next))}>
-            <SelectTrigger className="h-9 w-full min-w-0 sm:w-[220px]">
+            <SelectTrigger className="h-9 w-full min-w-0 sm:w-[200px]">
               <SelectValue placeholder="Mover a sección" />
             </SelectTrigger>
             <SelectContent>
@@ -814,6 +1301,17 @@ function FieldEditor({
         </div>
       </div>
 
+      {summary && (
+        <button
+          type="button"
+          onClick={onOpenLogic}
+          className="flex w-full items-center gap-2 rounded-xl border border-[#5b8fd4]/30 bg-[#5b8fd4]/5 px-3 py-2 text-left text-xs text-[#5b8fd4] transition hover:bg-[#5b8fd4]/10"
+        >
+          <Link2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 truncate">Se muestra si {summary.replace(" → ", " = ")}</span>
+        </button>
+      )}
+
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <Field label="Texto de la pregunta" value={field.label} onChange={(label) => onChange({ label })} />
@@ -824,16 +1322,24 @@ function FieldEditor({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(FIELD_TYPE_LABELS).map(([type, label]) => (
+                {Object.entries(FIELD_TYPE_LABELS).map(([type, typeLabel]) => (
                   <SelectItem key={type} value={type}>
-                    {label}
+                    {typeLabel}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Area label="Descripción o ayuda (puedes usar emojis 💙)" value={field.description ?? ""} onChange={(description) => onChange({ description })} />
-          <Field label="Placeholder" value={field.placeholder ?? ""} onChange={(placeholder) => onChange({ placeholder })} />
+          <Area
+            label="Descripción o ayuda (puedes usar emojis 💙)"
+            value={field.description ?? ""}
+            onChange={(description) => onChange({ description })}
+          />
+          <Field
+            label="Placeholder"
+            value={field.placeholder ?? ""}
+            onChange={(placeholder) => onChange({ placeholder })}
+          />
         </div>
         <div className="space-y-4">
           <div className="grid gap-3">
@@ -845,139 +1351,31 @@ function FieldEditor({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Mínimo</Label>
-                <Input className="mt-1" type="number" value={field.min ?? 0} onChange={(e) => onChange({ min: Number(e.target.value) })} />
+                <Input
+                  className="mt-1"
+                  type="number"
+                  value={field.min ?? 0}
+                  onChange={(e) => onChange({ min: Number(e.target.value) })}
+                />
               </div>
               <div>
                 <Label>Máximo</Label>
-                <Input className="mt-1" type="number" value={field.max ?? 100} onChange={(e) => onChange({ max: Number(e.target.value) })} />
+                <Input
+                  className="mt-1"
+                  type="number"
+                  value={field.max ?? 100}
+                  onChange={(e) => onChange({ max: Number(e.target.value) })}
+                />
               </div>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="space-y-3 rounded-2xl border border-[#5b8fd4]/25 bg-[#5b8fd4]/5 p-4">
-        <div className="flex items-start gap-2">
-          <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-[#5b8fd4]" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">¿Cuándo se muestra esta pregunta?</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Conexión: elige otra pregunta (normalmente de opción única) y el valor que debe
-              responderse. Si no coincide, esta pregunta se oculta. Si toda una sección queda sin
-              preguntas visibles, el formulario salta esa sección.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div>
-            <Label>Mostrar solo si responden…</Label>
-            <Select
-              value={field.showIf?.field ?? "siempre"}
-              onValueChange={(next) => {
-                if (next === "siempre") {
-                  onChange({ showIf: undefined });
-                  return;
-                }
-                const src = findFieldById(sections, next);
-                const firstOpt = src?.options?.[0]?.value ?? "";
-                onChange({
-                  showIf:
-                    src?.type === "multiple_choice"
-                      ? { field: next, includes: firstOpt }
-                      : { field: next, equals: firstOpt || field.showIf?.equals || "" },
-                });
-              }}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="siempre">Siempre visible</SelectItem>
-                {triggerCandidates.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {field.showIf?.field && (
-            <div>
-              <Label>
-                {trigger?.type === "multiple_choice"
-                  ? "…y la respuesta incluye"
-                  : triggerIsChoice
-                    ? "…y eligen la opción"
-                    : "…y el valor es exactamente"}
-              </Label>
-              {triggerOptions.length > 0 ? (
-                <Select
-                  value={field.showIf.equals ?? field.showIf.includes ?? ""}
-                  onValueChange={(val) =>
-                    onChange({
-                      showIf:
-                        trigger?.type === "multiple_choice"
-                          ? { field: field.showIf!.field, includes: val }
-                          : { field: field.showIf!.field, equals: val },
-                    })
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Elige la opción" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {triggerOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : trigger?.type === "checkbox" ? (
-                <Select
-                  value={field.showIf.equals ?? "true"}
-                  onValueChange={(val) => onChange({ showIf: { field: field.showIf!.field, equals: val } })}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Marcada (sí)</SelectItem>
-                    <SelectItem value="false">Sin marcar (no)</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  className="mt-1"
-                  value={field.showIf.equals ?? ""}
-                  onChange={(e) => onChange({ showIf: { field: field.showIf!.field, equals: e.target.value } })}
-                  placeholder="Escribe el valor exacto"
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {field.showIf?.field && (
-          <p className="rounded-lg bg-background/80 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Resumen: </span>
-            {formatCondition(field.showIf, sections) || "Elige la opción para completar la conexión"}
-          </p>
-        )}
       </div>
 
       {isChoice && (
         <div className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <Label>Opciones de respuesta</Label>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Cada opción puede abrir una rama distinta. El «valor interno» se usa en las conexiones;
-                el texto es lo que ve la persona.
-              </p>
-            </div>
+            <Label>Opciones ({field.options?.length ?? 0})</Label>
             <Button
               size="sm"
               variant="outline"
@@ -985,10 +1383,7 @@ function FieldEditor({
               onClick={() => {
                 const label = "Nueva opción";
                 onChange({
-                  options: [
-                    ...(field.options ?? []),
-                    { value: slugifyOptionValue(label), label },
-                  ],
+                  options: [...(field.options ?? []), { value: slugifyOptionValue(label), label }],
                 });
               }}
             >
@@ -997,11 +1392,13 @@ function FieldEditor({
             </Button>
           </div>
           {(field.options ?? []).map((option, index) => (
-            <div key={`${option.value}-${index}`} className="grid min-w-0 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_120px_auto]">
-              <div className="min-w-0">
-                <Label className="text-[11px] text-muted-foreground">Texto visible</Label>
+            <div
+              key={`${option.value}-${index}`}
+              className="grid min-w-0 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_auto]"
+            >
+              <div className="min-w-0 space-y-2">
                 <Input
-                  className="mt-1 min-w-0"
+                  className="min-w-0"
                   value={option.label}
                   onChange={(e) => {
                     const label = e.target.value;
@@ -1010,7 +1407,6 @@ function FieldEditor({
                         ? {
                             ...item,
                             label,
-                            // Solo auto-slug si el value parece generado / vacío
                             value:
                               !item.value || item.value.startsWith("opcion-")
                                 ? slugifyOptionValue(label)
@@ -1020,38 +1416,49 @@ function FieldEditor({
                     );
                     onChange({ options });
                   }}
-                  placeholder="Ej. Incorporación de nuevo(s) miembro(s)"
+                  placeholder="Texto de la opción"
                 />
-              </div>
-              <div className="min-w-0">
-                <Label className="text-[11px] text-muted-foreground">Valor interno (conexiones)</Label>
-                <Input
-                  className="mt-1 min-w-0 font-mono text-xs"
-                  value={option.value}
+                <Textarea
+                  value={option.description ?? ""}
                   onChange={(e) => {
                     const options = (field.options ?? []).map((item, i) =>
-                      i === index ? { ...item, value: e.target.value.trim() || item.value } : item,
+                      i === index ? { ...item, description: e.target.value } : item,
                     );
                     onChange({ options });
                   }}
-                  placeholder="incorporacion"
+                  placeholder="Descripción (opcional)"
+                  className="min-h-[60px]"
                 />
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none hover:text-foreground">
+                    Avanzado: valor interno y sigla
+                  </summary>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <Input
+                      className="font-mono text-xs"
+                      value={option.value}
+                      onChange={(e) => {
+                        const options = (field.options ?? []).map((item, i) =>
+                          i === index ? { ...item, value: e.target.value.trim() || item.value } : item,
+                        );
+                        onChange({ options });
+                      }}
+                      placeholder="valor-interno"
+                    />
+                    <Input
+                      value={option.acronym ?? ""}
+                      onChange={(e) => {
+                        const options = (field.options ?? []).map((item, i) =>
+                          i === index ? { ...item, acronym: e.target.value } : item,
+                        );
+                        onChange({ options });
+                      }}
+                      placeholder="Sigla"
+                    />
+                  </div>
+                </details>
               </div>
-              <div className="min-w-0">
-                <Label className="text-[11px] text-muted-foreground">Sigla</Label>
-                <Input
-                  className="mt-1"
-                  value={option.acronym ?? ""}
-                  onChange={(e) => {
-                    const options = (field.options ?? []).map((item, i) =>
-                      i === index ? { ...item, acronym: e.target.value } : item,
-                    );
-                    onChange({ options });
-                  }}
-                  placeholder="Sigla"
-                />
-              </div>
-              <div className="flex items-end">
+              <div className="flex items-start justify-end">
                 <Button
                   size="icon"
                   variant="ghost"
@@ -1060,32 +1467,23 @@ function FieldEditor({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <Textarea
-                className="md:col-span-4"
-                value={option.description ?? ""}
-                onChange={(e) => {
-                  const options = (field.options ?? []).map((item, i) =>
-                    i === index ? { ...item, description: e.target.value } : item,
-                  );
-                  onChange({ options });
-                }}
-                placeholder="Descripción visual (emojis permitidos)"
-              />
             </div>
           ))}
-          {(field.options?.length ?? 0) > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Tip: para cada valor interno crea (o reutiliza) una sección y en «¿Cuándo aparece esta sección?»
-              elige esta pregunta + esa opción. Así queda claro a qué rama manda cada respuesta.
-            </p>
-          )}
         </div>
       )}
     </div>
   );
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+function Toggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
   return (
     <label className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
       {label}
