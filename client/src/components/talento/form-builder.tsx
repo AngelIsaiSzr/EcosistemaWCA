@@ -1,9 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { GitBranch, LayoutGrid, Palette, Settings2 } from "lucide-react";
+import { GitBranch, LayoutGrid, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -12,20 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { ImageUrlInput } from "@/components/media/image-url-input";
 import {
-  APPEARANCE_PRESETS,
   IntegrationField,
   IntegrationFieldType,
   IntegrationFormDefinition,
-  IntegrationImageAttachment,
-  IntegrationImageFit,
-  IntegrationImagePosition,
-  IntegrationImageRepeat,
   IntegrationSection,
   IntegrationShowIf,
   IntegrationTheme,
-  WCA_LOGO_URL,
   createEmptyField,
   newFieldId,
 } from "@shared/integration-form";
@@ -33,6 +25,7 @@ import type { CatalogItem } from "./form-builder-catalog-data";
 import { FormBuilderCatalog } from "./form-builder-catalog";
 import { FormBuilderFieldSettings } from "./form-builder-field-settings";
 import { FormBuilderCanvas, type BuilderSelection } from "./form-builder-canvas";
+import { FormBuilderDesign } from "./form-builder-design";
 
 type BuilderMode = "elementos" | "diseno" | "logica";
 
@@ -397,7 +390,10 @@ export function IntegrationFormBuilder({
           active={mode === "elementos"}
           icon={LayoutGrid}
           label="Elementos"
-          onClick={() => setMode("elementos")}
+          onClick={() => {
+            setMode("elementos");
+            setAsideMode("catalog");
+          }}
         />
         <ModeTab
           active={mode === "diseno"}
@@ -431,18 +427,7 @@ export function IntegrationFormBuilder({
           ))}
 
         {mode === "diseno" && (
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Apariencia
-            </p>
-            <NavButton active onClick={() => setMode("diseno")}>
-              <Settings2 className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 truncate">Tema y colores</span>
-            </NavButton>
-            <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-              Plantillas y personalización del fondo del formulario.
-            </p>
-          </div>
+          <FormBuilderDesign theme={value.theme} onChange={updateTheme} />
         )}
 
         {mode === "logica" && (
@@ -468,37 +453,38 @@ export function IntegrationFormBuilder({
       </aside>
 
       {/* Lienzo / editor */}
-      {mode === "elementos" ? (
+      {mode === "elementos" || mode === "diseno" ? (
         <FormBuilderCanvas
           definition={value}
-          selection={selection}
-          onSelect={setSelection}
-          onOpenSettings={(target) => {
-            setSelection(target);
-            setAsideMode("settings");
-          }}
-          onUpdateDefinition={update}
-          onUpdateSection={updateSection}
-          onUpdateField={updateField}
-          onDuplicate={duplicateBlock}
-          onMove={moveBlock}
-          onDelete={deleteBlock}
-          onInsertField={insertFieldAt}
-          onMoveFieldTo={moveFieldTo}
+          selection={mode === "elementos" ? selection : null}
+          onSelect={mode === "elementos" ? setSelection : () => {}}
+          onOpenSettings={
+            mode === "elementos"
+              ? (target) => {
+                  setSelection(target);
+                  setAsideMode("settings");
+                }
+              : () => {}
+          }
+          onUpdateDefinition={mode === "elementos" ? update : () => {}}
+          onUpdateSection={mode === "elementos" ? updateSection : () => {}}
+          onUpdateField={mode === "elementos" ? updateField : () => {}}
+          onDuplicate={mode === "elementos" ? duplicateBlock : () => {}}
+          onMove={mode === "elementos" ? moveBlock : () => {}}
+          onDelete={mode === "elementos" ? deleteBlock : () => {}}
+          onInsertField={mode === "elementos" ? insertFieldAt : undefined}
+          onMoveFieldTo={mode === "elementos" ? moveFieldTo : undefined}
         />
       ) : (
         <section className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {mode === "diseno" && <AppearanceEditor theme={value.theme} onChange={updateTheme} />}
-          {mode === "logica" && (
-            <LogicCanvas
-              value={value}
-              focus={logicFocus}
-              onFocus={setLogicFocus}
-              onSetSectionBranch={setSectionBranch}
-              onUpdateField={updateField}
-              onOpenLogic={openLogic}
-            />
-          )}
+          <LogicCanvas
+            value={value}
+            focus={logicFocus}
+            onFocus={setLogicFocus}
+            onSetSectionBranch={setSectionBranch}
+            onUpdateField={updateField}
+            onOpenLogic={openLogic}
+          />
         </section>
       )}
     </div>
@@ -540,28 +526,6 @@ function ModeTab({
   );
 }
 
-function NavButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm",
-        active ? "bg-[#5b8fd4]/15 text-[#5b8fd4]" : "hover:bg-muted",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 function LogicSidebar({
   rules,
@@ -919,187 +883,6 @@ function ShowIfEditor({
         <Button variant="outline" size="sm" onClick={() => onChange(undefined)}>
           Quitar condición
         </Button>
-      )}
-    </div>
-  );
-}
-
-function AppearanceEditor({
-  theme,
-  onChange,
-}: {
-  theme?: IntegrationTheme;
-  onChange: (patch: Partial<IntegrationTheme>) => void;
-}) {
-  const preset = theme?.background ?? "aurora";
-  const isCustom = preset === "custom";
-  const imagePath = theme?.backgroundImage?.trim() ?? "";
-  const imageFieldValue =
-    !imagePath || imagePath === "/logo-wca.png" || imagePath === WCA_LOGO_URL ? "" : imagePath;
-
-  return (
-    <div className="min-w-0 max-w-full space-y-5 overflow-hidden">
-      <div className="min-w-0">
-        <h2 className="font-heading text-xl font-semibold">Diseño</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Plantillas y personalización del fondo.</p>
-      </div>
-      <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {APPEARANCE_PRESETS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onChange({ background: item.id })}
-            className={cn(
-              "min-w-0 rounded-xl border p-3 text-left transition",
-              preset === item.id ? "border-[#5b8fd4] bg-[#5b8fd4]/10" : "hover:bg-muted",
-            )}
-          >
-            <p className="text-sm font-medium">{item.label}</p>
-            <p className="mt-1 break-words text-xs text-muted-foreground">{item.hint}</p>
-          </button>
-        ))}
-      </div>
-
-      <div className={cn("grid min-w-0 gap-4 overflow-hidden rounded-xl border p-3 sm:p-4", "md:grid-cols-2")}>
-        <div className="min-w-0">
-          <Label>Color de fondo</Label>
-          <div className="mt-1 flex min-w-0 items-center gap-2">
-            <input
-              type="color"
-              aria-label="Color de fondo"
-              className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
-              value={/^#[0-9a-fA-F]{6}$/.test(theme?.backgroundColor ?? "") ? theme!.backgroundColor! : "#0b1220"}
-              onChange={(e) => onChange({ backgroundColor: e.target.value })}
-            />
-            <Input
-              className="min-w-0 flex-1"
-              value={theme?.backgroundColor ?? "#0b1220"}
-              onChange={(e) => onChange({ backgroundColor: e.target.value })}
-              placeholder="#0b1220"
-            />
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          <Label>Velo oscuro ({theme?.overlayOpacity ?? 0}%)</Label>
-          <Slider
-            className="mt-4 w-full max-w-full"
-            min={0}
-            max={100}
-            step={1}
-            value={[theme?.overlayOpacity ?? 0]}
-            onValueChange={([v]) => onChange({ overlayOpacity: v ?? 0 })}
-          />
-        </div>
-
-        {isCustom && (
-          <>
-            <div className="min-w-0">
-              <Field
-                label="URL o ruta de la imagen"
-                value={imageFieldValue}
-                onChange={(backgroundImage) => onChange({ backgroundImage: backgroundImage.trim() })}
-              />
-            </div>
-            <div className="min-w-0">
-              <Label>Encaje</Label>
-              <Select
-                value={theme?.imageFit ?? "cover"}
-                onValueChange={(imageFit) => onChange({ imageFit: imageFit as IntegrationImageFit })}
-              >
-                <SelectTrigger className="mt-1 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cover">Cubrir</SelectItem>
-                  <SelectItem value="contain">Contener</SelectItem>
-                  <SelectItem value="auto">Tamaño original</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-0">
-              <Label>Posición</Label>
-              <Select
-                value={theme?.imagePosition ?? "center"}
-                onValueChange={(imagePosition) =>
-                  onChange({ imagePosition: imagePosition as IntegrationImagePosition })
-                }
-              >
-                <SelectTrigger className="mt-1 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="center">Centro</SelectItem>
-                  <SelectItem value="top">Arriba</SelectItem>
-                  <SelectItem value="bottom">Abajo</SelectItem>
-                  <SelectItem value="left">Izquierda</SelectItem>
-                  <SelectItem value="right">Derecha</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-0">
-              <Label>Anclaje</Label>
-              <Select
-                value={theme?.imageAttachment ?? "fixed"}
-                onValueChange={(imageAttachment) =>
-                  onChange({ imageAttachment: imageAttachment as IntegrationImageAttachment })
-                }
-              >
-                <SelectTrigger className="mt-1 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Fijo</SelectItem>
-                  <SelectItem value="scroll">Con el scroll</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-0">
-              <Label>Repetición</Label>
-              <Select
-                value={theme?.imageRepeat ?? "no-repeat"}
-                onValueChange={(imageRepeat) =>
-                  onChange({ imageRepeat: imageRepeat as IntegrationImageRepeat })
-                }
-              >
-                <SelectTrigger className="mt-1 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no-repeat">Sin repetir</SelectItem>
-                  <SelectItem value="repeat">Repetir</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-0">
-              <Label>Opacidad de la imagen ({theme?.imageOpacity ?? 28}%)</Label>
-              <Slider
-                className="mt-4 w-full max-w-full"
-                min={0}
-                max={100}
-                step={1}
-                value={[theme?.imageOpacity ?? 28]}
-                onValueChange={([v]) => onChange({ imageOpacity: v ?? 0 })}
-              />
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const isImage = /imagen|foto|logo|image/i.test(label);
-  return (
-    <div className="min-w-0">
-      <Label>{label}</Label>
-      {isImage ? (
-        <div className="mt-1">
-          <ImageUrlInput value={value} onChange={onChange} />
-        </div>
-      ) : (
-        <Input className="mt-1 min-w-0 max-w-full" value={value} onChange={(e) => onChange(e.target.value)} />
       )}
     </div>
   );

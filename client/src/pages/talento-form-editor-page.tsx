@@ -152,7 +152,7 @@ export default function TalentoFormEditorPage({
       </Helmet>
       <div className="min-h-screen overflow-x-hidden bg-background">
         <Navbar />
-        <main className="container mx-auto max-w-full px-4 pb-16 pt-24">
+        <main className="container mx-auto max-w-full px-4 pb-6 pt-24">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <Link

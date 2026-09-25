@@ -26,6 +26,8 @@ import {
   isValidHttpUrl,
   isValidPhoneNumber,
   normalizeUrl,
+  themeControlRadius,
+  type IntegrationCornerStyle,
   type IntegrationFileAnswer,
 } from "@shared/integration-form";
 import { WcaLogo } from "@/components/integration/wca-logo";
@@ -45,8 +47,12 @@ const fade = {
 };
 
 const emojiFont = "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
-const controlClass =
+const controlBase =
   "h-12 border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#87b1e0] focus-visible:shadow-[0_0_0_2px_#5b8fd4]";
+
+function controlClass(cornerStyle?: IntegrationCornerStyle) {
+  return cn(controlBase, themeControlRadius(cornerStyle));
+}
 
 function emptyAnswers(definition: IntegrationFormDefinition): Answers {
   const answers: Answers = {
@@ -416,6 +422,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
                         value={answers[field.id]}
                         error={errors[field.id]}
                         slug={slug}
+                        cornerStyle={definition.theme?.cornerStyle}
                         otherValue={otherValues[field.id] ?? ""}
                         onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
                         onChange={(value) => setValue(field.id, value)}
@@ -473,6 +480,7 @@ function FieldControl({
   otherValue,
   onOtherChange,
   slug,
+  cornerStyle,
 }: {
   field: IntegrationField;
   value: unknown;
@@ -481,9 +489,12 @@ function FieldControl({
   otherValue: string;
   onOtherChange: (value: string) => void;
   slug: string;
+  cornerStyle?: IntegrationCornerStyle;
 }) {
   const selected = Array.isArray(value) ? (value as string[]) : [];
   const [uploading, setUploading] = useState(false);
+  const radius = themeControlRadius(cornerStyle);
+  const ctrl = controlClass(cornerStyle);
 
   const toggleMulti = (optionValue: string) => {
     if (selected.includes(optionValue)) {
@@ -526,7 +537,7 @@ function FieldControl({
 
   if (field.type === "explanation") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+      <div className={cn(radius, "border border-white/10 bg-white/5 px-4 py-4")}>
         <p className="text-lg font-semibold text-white">{field.label}</p>
         {field.description && (
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70">{field.description}</p>
@@ -556,7 +567,7 @@ function FieldControl({
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             maxLength={field.maxLength}
-            className={controlClass}
+            className={ctrl}
           />
         )}
         {field.type === "email" && (
@@ -567,7 +578,7 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={controlClass}
+            className={ctrl}
           />
         )}
         {field.type === "url" && (
@@ -581,7 +592,7 @@ function FieldControl({
               if (next) onChange(normalizeUrl(next));
             }}
             placeholder={field.placeholder}
-            className={controlClass}
+            className={ctrl}
           />
         )}
         {field.type === "number" && (
@@ -593,7 +604,7 @@ function FieldControl({
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
             placeholder={field.placeholder}
-            className={cn(controlClass, "integration-number-input")}
+            className={cn(ctrl, "integration-number-input")}
           />
         )}
         {field.type === "long_text" && (
@@ -601,15 +612,15 @@ function FieldControl({
             value={String(value ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className={cn(controlClass, "min-h-[140px] h-auto")}
+            className={cn(ctrl, "min-h-[140px] h-auto")}
           />
         )}
-        {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
+        {field.type === "phone" && <PhoneField value={value} onChange={onChange} cornerStyle={cornerStyle} />}
         {field.type === "date" && (
-          <Input type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={controlClass} />
+          <Input type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={ctrl} />
         )}
         {field.type === "time" && (
-          <Input type="time" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={controlClass} />
+          <Input type="time" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={ctrl} />
         )}
         {field.type === "yes_no" && (
           <div className="grid grid-cols-2 gap-3">
@@ -627,7 +638,8 @@ function FieldControl({
                   type="button"
                   onClick={() => onChange(option.value)}
                   className={cn(
-                    "rounded-2xl border px-4 py-4 text-center font-medium transition",
+                    "border px-4 py-4 text-center font-medium transition",
+                    radius,
                     active ? "border-[#87b1e0] bg-[#87b1e0]/15 text-white" : "border-white/10 bg-white/5 text-white/80",
                   )}
                 >
@@ -639,7 +651,7 @@ function FieldControl({
         )}
         {field.type === "dropdown" && (
           <Select value={String(value ?? "") || undefined} onValueChange={onChange}>
-            <SelectTrigger className={controlClass}>
+            <SelectTrigger className={ctrl}>
               <SelectValue placeholder={field.placeholder || "Elige una opción"} />
             </SelectTrigger>
             <SelectContent>
@@ -675,7 +687,8 @@ function FieldControl({
           <div className="space-y-3">
             <label
               className={cn(
-                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 py-8 text-sm text-white/70 transition hover:border-[#87b1e0]/50",
+                "flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-white/20 bg-white/5 px-4 py-8 text-sm text-white/70 transition hover:border-[#87b1e0]/50",
+                radius,
                 uploading && "opacity-60",
               )}
             >
@@ -724,7 +737,7 @@ function FieldControl({
                   type="button"
                   onClick={() => onChange(option.value)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition",
+                    "w-full border px-4 py-4 text-left transition", radius,
                     active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
@@ -766,7 +779,7 @@ function FieldControl({
                   type="button"
                   onClick={() => toggleMulti(option.value)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition",
+                    "w-full border px-4 py-4 text-left transition", radius,
                     active ? "border-[#87b1e0] bg-[#87b1e0]/15" : "border-white/10 bg-white/5 hover:border-white/25",
                   )}
                 >
@@ -802,7 +815,7 @@ function FieldControl({
                   type="button"
                   onClick={() => toggleMulti("otro")}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition",
+                    "w-full border px-4 py-4 text-left transition", radius,
                     selected.includes("otro")
                       ? "border-[#87b1e0] bg-[#87b1e0]/15"
                       : "border-white/10 bg-white/5 hover:border-white/25",
@@ -823,7 +836,7 @@ function FieldControl({
                         value={otherValue}
                         onChange={(e) => onOtherChange(e.target.value)}
                         placeholder="Especifica..."
-                        className={controlClass}
+                        className={ctrl}
                       />
                     </motion.div>
                   )}
@@ -833,7 +846,7 @@ function FieldControl({
           </div>
         )}
         {field.type === "checkbox" && (
-          <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <label className={cn("mt-2 flex cursor-pointer items-start gap-3 border border-white/10 bg-white/5 p-4", radius)}>
             <Checkbox
               checked={value === true}
               onCheckedChange={(checked) => onChange(checked === true)}
@@ -872,16 +885,19 @@ function FieldControl({
 function PhoneField({
   value,
   onChange,
+  cornerStyle,
 }: {
   value: unknown;
   onChange: (value: unknown) => void;
+  cornerStyle?: IntegrationCornerStyle;
 }) {
   const phone = (value as { dial?: string; number?: string }) ?? { dial: "+52", number: "" };
   const selected = PHONE_COUNTRIES.find((c) => c.dial === (phone.dial ?? "+52")) ?? PHONE_COUNTRIES[0];
+  const ctrl = controlClass(cornerStyle);
   return (
     <div className="flex gap-2">
       <Select value={phone.dial ?? "+52"} onValueChange={(dial) => onChange({ ...phone, dial })}>
-        <SelectTrigger className={cn(controlClass, "w-[170px]")}>
+        <SelectTrigger className={cn(ctrl, "w-[170px]")}>
           <SelectValue>
             <span className="flex items-center gap-2">
               <img src={countryFlagUrl(selected.code)} alt="" className="h-4 w-5 rounded-sm object-cover" />
@@ -910,7 +926,7 @@ function PhoneField({
         value={phone.number ?? ""}
         onChange={(e) => onChange({ ...phone, number: e.target.value.replace(/[^\d\s-]/g, "") })}
         placeholder="812 000 0000"
-        className={controlClass}
+        className={ctrl}
       />
     </div>
   );

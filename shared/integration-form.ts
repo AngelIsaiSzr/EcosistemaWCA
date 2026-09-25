@@ -106,6 +106,8 @@ export type IntegrationImagePosition =
   | "bottom left"
   | "bottom right";
 
+export type IntegrationCornerStyle = "sharp" | "rounded" | "pill";
+
 export interface IntegrationTheme {
   background?: IntegrationBackground;
   backgroundColor?: string;
@@ -116,6 +118,10 @@ export interface IntegrationTheme {
   imageRepeat?: IntegrationImageRepeat;
   imageOpacity?: number;
   overlayOpacity?: number;
+  /** Radio de esquinas de controles del formulario. */
+  cornerStyle?: IntegrationCornerStyle;
+  /** Si true, se aplican los ajustes de Personalizar (colores / imagen). */
+  customizeEnabled?: boolean;
 }
 
 export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hint: string }[] = [
@@ -132,6 +138,30 @@ export const APPEARANCE_PRESETS: { id: IntegrationBackground; label: string; hin
   { id: "logo", label: "Marca de agua", hint: "Logo grande al centro, fondo sólido" },
   { id: "custom", label: "Imagen propia", hint: "Sube o pega una URL y recórtala" },
 ];
+
+/** Plantillas del tab Temas (sin Imagen propia). */
+export const THEME_PRESET_CATEGORIES: {
+  id: string;
+  title: string;
+  presets: IntegrationBackground[];
+}[] = [
+  {
+    id: "wca",
+    title: "Diseños WCA",
+    presets: ["aurora", "midnight", "mist", "horizon", "minimal", "logo"],
+  },
+  {
+    id: "atmosfera",
+    title: "Atmósfera",
+    presets: ["constellation", "spotlight", "ripple", "glass", "duotone"],
+  },
+];
+
+export function themeControlRadius(style?: IntegrationCornerStyle): string {
+  if (style === "sharp") return "rounded-none";
+  if (style === "pill") return "rounded-full";
+  return "rounded-2xl";
+}
 
 export interface IntegrationFormDefinition {
   version: number;

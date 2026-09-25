@@ -32,6 +32,7 @@ import {
   FIELD_TYPE_LABELS,
   newFieldId,
   slugify,
+  themeControlRadius,
   type IntegrationChoice,
   type IntegrationField,
   type IntegrationFieldType,
@@ -60,8 +61,8 @@ const emojiFont =
 const inline =
   "rounded-lg border border-transparent bg-transparent text-white shadow-none placeholder:text-white/30 hover:border-white/10 focus-visible:border-[#5b8fd4]/60 focus-visible:ring-0 focus-visible:ring-offset-0";
 
-const mockControl =
-  "flex w-full items-center rounded-2xl border border-white/15 bg-white/10 px-4 text-sm text-white/40";
+const mockControlBase =
+  "flex w-full items-center border border-white/15 bg-white/10 px-4 text-sm text-white/40";
 
 const iconButton =
   "flex h-6 w-6 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white";
@@ -115,6 +116,7 @@ export function FormBuilderCanvas({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  const controlRadius = themeControlRadius(definition.theme?.cornerStyle);
 
   const realSections = definition.sections
     .map((section, sectionIndex) => ({ section, sectionIndex }))
@@ -280,6 +282,7 @@ export function FormBuilderCanvas({
                       >
                         <FieldBlock
                           field={field}
+                          controlRadius={controlRadius}
                           onUpdate={(patch) => onUpdateField(sectionIndex, fieldIndex, patch)}
                         />
                       </CanvasBlock>
@@ -579,9 +582,11 @@ function AutoArea({
 
 function FieldBlock({
   field,
+  controlRadius,
   onUpdate,
 }: {
   field: IntegrationField;
+  controlRadius: string;
   onUpdate: (patch: Partial<IntegrationField>) => void;
 }) {
   if (field.type === "separator") {
@@ -600,7 +605,7 @@ function FieldBlock({
 
   if (field.type === "explanation") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className={cn(controlRadius, "border border-white/10 bg-white/5 px-4 py-3")}>
         <AutoArea
           value={field.label ?? ""}
           onChange={(label) => onUpdate({ label })}
@@ -619,7 +624,7 @@ function FieldBlock({
 
   if (field.type === "checkbox") {
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className={cn("flex items-start gap-3 border border-white/10 bg-white/5 px-4 py-3", controlRadius)}>
         <span className="mt-2 h-5 w-5 shrink-0 rounded-md border border-white/40" />
         <div className="min-w-0 flex-1">
           <AutoArea
@@ -660,7 +665,7 @@ function FieldBlock({
         className={cn(inline, "text-sm text-white/60")}
       />
       <div className="mt-3">
-        <FieldMock field={field} onUpdate={onUpdate} />
+        <FieldMock field={field} controlRadius={controlRadius} onUpdate={onUpdate} />
       </div>
     </div>
   );
@@ -669,12 +674,15 @@ function FieldBlock({
 /** Maqueta del control: se ve como el formulario público; las opciones sí se editan aquí. */
 function FieldMock({
   field,
+  controlRadius,
   onUpdate,
 }: {
   field: IntegrationField;
+  controlRadius: string;
   onUpdate: (patch: Partial<IntegrationField>) => void;
 }) {
   const placeholder = field.placeholder?.trim();
+  const mockControl = cn(mockControlBase, controlRadius);
 
   if (field.type === "long_text") {
     return (
@@ -703,7 +711,7 @@ function FieldMock({
           <span>{placeholder || "Elige una opción"}</span>
           <ChevronDown className="h-4 w-4" />
         </div>
-        <EditableOptions field={field} onUpdate={onUpdate} />
+        <EditableOptions field={field} controlRadius={controlRadius} onUpdate={onUpdate} />
       </div>
     );
   }
@@ -736,12 +744,12 @@ function FieldMock({
     field.type === "multiple_choice" ||
     field.type === "yes_no"
   ) {
-    return <EditableOptions field={field} onUpdate={onUpdate} />;
+    return <EditableOptions field={field} controlRadius={controlRadius} onUpdate={onUpdate} />;
   }
 
   if (field.type === "image_upload" || field.type === "file") {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 py-7 text-sm text-white/55">
+      <div className={cn("flex flex-col items-center justify-center gap-2 border border-dashed border-white/20 bg-white/5 px-4 py-7 text-sm text-white/55", controlRadius)}>
         <Upload className="h-6 w-6 text-[#87b1e0]" />
         <span>{field.type === "image_upload" ? "Elige una imagen" : "Elige un archivo"}</span>
       </div>
@@ -766,9 +774,11 @@ function FieldMock({
 /** Opciones editables sobre el lienzo: texto, orden, agregar y quitar. */
 function EditableOptions({
   field,
+  controlRadius,
   onUpdate,
 }: {
   field: IntegrationField;
+  controlRadius: string;
   onUpdate: (patch: Partial<IntegrationField>) => void;
 }) {
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -836,7 +846,7 @@ function EditableOptions({
             if (Number.isInteger(from)) reorder(from, index);
           }}
           className={cn(
-            "flex items-start gap-3 rounded-2xl border px-4 py-2 transition",
+            "flex items-start gap-3 border px-4 py-2 transition", controlRadius,
             overIndex === index
               ? "border-[#5b8fd4] bg-[#5b8fd4]/10"
               : "border-white/10 bg-white/5",
@@ -901,7 +911,7 @@ function EditableOptions({
       ))}
 
       {field.allowOther && (
-        <div className="flex items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-3">
+        <div className={cn("flex items-center gap-3 border border-dashed border-white/15 bg-white/5 px-4 py-3", controlRadius)}>
           <span
             className={cn(
               "h-5 w-5 shrink-0 border border-white/30",
@@ -915,7 +925,7 @@ function EditableOptions({
       <button
         type="button"
         onClick={() => insertAfter(options.length - 1)}
-        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-white/15 px-4 py-2 text-xs text-white/50 transition hover:border-[#5b8fd4]/60 hover:text-[#87b1e0]"
+        className={cn("flex w-full items-center justify-center gap-1.5 border border-dashed border-white/15 px-4 py-2 text-xs text-white/50 transition hover:border-[#5b8fd4]/60 hover:text-[#87b1e0]", controlRadius)}
       >
         <Plus className="h-3.5 w-3.5" />
         Agregar opción
