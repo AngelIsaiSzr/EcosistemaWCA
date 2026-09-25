@@ -5,6 +5,7 @@ import {
   BookOpen,
   Flag,
   Handshake,
+  Images,
   Mail,
   MessageSquareQuote,
   QrCode,
@@ -61,6 +62,15 @@ export default function AdminDashboardPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/qr-codes", { credentials: "include" });
       if (!res.ok) throw new Error("No se pudieron cargar los códigos QR");
+      return res.json();
+    },
+  });
+  const { data: mediaLibrary } = useQuery<{ items: unknown[] }>({
+    queryKey: ["/api/media/library"],
+    enabled: user?.role === "admin",
+    queryFn: async () => {
+      const res = await fetch("/api/media/library", { credentials: "include" });
+      if (!res.ok) throw new Error("No se pudo cargar la biblioteca");
       return res.json();
     },
   });
@@ -128,6 +138,15 @@ export default function AdminDashboardPage() {
       icon: QrCode,
       count: qrCodes?.length ?? null,
       countLabel: "códigos",
+    },
+    {
+      id: "biblioteca",
+      title: "Biblioteca de imágenes",
+      description: "Sube, reemplaza o elimina imágenes usadas en la plataforma.",
+      href: "/admin/biblioteca",
+      icon: Images,
+      count: mediaLibrary?.items?.length ?? null,
+      countLabel: "imágenes",
     },
   ];
 

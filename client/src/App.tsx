@@ -20,6 +20,7 @@ import AdminPage from "@/pages/admin-page";
 import AdminAlliesPage from "@/pages/admin-allies-page";
 import AdminCountriesPage from "@/pages/admin-countries-page";
 import AdminQrPage from "@/pages/admin-qr-page";
+import AdminMediaLibraryPage from "@/pages/admin-media-library-page";
 import AdminCardsPage from "@/pages/admin-cards-page";
 import AdminCardEditorPage from "@/pages/admin-card-editor-page";
 import AdminEmailAutomationPage from "@/pages/admin-email-automation-page";
@@ -139,6 +140,7 @@ function Router() {
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/qr" component={AdminQrPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/biblioteca" component={AdminMediaLibraryPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/programas/:slug/contenido" component={AdminProgramContentPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin" component={AdminDashboardPage} roles={["admin"]} />

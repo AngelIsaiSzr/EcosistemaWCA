@@ -165,10 +165,10 @@ export default function TalentoOrganigramaPage() {
       <Helmet>
         <title>Organigrama | Talento y Bienestar</title>
       </Helmet>
-      <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen flex-col bg-background lg:h-[100dvh] lg:overflow-hidden">
         <Navbar />
-        <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <main className="container mx-auto flex min-h-0 flex-1 flex-col px-4 pb-6 pt-24 lg:overflow-hidden">
+          <div className="mb-6 flex shrink-0 flex-wrap items-end justify-between gap-4 lg:mb-6">
             <div>
               <p className="text-sm text-muted-foreground">
                 <Link href="/talento" className="hover:text-foreground">
@@ -191,8 +191,8 @@ export default function TalentoOrganigramaPage() {
             </Button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <section className="space-y-4">
+          <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:overflow-hidden">
+            <section className="space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
               {directors.map((dir) => {
                 const color = orgColor(dir.directionKey as OrgDirectionKey);
                 const members = membersOf(dir.id);
@@ -264,7 +264,7 @@ export default function TalentoOrganigramaPage() {
               })}
             </section>
 
-            <section className="rounded-2xl border bg-card p-5 lg:sticky lg:top-24 lg:self-start">
+            <section className="rounded-2xl border bg-card p-5 lg:min-h-0 lg:overflow-y-auto">
               {addingUnder ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">

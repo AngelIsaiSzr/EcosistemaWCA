@@ -7,6 +7,7 @@ import {
   Eye,
   Globe2,
   MoreHorizontal,
+  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -241,10 +242,9 @@ export default function TalentoDashboardPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/talento/formularios/${form.slug}`}>Abrir respuestas</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/talento/formularios/${form.slug}/editar`}>Editar</Link>
+                          <Link href={`/talento/formularios/${form.slug}/editar`}>
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => pinMutation.mutate({ slug: form.slug, pinned: !pinned })}

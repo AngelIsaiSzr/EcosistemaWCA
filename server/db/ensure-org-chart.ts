@@ -42,7 +42,6 @@ export async function ensureOrgChartTables() {
   if (existing.length === 0) {
     await seedMonterreyOrg();
   } else {
-    await seedMissingMembers();
     await syncLeaderSortOrders();
   }
 
@@ -144,46 +143,6 @@ async function seedMonterreyOrg() {
       sortOrder: person.sortOrder,
       isActive: true,
     });
-  }
-}
-
-/** Si ya existían solo directores, agrega integrantes faltantes por correo. */
-async function seedMissingMembers() {
-  const rows = await db
-    .select()
-    .from(orgChartPeople)
-    .where(eq(orgChartPeople.sedeId, ORG_SEDE_ID));
-
-  const emails = new Set(
-    rows.map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean),
-  );
-  const directorsByKey = new Map<string, number>();
-  for (const r of rows) {
-    if (r.roleKind === "director" && !r.directionKey.startsWith("sede")) {
-      directorsByKey.set(r.directionKey, r.id);
-    }
-  }
-
-  for (const person of ORG_SEED_MONTERREY.filter((p) => p.roleKind === "member")) {
-    const email = (person.email || "").trim().toLowerCase();
-    if (!email || emails.has(email)) continue;
-    const parentId = directorsByKey.get(person.parentDirectionKey ?? person.directionKey);
-    if (!parentId) continue;
-    await db.insert(orgChartPeople).values({
-      sedeId: ORG_SEDE_ID,
-      parentId,
-      directionKey: person.directionKey,
-      roleKind: "member",
-      name: person.name,
-      roleTitle: person.roleTitle,
-      email: person.email,
-      phone: null,
-      photoUrl: null,
-      socialLinks: [],
-      sortOrder: person.sortOrder,
-      isActive: true,
-    });
-    emails.add(email);
   }
 }
 

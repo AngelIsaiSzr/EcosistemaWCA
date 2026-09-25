@@ -20,6 +20,13 @@ function requireStaff(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated() || req.user.role !== "admin") {
+    return res.status(403).json({ message: "Unauthorized: Admin access required" });
+  }
+  next();
+}
+
 function walkMediaDir(
   dir: string,
   baseUrl: string,
@@ -58,6 +65,17 @@ function pushUrl(
   const u = (url || "").trim();
   if (!u) return;
   if (!out.has(u)) out.set(u, { url: u, label, source });
+}
+
+function resolveLibraryFile(libraryRoot: string, url: string): string | null {
+  const trimmed = (url || "").trim();
+  const prefix = "/media/library/";
+  if (!trimmed.startsWith(prefix)) return null;
+  const relative = trimmed.slice(prefix.length);
+  if (!relative || relative.includes("..") || path.isAbsolute(relative)) return null;
+  const resolved = path.resolve(libraryRoot, relative);
+  if (!resolved.startsWith(libraryRoot + path.sep) && resolved !== libraryRoot) return null;
+  return resolved;
 }
 
 export function registerMediaLibraryRoutes(app: Express) {
@@ -177,6 +195,66 @@ export function registerMediaLibraryRoutes(app: Express) {
       } catch (error) {
         console.error("POST /api/media/library/upload", error);
         res.status(500).json({ message: "No se pudo subir la imagen" });
+      }
+    },
+  );
+
+  app.delete("/api/media/library", requireAdmin, async (req, res) => {
+    try {
+      const url = String(req.body?.url || "").trim();
+      const filePath = resolveLibraryFile(LIBRARY_UPLOAD_ROOT, url);
+      if (!filePath) {
+        return res.status(400).json({
+          message: "Solo se pueden borrar imágenes subidas a /media/library/",
+        });
+      }
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Archivo no encontrado" });
+      }
+      fs.unlinkSync(filePath);
+      res.json({ message: "Imagen eliminada", url });
+    } catch (error) {
+      console.error("DELETE /api/media/library", error);
+      res.status(500).json({ message: "No se pudo eliminar la imagen" });
+    }
+  });
+
+  app.post(
+    "/api/media/library/replace",
+    requireAdmin,
+    memoryUpload.single("file"),
+    async (req, res) => {
+      try {
+        const url = String(req.body?.url || req.query.url || "").trim();
+        const filePath = resolveLibraryFile(LIBRARY_UPLOAD_ROOT, url);
+        if (!filePath) {
+          return res.status(400).json({
+            message: "Solo se pueden reemplazar imágenes subidas a /media/library/",
+          });
+        }
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ message: "Archivo no encontrado" });
+        }
+        const file = req.file;
+        if (!file) {
+          return res.status(400).json({ message: "No se recibió archivo" });
+        }
+        const ext = path.extname(file.originalname || "").toLowerCase();
+        if (!UPLOAD_MIME.has(file.mimetype) || !UPLOAD_EXT.has(ext)) {
+          return res.status(400).json({
+            message: "Solo se permiten imágenes PNG, JPEG o WebP",
+          });
+        }
+        // Conservar la misma URL pública (mismo nombre de archivo).
+        fs.writeFileSync(filePath, file.buffer);
+        res.json({
+          url,
+          label: path.basename(filePath),
+          replaced: true,
+        });
+      } catch (error) {
+        console.error("POST /api/media/library/replace", error);
+        res.status(500).json({ message: "No se pudo reemplazar la imagen" });
       }
     },
   );
