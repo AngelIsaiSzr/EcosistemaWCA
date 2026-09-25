@@ -10,18 +10,24 @@ export function FormAtmosphere({
   contained?: boolean;
 }) {
   const theme = definition.theme;
-  const preset = theme?.background ?? "aurora";
+  const customizeOn = theme?.customizeEnabled === true;
+  const preset = theme?.background;
   const customImage = theme?.backgroundImage?.trim() || "";
   const isLogoPath = customImage === "/logo-wca.png" || customImage === WCA_LOGO_URL;
-  const showImage = Boolean(customImage) && !isLogoPath;
+  const showImage = customizeOn && Boolean(customImage) && !isLogoPath;
   const imageSrc = customImage;
-  const opacity = Math.min(100, Math.max(0, theme?.imageOpacity ?? (preset === "custom" ? 28 : 14))) / 100;
-  const overlay = Math.min(100, Math.max(0, theme?.overlayOpacity ?? 0)) / 100;
+  const opacity =
+    Math.min(100, Math.max(0, theme?.imageOpacity ?? (preset === "custom" ? 28 : 14))) / 100;
+  const overlay = customizeOn
+    ? Math.min(100, Math.max(0, theme?.overlayOpacity ?? 0)) / 100
+    : 0;
   const fit = theme?.imageFit ?? "cover";
   const position = theme?.imagePosition ?? "center";
   const attachment = contained ? "scroll" : (theme?.imageAttachment ?? "fixed");
   const repeat = theme?.imageRepeat ?? "no-repeat";
-  const baseColor = theme?.backgroundColor?.trim() || "#0b1220";
+  const baseColor = customizeOn
+    ? theme?.backgroundColor?.trim() || "#0b1220"
+    : "#0b1220";
   const layer = contained ? "absolute" : "fixed";
 
   return (

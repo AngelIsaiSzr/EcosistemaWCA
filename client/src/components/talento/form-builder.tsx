@@ -106,8 +106,13 @@ export function IntegrationFormBuilder({
   const [logicFocus, setLogicFocus] = useState<LogicTarget | null>(null);
 
   const update = (patch: Partial<IntegrationFormDefinition>) => onChange({ ...value, ...patch });
-  const updateTheme = (patch: Partial<IntegrationTheme>) =>
-    onChange({ ...value, theme: { ...value.theme, ...patch } });
+  const updateTheme = (patch: Partial<IntegrationTheme>) => {
+    const next: IntegrationTheme = { ...value.theme, ...patch };
+    if ("background" in patch && patch.background === undefined) {
+      delete next.background;
+    }
+    onChange({ ...value, theme: next });
+  };
 
   const updateSection = (index: number, patch: Partial<IntegrationSection>) => {
     const sections = value.sections.map((section, i) =>
@@ -690,23 +695,6 @@ function LogicCanvas({
           excludeFieldId={undefined}
           onChange={(showIf) => onSetSectionBranch(focus.sectionIndex, showIf)}
         />
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Preguntas de la sección
-          </p>
-          {section.fields.map((field, fieldIndex) => (
-            <button
-              key={field.id}
-              type="button"
-              onClick={() =>
-                onOpenLogic({ kind: "field", sectionIndex: focus.sectionIndex, fieldIndex })
-              }
-              className="w-full truncate rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              {field.label}
-            </button>
-          ))}
-        </div>
       </div>
     );
   }

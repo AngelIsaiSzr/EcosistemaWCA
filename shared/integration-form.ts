@@ -160,7 +160,7 @@ export const THEME_PRESET_CATEGORIES: {
 export function themeControlRadius(style?: IntegrationCornerStyle): string {
   if (style === "sharp") return "rounded-none";
   if (style === "pill") return "rounded-full";
-  return "rounded-2xl";
+  return "rounded-lg";
 }
 
 export interface IntegrationFormDefinition {
@@ -194,8 +194,7 @@ export function createBlankIntegrationForm(title = "Formulario sin título"): In
       message: "Recibimos tu información. El equipo de Talento y Bienestar te contactará si es necesario.",
     },
     theme: {
-      background: "aurora",
-      backgroundColor: "#0b1220",
+      customizeEnabled: false,
     },
     sections: [
       {

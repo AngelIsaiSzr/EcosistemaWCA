@@ -52,15 +52,13 @@ export function FormBuilderDesign({
 }) {
   const [tab, setTab] = useState<DesignTab>("temas");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const active = theme?.background ?? "aurora";
+  const active = theme?.background;
 
   const imagePath = theme?.backgroundImage?.trim() ?? "";
   const imageFieldValue =
     !imagePath || imagePath === "/logo-wca.png" || imagePath === WCA_LOGO_URL ? "" : imagePath;
 
-  const customizeOn = Boolean(
-    theme?.customizeEnabled ?? (theme?.background === "custom" || Boolean(imageFieldValue)),
-  );
+  const customizeOn = Boolean(theme?.customizeEnabled);
 
   const presetMeta = useMemo(() => {
     const map = new Map(APPEARANCE_PRESETS.map((p) => [p.id, p]));
@@ -68,7 +66,15 @@ export function FormBuilderDesign({
   }, []);
 
   const setCustomize = (enabled: boolean) => {
-    onChange({ customizeEnabled: enabled });
+    if (enabled) {
+      const patch: Partial<IntegrationTheme> = { customizeEnabled: true };
+      if (!theme?.backgroundColor?.trim()) {
+        patch.backgroundColor = "#0b1220";
+      }
+      onChange(patch);
+      return;
+    }
+    onChange({ customizeEnabled: false });
   };
 
   const setImage = (backgroundImage: string) => {
@@ -82,6 +88,14 @@ export function FormBuilderDesign({
       if (theme?.imageOpacity == null) patch.imageOpacity = 28;
     }
     onChange(patch);
+  };
+
+  const selectTheme = (id: IntegrationBackground) => {
+    if (active === id) {
+      onChange({ background: undefined });
+      return;
+    }
+    onChange({ background: id });
   };
 
   return (
@@ -139,7 +153,7 @@ export function FormBuilderDesign({
                             id={id}
                             label={meta.label}
                             selected={active === id}
-                            onSelect={() => onChange({ background: id })}
+                            onSelect={() => selectTheme(id)}
                           />
                         );
                       })}

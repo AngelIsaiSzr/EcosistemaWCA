@@ -422,7 +422,11 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
                         value={answers[field.id]}
                         error={errors[field.id]}
                         slug={slug}
-                        cornerStyle={definition.theme?.cornerStyle}
+                        cornerStyle={
+                          definition.theme?.customizeEnabled
+                            ? definition.theme?.cornerStyle
+                            : undefined
+                        }
                         otherValue={otherValues[field.id] ?? ""}
                         onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
                         onChange={(value) => setValue(field.id, value)}

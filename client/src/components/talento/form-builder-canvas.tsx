@@ -116,7 +116,9 @@ export function FormBuilderCanvas({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
-  const controlRadius = themeControlRadius(definition.theme?.cornerStyle);
+  const controlRadius = themeControlRadius(
+    definition.theme?.customizeEnabled ? definition.theme?.cornerStyle : undefined,
+  );
 
   const realSections = definition.sections
     .map((section, sectionIndex) => ({ section, sectionIndex }))
