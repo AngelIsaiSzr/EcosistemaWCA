@@ -7,6 +7,7 @@ import { DEFAULT_INTEGRATION_FORM, IntegrationFormDefinition } from "@shared/int
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import NotFound from "@/pages/not-found";
 
 type PublicFormPayload = {
   title: string;
@@ -48,6 +49,10 @@ export default function IntegrationFormBySlugPage({
   const isRestricted = accessError?.status === 403;
   const needsAuth = Boolean(accessError?.requiresAuth);
 
+  if ((isError || !slug) && !isLoading && !isRestricted) {
+    return <NotFound />;
+  }
+
   return (
     <>
       <Helmet>
@@ -80,11 +85,6 @@ export default function IntegrationFormBySlugPage({
                 </Link>
               </Button>
             )}
-          </div>
-        )}
-        {(isError || !slug) && !isLoading && !isRestricted && (
-          <div className="flex min-h-screen items-center justify-center px-6 text-center text-white/80">
-            El formulario no está disponible.
           </div>
         )}
         {data && (

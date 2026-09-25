@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { FolderOpen, Search, Check } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FolderOpen, Search, Check, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type LibraryItem = {
   url: string;
@@ -29,6 +30,7 @@ type Props = {
 
 const SOURCE_LABEL: Record<string, string> = {
   media: "Archivos",
+  subida: "Subidas",
   equipo: "Equipo",
   tarjeta: "Tarjetas",
   testimonio: "Testimonios",
@@ -46,6 +48,10 @@ export function ImageUrlInput({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery<{ items: LibraryItem[] }>({
     queryKey: ["/api/media/library"],
@@ -63,12 +69,43 @@ export function ImageUrlInput({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter(
-      (i) =>
-        i.label.toLowerCase().includes(needle) ||
-        i.url.toLowerCase().includes(needle) ||
-        (SOURCE_LABEL[i.source] || i.source).toLowerCase().includes(needle),
+      (item) =>
+        item.label.toLowerCase().includes(needle) ||
+        item.url.toLowerCase().includes(needle) ||
+        (SOURCE_LABEL[item.source] || item.source).toLowerCase().includes(needle),
     );
   }, [data?.items, q]);
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/media/library/upload", {
+        method: "POST",
+        body,
+        credentials: "include",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload.message || "No se pudo subir la imagen");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/media/library"] });
+      onChange(String(payload.url));
+      setOpen(false);
+      setQ("");
+      toast({ title: "Imagen subida" });
+    } catch (error) {
+      toast({
+        title: "Error al subir",
+        description: error instanceof Error ? error.message : "Inténtalo de nuevo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   return (
     <>
@@ -85,7 +122,6 @@ export function ImageUrlInput({
           type="button"
           variant="outline"
           size="icon"
-          className="shrink-0"
           title="Biblioteca de imágenes"
           disabled={disabled}
           onClick={() => setOpen(true)}
@@ -97,10 +133,34 @@ export function ImageUrlInput({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="border-b px-5 py-4 text-left">
-            <DialogTitle>Biblioteca de imágenes</DialogTitle>
-            <DialogDescription>
-              Elige una imagen ya usada en la plataforma (Equipo, media, tarjetas, organigrama…).
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div className="min-w-0 space-y-1.5">
+                <DialogTitle>Biblioteca de imágenes</DialogTitle>
+                <DialogDescription>
+                  Elige una imagen ya usada en la plataforma (Equipo, media, tarjetas, organigrama…).
+                </DialogDescription>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                {uploading ? "Subiendo…" : "Subir"}
+              </Button>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadFile(file);
+              }}
+            />
           </DialogHeader>
 
           <div className="border-b px-5 py-3">

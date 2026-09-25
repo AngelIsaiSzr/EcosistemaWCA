@@ -26,6 +26,7 @@ import {
   isValidHttpUrl,
   isValidPhoneNumber,
   normalizeUrl,
+  pruneInvisibleAnswers,
   themeControlRadius,
   type IntegrationCornerStyle,
   type IntegrationFileAnswer,
@@ -300,7 +301,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const payload = { ...answers };
+      let payload = { ...answers };
       for (const field of getAllFields(definition)) {
         if (field.type === "url" && typeof payload[field.id] === "string" && String(payload[field.id]).trim()) {
           payload[field.id] = normalizeUrl(String(payload[field.id]));
@@ -313,6 +314,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
           payload[fieldId] = [...current.filter((v) => v !== "otro"), extra.trim()];
         }
       }
+      payload = pruneInvisibleAnswers(definition, payload);
       const res = await fetch(`/api/integration/public/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

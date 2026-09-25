@@ -11,6 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
 import { IntegrationFormBuilder } from "@/components/talento/form-builder";
@@ -24,6 +34,35 @@ import { IntegrationForm } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 type UserBasic = { id: number; name: string; email: string };
+
+type EditorSnapshot = {
+  title: string;
+  slug: string;
+  published: boolean;
+  accessMode: "public" | "restricted";
+  allowedUserIds: number[];
+  allowMultipleSubmissions: boolean;
+  definition: IntegrationFormDefinition;
+};
+
+function snapshotKey(snap: EditorSnapshot) {
+  return JSON.stringify({
+    ...snap,
+    allowedUserIds: [...snap.allowedUserIds].sort((a, b) => a - b),
+  });
+}
+
+function formToSnapshot(form: IntegrationForm): EditorSnapshot {
+  return {
+    title: form.title,
+    slug: form.slug,
+    published: form.isPublished,
+    accessMode: form.accessMode === "restricted" ? "restricted" : "public",
+    allowedUserIds: Array.isArray(form.allowedUserIds) ? [...form.allowedUserIds] : [],
+    allowMultipleSubmissions: Boolean(form.allowMultipleSubmissions),
+    definition: (form.schema as IntegrationFormDefinition) ?? DEFAULT_INTEGRATION_FORM,
+  };
+}
 
 export default function TalentoFormEditorPage({
   params,
@@ -42,6 +81,9 @@ export default function TalentoFormEditorPage({
   const [allowMultipleSubmissions, setAllowMultipleSubmissions] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [definition, setDefinition] = useState<IntegrationFormDefinition>(DEFAULT_INTEGRATION_FORM);
+  const [baseline, setBaseline] = useState<EditorSnapshot | null>(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const isOfficial = formSlug === DEFAULT_INTEGRATION_SLUG;
   const isReservedSlug = isOfficial || formSlug === DEFAULT_MIEMBROS_SLUG;
 
@@ -75,14 +117,44 @@ export default function TalentoFormEditorPage({
 
   useEffect(() => {
     if (!form) return;
-    setTitle(form.title);
-    setSlug(form.slug);
-    setPublished(form.isPublished);
-    setAccessMode(form.accessMode === "restricted" ? "restricted" : "public");
-    setAllowedUserIds(Array.isArray(form.allowedUserIds) ? form.allowedUserIds : []);
-    setAllowMultipleSubmissions(Boolean(form.allowMultipleSubmissions));
-    setDefinition((form.schema as IntegrationFormDefinition) ?? DEFAULT_INTEGRATION_FORM);
+    const snap = formToSnapshot(form);
+    setTitle(snap.title);
+    setSlug(snap.slug);
+    setPublished(snap.published);
+    setAccessMode(snap.accessMode);
+    setAllowedUserIds(snap.allowedUserIds);
+    setAllowMultipleSubmissions(snap.allowMultipleSubmissions);
+    setDefinition(snap.definition);
+    setBaseline(snap);
   }, [form]);
+
+  const currentSnapshot: EditorSnapshot = useMemo(
+    () => ({
+      title,
+      slug,
+      published,
+      accessMode,
+      allowedUserIds,
+      allowMultipleSubmissions,
+      definition,
+    }),
+    [title, slug, published, accessMode, allowedUserIds, allowMultipleSubmissions, definition],
+  );
+
+  const dirty = useMemo(() => {
+    if (!baseline) return false;
+    return snapshotKey(currentSnapshot) !== snapshotKey(baseline);
+  }, [baseline, currentSnapshot]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
@@ -93,6 +165,22 @@ export default function TalentoFormEditorPage({
         u.email.toLowerCase().includes(q),
     );
   }, [platformUsers, userSearch]);
+
+  const requestLeave = (href: string) => {
+    if (!dirty) {
+      navigate(href);
+      return;
+    }
+    setPendingHref(href);
+    setLeaveOpen(true);
+  };
+
+  const confirmLeave = () => {
+    const href = pendingHref;
+    setLeaveOpen(false);
+    setPendingHref(null);
+    if (href) navigate(href);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -111,8 +199,21 @@ export default function TalentoFormEditorPage({
       queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
       queryClient.invalidateQueries({ queryKey: ["/api/integration/public"] });
       toast({ title: "Formulario guardado" });
-      if (updated?.slug && updated.slug !== formSlug) {
-        navigate(`/talento/formularios/${updated.slug}/editar`);
+      if (updated) {
+        const snap = formToSnapshot(updated);
+        setTitle(snap.title);
+        setSlug(snap.slug);
+        setPublished(snap.published);
+        setAccessMode(snap.accessMode);
+        setAllowedUserIds(snap.allowedUserIds);
+        setAllowMultipleSubmissions(snap.allowMultipleSubmissions);
+        setDefinition(snap.definition);
+        setBaseline(snap);
+        if (updated.slug && updated.slug !== formSlug) {
+          navigate(`/talento/formularios/${updated.slug}/editar`);
+        }
+      } else {
+        setBaseline(currentSnapshot);
       }
     },
     onError: (error: Error) => {
@@ -155,23 +256,37 @@ export default function TalentoFormEditorPage({
         <main className="container mx-auto max-w-full px-4 pb-6 pt-24">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <Link
-                href={`/talento/formularios/${formSlug}`}
+              <button
+                type="button"
+                onClick={() => requestLeave(`/talento/formularios/${formSlug}`)}
                 className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Volver al panel
-              </Link>
-              <h1 className="font-heading text-2xl font-bold sm:text-3xl">Editar formulario</h1>
+              </button>
+              <h1 className="font-heading text-2xl font-bold sm:text-3xl">
+                Editar formulario
+                {dirty ? <span className="text-amber-500"> *</span> : null}
+              </h1>
               <p className="mt-1 break-words text-sm text-muted-foreground sm:text-base">
                 Arrastra preguntas entre secciones, edita textos y configura quién puede verlo o
                 responderlo.
+                {dirty ? (
+                  <span className="ml-2 text-amber-600 dark:text-amber-400">
+                    · Cambios sin guardar
+                  </span>
+                ) : null}
               </p>
             </div>
             <Button
-              className="w-full shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4] sm:w-auto"
+              className={cn(
+                "w-full shrink-0 sm:w-auto",
+                dirty
+                  ? "bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                  : "bg-muted text-muted-foreground hover:bg-muted",
+              )}
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || !dirty}
             >
               <Save className="h-4 w-4" />
               {saveMutation.isPending ? "Guardando..." : "Guardar cambios"}
@@ -327,6 +442,27 @@ export default function TalentoFormEditorPage({
           </div>
         </main>
       </div>
+
+      <AlertDialog
+        open={leaveOpen}
+        onOpenChange={(open) => {
+          setLeaveOpen(open);
+          if (!open) setPendingHref(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cambios sin guardar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLeave}>Salir sin guardar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

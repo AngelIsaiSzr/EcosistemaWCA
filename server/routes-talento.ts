@@ -22,6 +22,7 @@ import {
   isValidHttpUrl,
   isValidPhoneNumber,
   normalizeUrl,
+  pruneInvisibleAnswers,
   sheetTabFilename,
   slugify,
   type IntegrationFileAnswer,
@@ -458,7 +459,7 @@ export function registerTalentoRoutes(app: Express) {
       }
 
       const definition = asDefinition(form.schema ?? DEFAULT_INTEGRATION_FORM);
-      const answers = { ...parsed.data.answers } as Record<string, unknown>;
+      let answers = { ...parsed.data.answers } as Record<string, unknown>;
       for (const field of getAllFields(definition)) {
         if (field.type === "url" && typeof answers[field.id] === "string" && String(answers[field.id]).trim()) {
           answers[field.id] = normalizeUrl(String(answers[field.id]));
@@ -467,6 +468,7 @@ export function registerTalentoRoutes(app: Express) {
           answers[field.id] = String(answers[field.id]).trim().toLowerCase();
         }
       }
+      answers = pruneInvisibleAnswers(definition, answers);
       const errors = validateAnswers(definition, answers);
       if (Object.keys(errors).length > 0) {
         return res.status(400).json({ message: "Por favor completa los campos requeridos", errors });

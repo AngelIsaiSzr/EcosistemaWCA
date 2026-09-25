@@ -1136,7 +1136,14 @@ export default function AdminPage({
     }
   };
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
+    return null;
+  }
+  if (isTalentoPortal) {
+    if (user.role !== "talento") {
+      return null;
+    }
+  } else if (user.role !== "admin") {
     return null;
   }
 

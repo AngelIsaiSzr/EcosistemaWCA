@@ -1467,7 +1467,7 @@ export class DatabaseStorage implements IStorage {
     const forms = await db
       .select()
       .from(integrationForms)
-      .orderBy(sql`${integrationForms.pinnedAt} DESC NULLS LAST`, desc(integrationForms.createdAt));
+      .orderBy(sql`${integrationForms.pinnedAt} ASC NULLS LAST`, desc(integrationForms.createdAt));
 
     if (forms.length === 0) return [];
 

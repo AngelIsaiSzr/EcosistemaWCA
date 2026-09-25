@@ -102,7 +102,11 @@ export default function TalentoDashboardPage() {
       }
       const ap = a.pinnedAt ? new Date(a.pinnedAt).getTime() : 0;
       const bp = b.pinnedAt ? new Date(b.pinnedAt).getTime() : 0;
-      if (ap !== bp) return bp - ap;
+      if (ap !== bp) {
+        if (!ap) return 1;
+        if (!bp) return -1;
+        return ap - bp;
+      }
       return (
         (b.createdAt ? new Date(b.createdAt).getTime() : 0) -
         (a.createdAt ? new Date(a.createdAt).getTime() : 0)

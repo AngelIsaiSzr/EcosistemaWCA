@@ -1,12 +1,17 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import fs from "fs";
 import path from "path";
+import multer from "multer";
+import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { db } from "./db";
 import { orgChartPeople } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"]);
+const UPLOAD_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+const UPLOAD_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function requireStaff(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated() || (req.user.role !== "admin" && req.user.role !== "talento")) {
@@ -15,7 +20,12 @@ function requireStaff(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-function walkMediaDir(dir: string, baseUrl: string, out: { url: string; label: string; source: string }[]) {
+function walkMediaDir(
+  dir: string,
+  baseUrl: string,
+  out: { url: string; label: string; source: string }[],
+  source = "media",
+) {
   if (!fs.existsSync(dir)) return;
   let entries: fs.Dirent[];
   try {
@@ -26,7 +36,7 @@ function walkMediaDir(dir: string, baseUrl: string, out: { url: string; label: s
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      walkMediaDir(full, `${baseUrl}/${entry.name}`, out);
+      walkMediaDir(full, `${baseUrl}/${entry.name}`, out, source);
       continue;
     }
     const ext = path.extname(entry.name).toLowerCase();
@@ -34,7 +44,7 @@ function walkMediaDir(dir: string, baseUrl: string, out: { url: string; label: s
     out.push({
       url: `${baseUrl}/${entry.name}`.replace(/\\/g, "/"),
       label: entry.name,
-      source: "media",
+      source,
     });
   }
 }
@@ -51,6 +61,15 @@ function pushUrl(
 }
 
 export function registerMediaLibraryRoutes(app: Express) {
+  const LIBRARY_UPLOAD_ROOT = path.resolve(process.cwd(), "uploads", "media-library");
+  fs.mkdirSync(LIBRARY_UPLOAD_ROOT, { recursive: true });
+  app.use("/media/library", express.static(LIBRARY_UPLOAD_ROOT, { maxAge: "7d" }));
+
+  const memoryUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 8 * 1024 * 1024 },
+  });
+
   app.get("/api/media/library", requireStaff, async (_req, res) => {
     try {
       const byUrl = new Map<string, { url: string; label: string; source: string }>();
@@ -62,8 +81,9 @@ export function registerMediaLibraryRoutes(app: Express) {
       ];
       const fileItems: { url: string; label: string; source: string }[] = [];
       for (const root of mediaRoots) {
-        walkMediaDir(root, "/media", fileItems);
+        walkMediaDir(root, "/media", fileItems, "media");
       }
+      walkMediaDir(LIBRARY_UPLOAD_ROOT, "/media/library", fileItems, "subida");
       for (const item of fileItems) {
         if (!byUrl.has(item.url)) byUrl.set(item.url, item);
       }
@@ -127,4 +147,37 @@ export function registerMediaLibraryRoutes(app: Express) {
       res.status(500).json({ message: "No se pudo cargar la biblioteca" });
     }
   });
+
+  app.post(
+    "/api/media/library/upload",
+    requireStaff,
+    memoryUpload.single("file"),
+    async (req, res) => {
+      try {
+        const file = req.file;
+        if (!file) {
+          return res.status(400).json({ message: "No se recibió archivo" });
+        }
+        const ext = path.extname(file.originalname || "").toLowerCase();
+        if (!UPLOAD_MIME.has(file.mimetype) || !UPLOAD_EXT.has(ext)) {
+          return res.status(400).json({
+            message: "Solo se permiten imágenes PNG, JPEG o WebP",
+          });
+        }
+        const safeBase = path
+          .basename(file.originalname, ext)
+          .replace(/[^a-zA-Z0-9._-]+/g, "-")
+          .replace(/-+/g, "-")
+          .slice(0, 60)
+          .replace(/^-|-$/g, "") || "imagen";
+        const safeName = `${Date.now()}-${randomBytes(4).toString("hex")}-${safeBase}${ext}`;
+        fs.writeFileSync(path.join(LIBRARY_UPLOAD_ROOT, safeName), file.buffer);
+        const url = `/media/library/${safeName}`;
+        res.json({ url, label: file.originalname || safeName });
+      } catch (error) {
+        console.error("POST /api/media/library/upload", error);
+        res.status(500).json({ message: "No se pudo subir la imagen" });
+      }
+    },
+  );
 }

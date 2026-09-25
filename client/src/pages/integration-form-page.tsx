@@ -4,6 +4,7 @@ import { IntegrationFormFlow } from "@/components/integration/integration-form-f
 import { FormAtmosphere } from "@/components/integration/form-atmosphere";
 import { DEFAULT_INTEGRATION_FORM } from "@shared/integration-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import NotFound from "@/pages/not-found";
 
 export default function IntegrationFormPage() {
   const { data, isLoading, isError } = useQuery({
@@ -11,6 +12,10 @@ export default function IntegrationFormPage() {
   });
 
   const form = data as { title: string; slug: string; schema: typeof DEFAULT_INTEGRATION_FORM } | undefined;
+
+  if (isError && !isLoading) {
+    return <NotFound />;
+  }
 
   return (
     <>
@@ -28,11 +33,6 @@ export default function IntegrationFormPage() {
         {isLoading && (
           <div className="flex min-h-screen items-center justify-center">
             <LoadingSpinner size="lg" text="Cargando formulario..." />
-          </div>
-        )}
-        {isError && (
-          <div className="flex min-h-screen items-center justify-center px-6 text-center text-white/80">
-            El formulario no está disponible en este momento.
           </div>
         )}
         {form && (

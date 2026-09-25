@@ -973,6 +973,27 @@ export function isFieldVisible(
   return matchesShowIf(field.showIf, answers);
 }
 
+/**
+ * Conserva solo respuestas de campos actualmente visibles
+ * (sección + showIf del campo). Usar al enviar, no al editar.
+ */
+export function pruneInvisibleAnswers(
+  definition: IntegrationFormDefinition,
+  answers: Record<string, unknown>,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = {};
+  for (const section of definition.sections) {
+    if (!section.isWelcome && !matchesShowIf(section.showIf, answers)) continue;
+    for (const field of section.fields) {
+      if (!isFieldVisible(field, answers)) continue;
+      if (Object.prototype.hasOwnProperty.call(answers, field.id)) {
+        next[field.id] = answers[field.id];
+      }
+    }
+  }
+  return next;
+}
+
 /** Una sección aparece si no es bienvenida-condicional y tiene al menos un campo visible. */
 export function isSectionVisible(
   section: IntegrationSection,
