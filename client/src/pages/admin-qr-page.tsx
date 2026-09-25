@@ -231,8 +231,8 @@ export default function AdminQrPage() {
             </Button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-            <Card className="min-w-0">
+          <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+            <Card className="flex min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -243,7 +243,7 @@ export default function AdminQrPage() {
                   <code className="rounded bg-muted px-1 text-xs">/f/mi-formulario</code>.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex flex-1 flex-col space-y-4">
                 <div>
                   <Label htmlFor="qr-name">Nombre</Label>
                   <Input
@@ -269,7 +269,7 @@ export default function AdminQrPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="mt-auto flex flex-wrap items-center gap-2">
                   <Button
                     className="shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
                     onClick={() => saveMutation.mutate()}
@@ -297,7 +297,7 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="min-w-0">
+            <Card className="flex min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrCodeIcon className="h-5 w-5" />
@@ -305,7 +305,7 @@ export default function AdminQrPage() {
                 </CardTitle>
                 <CardDescription>Se actualiza al cambiar el enlace.</CardDescription>
               </CardHeader>
-              <CardContent className="flex min-h-[220px] items-center justify-center">
+              <CardContent className="flex flex-1 items-center justify-center">
                 {previewDataUrl ? (
                   <img
                     src={previewDataUrl}
@@ -320,29 +320,34 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="min-w-0">
+            <Card className="flex min-w-0 flex-col">
               <CardHeader>
                 <CardTitle>Guardados</CardTitle>
                 <CardDescription>
                   {items.length} código{items.length === 1 ? "" : "s"}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex min-h-0 flex-1 flex-col">
                 {listLoading ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">Cargando…</p>
+                  <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                    Cargando…
+                  </p>
                 ) : items.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
+                  <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                     Aún no hay códigos QR guardados.
                   </p>
                 ) : (
-                  <ul className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+                  <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                     {items.map((item) => (
-                      <li key={item.id} className="rounded-xl border px-3 py-3">
-                        <div className="min-w-0">
+                      <li
+                        key={item.id}
+                        className="flex items-center gap-2 rounded-xl border px-3 py-3"
+                      >
+                        <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
                           <p className="truncate text-xs text-muted-foreground">{item.targetUrl}</p>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                        <div className="flex shrink-0 items-center gap-1">
                           <Button
                             type="button"
                             size="sm"
