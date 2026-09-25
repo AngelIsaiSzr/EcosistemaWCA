@@ -7,13 +7,14 @@ import {
   InsertTeam, Team, 
   InsertTestimonial, Testimonial,
   InsertAlly, Ally,
+  InsertQrCode, QrCode,
   InsertCountry, Country,
   InsertPresentationCard, PresentationCard,
   InsertContact, Contact,
   InsertLiveCourseRegistration, LiveCourseRegistration,
   InsertIntegrationForm, IntegrationForm,
   InsertIntegrationResponse, IntegrationResponse,
-  users, courses, enrollments, modules, sections, teams, testimonials, allies, countries, presentationCards, contacts, liveCourseRegistrations,
+  users, courses, enrollments, modules, sections, teams, testimonials, allies, qrCodes, countries, presentationCards, contacts, liveCourseRegistrations,
   integrationForms, integrationResponses
 } from "@shared/schema";
 import { DEFAULT_ALLIES, DEFAULT_COUNTRIES } from "@shared/carousel-defaults";
@@ -88,6 +89,12 @@ export interface IStorage {
   updateAlly(id: number, ally: Partial<InsertAlly>): Promise<Ally | undefined>;
   deleteAlly(id: number): Promise<boolean>;
 
+  // QR codes
+  getAllQrCodes(): Promise<QrCode[]>;
+  createQrCode(qr: InsertQrCode): Promise<QrCode>;
+  updateQrCode(id: number, qr: Partial<InsertQrCode>): Promise<QrCode | undefined>;
+  deleteQrCode(id: number): Promise<boolean>;
+
   // Countries
   getAllCountries(): Promise<Country[]>;
   createCountry(country: InsertCountry): Promise<Country>;
@@ -144,6 +151,7 @@ export class MemStorage implements IStorage {
   private teams: Map<number, Team>;
   private testimonials: Map<number, Testimonial>;
   private allies: Map<number, Ally>;
+  private qrCodes: Map<number, QrCode>;
   private countries: Map<number, Country>;
   private presentationCards: Map<number, PresentationCard>;
   private contacts: Map<number, Contact>;
@@ -159,6 +167,7 @@ export class MemStorage implements IStorage {
   private currentTeamIds: number;
   private currentTestimonialIds: number;
   private currentAllyIds: number;
+  private currentQrCodeIds: number;
   private currentCountryIds: number;
   private currentPresentationCardIds: number;
   private currentContactIds: number;
@@ -177,6 +186,7 @@ export class MemStorage implements IStorage {
     this.teams = new Map();
     this.testimonials = new Map();
     this.allies = new Map();
+    this.qrCodes = new Map();
     this.countries = new Map();
     this.presentationCards = new Map();
     this.contacts = new Map();
@@ -192,6 +202,7 @@ export class MemStorage implements IStorage {
     this.currentTeamIds = 1;
     this.currentTestimonialIds = 1;
     this.currentAllyIds = 1;
+    this.currentQrCodeIds = 1;
     this.currentCountryIds = 1;
     this.currentPresentationCardIds = 1;
     this.currentContactIds = 1;
@@ -581,6 +592,40 @@ export class MemStorage implements IStorage {
   async deleteAlly(id: number): Promise<boolean> {
     if (!this.allies.has(id)) return false;
     return this.allies.delete(id);
+  }
+
+  // QR codes
+  async getAllQrCodes(): Promise<QrCode[]> {
+    return Array.from(this.qrCodes.values()).sort((a, b) => {
+      const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bt - at;
+    });
+  }
+
+  async createQrCode(insertQr: InsertQrCode): Promise<QrCode> {
+    const id = this.currentQrCodeIds++;
+    const qr: QrCode = {
+      id,
+      name: insertQr.name || "",
+      targetUrl: insertQr.targetUrl,
+      createdAt: new Date(),
+    };
+    this.qrCodes.set(id, qr);
+    return qr;
+  }
+
+  async updateQrCode(id: number, qrUpdate: Partial<InsertQrCode>): Promise<QrCode | undefined> {
+    const qr = this.qrCodes.get(id);
+    if (!qr) return undefined;
+    const updated: QrCode = { ...qr, ...qrUpdate };
+    this.qrCodes.set(id, updated);
+    return updated;
+  }
+
+  async deleteQrCode(id: number): Promise<boolean> {
+    if (!this.qrCodes.has(id)) return false;
+    return this.qrCodes.delete(id);
   }
 
   // Countries
@@ -1248,6 +1293,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAlly(id: number): Promise<boolean> {
     const result = await db.delete(allies).where(eq(allies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // QR codes
+  async getAllQrCodes(): Promise<QrCode[]> {
+    return await db.select().from(qrCodes).orderBy(desc(qrCodes.createdAt));
+  }
+
+  async createQrCode(insertQr: InsertQrCode): Promise<QrCode> {
+    const [qr] = await db.insert(qrCodes).values(insertQr).returning();
+    return qr;
+  }
+
+  async updateQrCode(id: number, qrUpdate: Partial<InsertQrCode>): Promise<QrCode | undefined> {
+    const [qr] = await db
+      .update(qrCodes)
+      .set(qrUpdate)
+      .where(eq(qrCodes.id, id))
+      .returning();
+    return qr;
+  }
+
+  async deleteQrCode(id: number): Promise<boolean> {
+    const result = await db.delete(qrCodes).where(eq(qrCodes.id, id)).returning();
     return result.length > 0;
   }
 

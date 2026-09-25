@@ -172,6 +172,13 @@ export const allies = pgTable("allies", {
   order: integer("order").notNull(),
 });
 
+export const qrCodes = pgTable("qr_codes", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  targetUrl: text("target_url").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const countries = pgTable("countries", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -421,6 +428,11 @@ export const insertAllySchema = createInsertSchema(allies).omit({
   id: true,
 });
 
+export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCountrySchema = createInsertSchema(countries).omit({
   id: true,
 });
@@ -479,6 +491,7 @@ export type InsertSection = z.infer<typeof insertSectionSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type InsertAlly = z.infer<typeof insertAllySchema>;
+export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
 export type InsertCountry = z.infer<typeof insertCountrySchema>;
 export type InsertPresentationCard = z.infer<typeof insertPresentationCardSchema>;
 export type InsertContact = z.infer<typeof insertContactSchema>;
@@ -500,6 +513,7 @@ export type ModuleComment = typeof moduleComments.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Ally = typeof allies.$inferSelect;
+export type QrCode = typeof qrCodes.$inferSelect;
 export type Country = typeof countries.$inferSelect;
 export type PresentationCard = typeof presentationCards.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;

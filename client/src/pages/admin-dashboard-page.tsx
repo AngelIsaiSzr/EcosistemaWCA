@@ -7,11 +7,12 @@ import {
   Handshake,
   Mail,
   MessageSquareQuote,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
-import { Ally, Country, Course, Testimonial } from "@shared/schema";
+import { Ally, Country, Course, QrCode as QrCodeRecord, Testimonial } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 type AdminOption = {
@@ -51,6 +52,15 @@ export default function AdminDashboardPage() {
     queryFn: async () => {
       const res = await fetch("/api/admin/email-automation/stats", { credentials: "include" });
       if (!res.ok) throw new Error("No se pudieron cargar estadísticas");
+      return res.json();
+    },
+  });
+  const { data: qrCodes } = useQuery<QrCodeRecord[]>({
+    queryKey: ["/api/admin/qr-codes"],
+    enabled: user?.role === "admin",
+    queryFn: async () => {
+      const res = await fetch("/api/admin/qr-codes", { credentials: "include" });
+      if (!res.ok) throw new Error("No se pudieron cargar los códigos QR");
       return res.json();
     },
   });
@@ -109,6 +119,15 @@ export default function AdminDashboardPage() {
       icon: Mail,
       count: emailStats?.officialSent ?? null,
       countLabel: "enviados",
+    },
+    {
+      id: "qr",
+      title: "Códigos QR",
+      description: "Genera y guarda QR propios que apuntan directo al enlace que elijas.",
+      href: "/admin/qr",
+      icon: QrCode,
+      count: qrCodes?.length ?? null,
+      countLabel: "códigos",
     },
   ];
 

@@ -17,7 +17,9 @@ import { registerLearningRoutes } from "./routes-learning";
 import { registerCertificateRoutes } from "./routes-certificates";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
+import { ensureQrCodesTable } from "./db/ensure-qr-codes";
 import { ensureModuleLearningTables } from "./db/ensure-module-learning";
+import { insertQrCodeSchema } from "@shared/schema";
 import { ensureCertificatesAndEnrollmentActivity } from "./db/ensure-certificates";
 
 const ADMIN_EMAIL = "admin@ecosistemawca.com";
@@ -699,6 +701,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Ally deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete ally" });
+    }
+  });
+
+  // QR codes (admin)
+  app.get("/api/admin/qr-codes", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureQrCodesTable();
+      const items = await storage.getAllQrCodes();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch QR codes" });
+    }
+  });
+
+  app.post("/api/admin/qr-codes", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureQrCodesTable();
+      const parsed = insertQrCodeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() });
+      }
+      const qr = await storage.createQrCode(parsed.data);
+      res.status(201).json(qr);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create QR code" });
+    }
+  });
+
+  app.patch("/api/admin/qr-codes/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureQrCodesTable();
+      const id = parseInt(req.params.id);
+      const parsed = insertQrCodeSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos inválidos" });
+      }
+      const updated = await storage.updateQrCode(id, parsed.data);
+      if (!updated) {
+        return res.status(404).json({ message: "QR code not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update QR code" });
+    }
+  });
+
+  app.delete("/api/admin/qr-codes/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized: Admin access required" });
+      }
+      await ensureQrCodesTable();
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteQrCode(id);
+      if (!success) {
+        return res.status(404).json({ message: "QR code not found" });
+      }
+      res.json({ message: "QR code deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete QR code" });
     }
   });
 
