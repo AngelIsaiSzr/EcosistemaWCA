@@ -176,6 +176,8 @@ export const qrCodes = pgTable("qr_codes", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default(""),
   targetUrl: text("target_url").notNull(),
+  shortCode: text("short_code").unique(),
+  useShortUrl: boolean("use_short_url").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -431,6 +433,7 @@ export const insertAllySchema = createInsertSchema(allies).omit({
 export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({
   id: true,
   createdAt: true,
+  shortCode: true,
 });
 
 export const insertCountrySchema = createInsertSchema(countries).omit({

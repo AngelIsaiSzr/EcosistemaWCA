@@ -26,6 +26,18 @@ import createMemoryStore from "memorystore";
 import * as connectPgModule from "connect-pg-simple";
 import { db, pool } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
+
+const SHORT_CODE_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function generateShortCode(length = 8): string {
+  const bytes = randomBytes(length);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += SHORT_CODE_ALPHABET[bytes[i]! % SHORT_CODE_ALPHABET.length];
+  }
+  return out;
+}
 
 const connectPg = connectPgModule.default || connectPgModule;
 
@@ -91,6 +103,7 @@ export interface IStorage {
 
   // QR codes
   getAllQrCodes(): Promise<QrCode[]>;
+  getQrCodeByShortCode(code: string): Promise<QrCode | undefined>;
   createQrCode(qr: InsertQrCode): Promise<QrCode>;
   updateQrCode(id: number, qr: Partial<InsertQrCode>): Promise<QrCode | undefined>;
   deleteQrCode(id: number): Promise<boolean>;
@@ -603,12 +616,22 @@ export class MemStorage implements IStorage {
     });
   }
 
+  async getQrCodeByShortCode(code: string): Promise<QrCode | undefined> {
+    return Array.from(this.qrCodes.values()).find((qr) => qr.shortCode === code);
+  }
+
   async createQrCode(insertQr: InsertQrCode): Promise<QrCode> {
     const id = this.currentQrCodeIds++;
+    let shortCode = generateShortCode();
+    while (Array.from(this.qrCodes.values()).some((q) => q.shortCode === shortCode)) {
+      shortCode = generateShortCode();
+    }
     const qr: QrCode = {
       id,
       name: insertQr.name || "",
       targetUrl: insertQr.targetUrl,
+      shortCode,
+      useShortUrl: insertQr.useShortUrl ?? false,
       createdAt: new Date(),
     };
     this.qrCodes.set(id, qr);
@@ -618,7 +641,14 @@ export class MemStorage implements IStorage {
   async updateQrCode(id: number, qrUpdate: Partial<InsertQrCode>): Promise<QrCode | undefined> {
     const qr = this.qrCodes.get(id);
     if (!qr) return undefined;
-    const updated: QrCode = { ...qr, ...qrUpdate };
+    let shortCode = qr.shortCode;
+    if (!shortCode) {
+      shortCode = generateShortCode();
+      while (Array.from(this.qrCodes.values()).some((q) => q.id !== id && q.shortCode === shortCode)) {
+        shortCode = generateShortCode();
+      }
+    }
+    const updated: QrCode = { ...qr, ...qrUpdate, shortCode };
     this.qrCodes.set(id, updated);
     return updated;
   }
@@ -1301,15 +1331,54 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(qrCodes).orderBy(desc(qrCodes.createdAt));
   }
 
-  async createQrCode(insertQr: InsertQrCode): Promise<QrCode> {
-    const [qr] = await db.insert(qrCodes).values(insertQr).returning();
+  async getQrCodeByShortCode(code: string): Promise<QrCode | undefined> {
+    const [qr] = await db.select().from(qrCodes).where(eq(qrCodes.shortCode, code)).limit(1);
     return qr;
   }
 
+  async createQrCode(insertQr: InsertQrCode): Promise<QrCode> {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const shortCode = generateShortCode();
+      try {
+        const [qr] = await db
+          .insert(qrCodes)
+          .values({ ...insertQr, shortCode })
+          .returning();
+        return qr;
+      } catch (error: any) {
+        if (error?.code === "23505") continue; // unique_violation
+        throw error;
+      }
+    }
+    throw new Error("No se pudo generar un código corto único");
+  }
+
   async updateQrCode(id: number, qrUpdate: Partial<InsertQrCode>): Promise<QrCode | undefined> {
+    const existing = await db.select().from(qrCodes).where(eq(qrCodes.id, id)).limit(1);
+    if (!existing[0]) return undefined;
+
+    const patch: Record<string, unknown> = { ...qrUpdate };
+    if (!existing[0].shortCode) {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const shortCode = generateShortCode();
+        try {
+          const [qr] = await db
+            .update(qrCodes)
+            .set({ ...patch, shortCode })
+            .where(eq(qrCodes.id, id))
+            .returning();
+          return qr;
+        } catch (error: any) {
+          if (error?.code === "23505") continue;
+          throw error;
+        }
+      }
+      throw new Error("No se pudo generar un código corto único");
+    }
+
     const [qr] = await db
       .update(qrCodes)
-      .set(qrUpdate)
+      .set(patch)
       .where(eq(qrCodes.id, id))
       .returning();
     return qr;

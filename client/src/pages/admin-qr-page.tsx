@@ -30,12 +30,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 
 const formSchema = insertQrCodeSchema.extend({
   name: z.string().min(1, "El nombre es requerido"),
   targetUrl: z.string().min(1, "El enlace es requerido"),
 });
+
+/** Altura aprox. de 4 filas de QR guardados (fila + gap). */
+const SAVED_LIST_MAX_H = "max-h-[17.5rem]";
 
 function resolveTargetUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -45,6 +49,23 @@ function resolveTargetUrl(raw: string): string {
     return `${origin}${trimmed}`;
   }
   return trimmed;
+}
+
+function siteOrigin() {
+  return typeof window !== "undefined" ? window.location.origin : "";
+}
+
+function shortUrlFor(code: string | null | undefined) {
+  if (!code) return "";
+  return `${siteOrigin()}/r/${code}`;
+}
+
+/** URL que se embede en el QR (corta o destino final). */
+function encodeUrlForQr(item: Pick<QrCode, "targetUrl" | "shortCode" | "useShortUrl">) {
+  if (item.useShortUrl && item.shortCode) {
+    return shortUrlFor(item.shortCode);
+  }
+  return resolveTargetUrl(item.targetUrl);
 }
 
 function slugifyFilename(name: string) {
@@ -74,6 +95,7 @@ export default function AdminQrPage() {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
+  const [useShortUrl, setUseShortUrl] = useState(false);
   const [editing, setEditing] = useState<QrCode | null>(null);
   const [toDelete, setToDelete] = useState<number | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string>("");
@@ -91,6 +113,14 @@ export default function AdminQrPage() {
 
   const resolvedUrl = useMemo(() => resolveTargetUrl(targetUrl), [targetUrl]);
 
+  const previewEncodeUrl = useMemo(() => {
+    if (!resolvedUrl) return "";
+    if (useShortUrl && editing?.shortCode) {
+      return shortUrlFor(editing.shortCode);
+    }
+    return resolvedUrl;
+  }, [resolvedUrl, useShortUrl, editing?.shortCode]);
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "admin")) {
       navigate("/auth");
@@ -99,12 +129,12 @@ export default function AdminQrPage() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!resolvedUrl) {
+    if (!previewEncodeUrl) {
       setPreviewDataUrl("");
       setPreviewError(null);
       return;
     }
-    void buildQrDataUrl(resolvedUrl, 280)
+    void buildQrDataUrl(previewEncodeUrl, 400)
       .then((url) => {
         if (!cancelled) {
           setPreviewDataUrl(url);
@@ -120,18 +150,20 @@ export default function AdminQrPage() {
     return () => {
       cancelled = true;
     };
-  }, [resolvedUrl]);
+  }, [previewEncodeUrl]);
 
   const resetForm = () => {
     setEditing(null);
     setName("");
     setTargetUrl("");
+    setUseShortUrl(false);
   };
 
   const loadIntoForm = (item: QrCode) => {
     setEditing(item);
     setName(item.name);
     setTargetUrl(item.targetUrl);
+    setUseShortUrl(Boolean(item.useShortUrl));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -140,6 +172,7 @@ export default function AdminQrPage() {
       const parsed = formSchema.safeParse({
         name: name.trim(),
         targetUrl: resolvedUrl,
+        useShortUrl,
       });
       if (!parsed.success) {
         throw new Error(parsed.error.issues[0]?.message || "Datos inválidos");
@@ -178,7 +211,7 @@ export default function AdminQrPage() {
 
   const downloadPng = async (label: string, url: string) => {
     try {
-      const dataUrl = await buildQrDataUrl(resolveTargetUrl(url), 512);
+      const dataUrl = await buildQrDataUrl(url, 512);
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = `${slugifyFilename(label)}.png`;
@@ -232,14 +265,14 @@ export default function AdminQrPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
-            <Card className="flex min-w-0 flex-col">
+            <Card className="flex h-full min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                   {editing ? "Editar código" : "Nuevo código"}
                 </CardTitle>
                 <CardDescription>
-                  Usa una URL completa o una ruta del sitio como{" "}
+                  Usa una URL completa o una ruta de nuestro sitio web como{" "}
                   <code className="rounded bg-muted px-1 text-xs">/f/mi-formulario</code>.
                 </CardDescription>
               </CardHeader>
@@ -265,10 +298,33 @@ export default function AdminQrPage() {
                   />
                   {resolvedUrl && resolvedUrl !== targetUrl.trim() && (
                     <p className="mt-1 break-all text-xs text-muted-foreground">
-                      Se codificará: {resolvedUrl}
+                      Destino: {resolvedUrl}
                     </p>
                   )}
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+                  <div className="min-w-0">
+                    <Label htmlFor="qr-short" className="text-sm font-medium">
+                      Generar con enlace acortado
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      El QR usa un enlace corto nuestro (
+                      <code className="text-[10px]">/r/…</code>) que redirige al destino.
+                    </p>
+                  </div>
+                  <Switch
+                    id="qr-short"
+                    checked={useShortUrl}
+                    onCheckedChange={setUseShortUrl}
+                  />
+                </div>
+                {useShortUrl && (
+                  <p className="break-all text-xs text-muted-foreground">
+                    {editing?.shortCode
+                      ? `Se codificará: ${shortUrlFor(editing.shortCode)}`
+                      : "Al guardar se asignará el enlace corto en el QR."}
+                  </p>
+                )}
                 <div className="mt-auto flex flex-wrap items-center gap-2">
                   <Button
                     className="shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
@@ -282,8 +338,8 @@ export default function AdminQrPage() {
                     type="button"
                     variant="outline"
                     className="shrink-0"
-                    disabled={!resolvedUrl || Boolean(previewError)}
-                    onClick={() => downloadPng(name || "qr", resolvedUrl)}
+                    disabled={!previewEncodeUrl || Boolean(previewError)}
+                    onClick={() => downloadPng(name || "qr", previewEncodeUrl)}
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Descargar PNG
@@ -297,7 +353,7 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex min-w-0 flex-col">
+            <Card className="flex h-full min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrCodeIcon className="h-5 w-5" />
@@ -305,12 +361,12 @@ export default function AdminQrPage() {
                 </CardTitle>
                 <CardDescription>Se actualiza al cambiar el enlace.</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-1 items-center justify-center">
+              <CardContent className="flex flex-1 items-center justify-center py-6">
                 {previewDataUrl ? (
                   <img
                     src={previewDataUrl}
                     alt="Vista previa del código QR"
-                    className="h-48 w-48 rounded-xl border bg-white p-3 sm:h-56 sm:w-56"
+                    className="h-64 w-64 rounded-xl border bg-white p-3 sm:h-72 sm:w-72"
                   />
                 ) : (
                   <p className="px-4 text-center text-sm text-muted-foreground">
@@ -320,7 +376,7 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex min-w-0 flex-col">
+            <Card className="flex h-full min-w-0 flex-col">
               <CardHeader>
                 <CardTitle>Guardados</CardTitle>
                 <CardDescription>
@@ -337,47 +393,50 @@ export default function AdminQrPage() {
                     Aún no hay códigos QR guardados.
                   </p>
                 ) : (
-                  <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                    {items.map((item) => (
-                      <li
-                        key={item.id}
-                        className="flex items-center gap-2 rounded-xl border px-3 py-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
-                          <p className="truncate text-xs text-muted-foreground">{item.targetUrl}</p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => loadIntoForm(item)}
-                          >
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadPng(item.name, item.targetUrl)}
-                          >
-                            <Download className="mr-1.5 h-3.5 w-3.5" />
-                            PNG
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(item.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
+                  <ul className={`${SAVED_LIST_MAX_H} space-y-2 overflow-y-auto pr-1`}>
+                    {items.map((item) => {
+                      const encoded = encodeUrlForQr(item);
+                      return (
+                        <li
+                          key={item.id}
+                          className="flex items-center gap-2 rounded-xl border px-3 py-2.5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
+                            <p className="truncate text-xs text-muted-foreground">{encoded}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => loadIntoForm(item)}
+                            >
+                              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadPng(item.name, encoded)}
+                            >
+                              <Download className="mr-1.5 h-3.5 w-3.5" />
+                              PNG
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setToDelete(item.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </CardContent>

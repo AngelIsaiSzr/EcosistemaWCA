@@ -704,6 +704,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public short links for QR codes
+  app.get("/r/:code", async (req, res) => {
+    try {
+      await ensureQrCodesTable();
+      const code = String(req.params.code || "").trim();
+      if (!code || code.length > 32) {
+        return res.status(404).send("Enlace no encontrado");
+      }
+      const qr = await storage.getQrCodeByShortCode(code);
+      if (!qr?.targetUrl) {
+        return res.status(404).send("Enlace no encontrado");
+      }
+      return res.redirect(302, qr.targetUrl);
+    } catch {
+      return res.status(500).send("Error al resolver el enlace");
+    }
+  });
+
   // QR codes (admin)
   app.get("/api/admin/qr-codes", async (req, res) => {
     try {
