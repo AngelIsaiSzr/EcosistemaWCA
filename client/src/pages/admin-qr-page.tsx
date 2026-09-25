@@ -262,7 +262,7 @@ export default function AdminQrPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
-            <Card className="flex h-full min-w-0 flex-col">
+            <Card className="flex min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -350,7 +350,7 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex h-full min-w-0 flex-col">
+            <Card className="flex min-w-0 flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrCodeIcon className="h-5 w-5" />
@@ -373,71 +373,74 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-              <CardHeader className="shrink-0">
-                <CardTitle>Guardados</CardTitle>
-                <CardDescription>
-                  {items.length} código{items.length === 1 ? "" : "s"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4">
-                {listLoading ? (
-                  <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                    Cargando…
-                  </p>
-                ) : items.length === 0 ? (
-                  <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                    Aún no hay códigos QR guardados.
-                  </p>
-                ) : (
-                  <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
-                    {items.map((item) => {
-                      const encoded = encodeUrlForQr(item);
-                      return (
-                        <li
-                          key={item.id}
-                          className="flex items-center gap-2 rounded-xl border px-3 py-2.5"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
-                            <p className="truncate text-xs text-muted-foreground">{encoded}</p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => loadIntoForm(item)}
-                            >
-                              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                              Editar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadPng(item.name, encoded)}
-                            >
-                              <Download className="mr-1.5 h-3.5 w-3.5" />
-                              PNG
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setToDelete(item.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+            {/* Misma altura que los otros paneles en lg; lista con scroll sin estirar la fila */}
+            <div className="relative min-h-0 min-w-0">
+              <Card className="flex max-h-[22rem] flex-col overflow-hidden lg:absolute lg:inset-0 lg:max-h-none">
+                <CardHeader className="shrink-0">
+                  <CardTitle>Guardados</CardTitle>
+                  <CardDescription>
+                    {items.length} código{items.length === 1 ? "" : "s"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-0">
+                  {listLoading ? (
+                    <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                      Cargando…
+                    </p>
+                  ) : items.length === 0 ? (
+                    <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                      Aún no hay códigos QR guardados.
+                    </p>
+                  ) : (
+                    <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
+                      {items.map((item) => {
+                        const encoded = encodeUrlForQr(item);
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex items-center gap-2 rounded-xl border px-3 py-2.5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{encoded}</p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => loadIntoForm(item)}
+                              >
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                                Editar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadPng(item.name, encoded)}
+                              >
+                                <Download className="mr-1.5 h-3.5 w-3.5" />
+                                PNG
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setToDelete(item.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </main>
       </div>
