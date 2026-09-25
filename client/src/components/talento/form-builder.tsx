@@ -461,24 +461,21 @@ export function IntegrationFormBuilder({
       {mode === "elementos" || mode === "diseno" ? (
         <FormBuilderCanvas
           definition={value}
-          selection={mode === "elementos" ? selection : null}
-          onSelect={mode === "elementos" ? setSelection : () => {}}
-          onOpenSettings={
-            mode === "elementos"
-              ? (target) => {
-                  setSelection(target);
-                  setAsideMode("settings");
-                }
-              : () => {}
-          }
-          onUpdateDefinition={mode === "elementos" ? update : () => {}}
-          onUpdateSection={mode === "elementos" ? updateSection : () => {}}
-          onUpdateField={mode === "elementos" ? updateField : () => {}}
-          onDuplicate={mode === "elementos" ? duplicateBlock : () => {}}
-          onMove={mode === "elementos" ? moveBlock : () => {}}
-          onDelete={mode === "elementos" ? deleteBlock : () => {}}
-          onInsertField={mode === "elementos" ? insertFieldAt : undefined}
-          onMoveFieldTo={mode === "elementos" ? moveFieldTo : undefined}
+          selection={selection}
+          onSelect={setSelection}
+          onOpenSettings={(target) => {
+            setSelection(target);
+            setMode("elementos");
+            setAsideMode("settings");
+          }}
+          onUpdateDefinition={update}
+          onUpdateSection={updateSection}
+          onUpdateField={updateField}
+          onDuplicate={duplicateBlock}
+          onMove={moveBlock}
+          onDelete={deleteBlock}
+          onInsertField={insertFieldAt}
+          onMoveFieldTo={moveFieldTo}
         />
       ) : (
         <section className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
