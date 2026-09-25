@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,7 +8,9 @@ import {
   Clock,
   Copy,
   GripVertical,
+  Minus,
   MoreVertical,
+  Plus,
   Settings,
   Star,
   Trash2,
@@ -28,16 +30,28 @@ import { FormAtmosphere } from "@/components/integration/form-atmosphere";
 import { WcaLogo } from "@/components/integration/wca-logo";
 import {
   FIELD_TYPE_LABELS,
+  newFieldId,
+  slugify,
+  type IntegrationChoice,
   type IntegrationField,
+  type IntegrationFieldType,
   type IntegrationFormDefinition,
   type IntegrationSection,
 } from "@shared/integration-form";
+import { FIELD_DND_MIME, FIELD_MOVE_MIME } from "./form-builder-dnd";
+
+export { FIELD_DND_MIME, FIELD_MOVE_MIME };
 
 export type BuilderSelection =
   | { kind: "welcome" }
   | { kind: "ending" }
   | { kind: "section"; sectionIndex: number }
   | { kind: "field"; sectionIndex: number; fieldIndex: number };
+
+export type FieldLocation = { sectionIndex: number; fieldIndex: number };
+
+/** Reordenar opciones dentro de una misma pregunta. */
+const OPTION_MIME = "application/x-wca-option-index";
 
 const emojiFont =
   "[font-family:Inter,'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif]";
@@ -48,6 +62,25 @@ const inline =
 
 const mockControl =
   "flex w-full items-center rounded-2xl border border-white/15 bg-white/10 px-4 text-sm text-white/40";
+
+const iconButton =
+  "flex h-6 w-6 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white";
+
+function optionValue(label: string): string {
+  return slugify(label) || newFieldId("opcion");
+}
+
+function blockKey(selection: BuilderSelection): string {
+  if (selection.kind === "welcome") return "welcome";
+  if (selection.kind === "ending") return "ending";
+  if (selection.kind === "section") return `section-${selection.sectionIndex}`;
+  return `field-${selection.sectionIndex}-${selection.fieldIndex}`;
+}
+
+function acceptsFieldDrag(event: DragEvent): boolean {
+  const types = Array.from(event.dataTransfer.types);
+  return types.includes(FIELD_DND_MIME) || types.includes(FIELD_MOVE_MIME);
+}
 
 export function FormBuilderCanvas({
   definition,
@@ -60,6 +93,8 @@ export function FormBuilderCanvas({
   onDuplicate,
   onMove,
   onDelete,
+  onInsertField,
+  onMoveFieldTo,
 }: {
   definition: IntegrationFormDefinition;
   selection: BuilderSelection | null;
@@ -75,17 +110,62 @@ export function FormBuilderCanvas({
   onDuplicate: (selection: BuilderSelection) => void;
   onMove: (selection: BuilderSelection, direction: -1 | 1) => void;
   onDelete: (selection: BuilderSelection) => void;
+  onInsertField?: (sectionIndex: number, fieldIndex: number, type: IntegrationFieldType) => void;
+  onMoveFieldTo?: (from: FieldLocation, to: FieldLocation) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
   const realSections = definition.sections
     .map((section, sectionIndex) => ({ section, sectionIndex }))
     .filter(({ section }) => !section.isWelcome);
 
+  const selectionKey = selection ? blockKey(selection) : null;
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || !selectionKey) return;
+    const block = container.querySelector(`[data-builder-block="${selectionKey}"]`);
+    if (!block) return;
+    const box = container.getBoundingClientRect();
+    const rect = block.getBoundingClientRect();
+    if (rect.top >= box.top && rect.bottom <= box.bottom) return;
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectionKey]);
+
+  useEffect(() => {
+    const stop = () => setDragging(false);
+    window.addEventListener("dragend", stop);
+    window.addEventListener("drop", stop);
+    return () => {
+      window.removeEventListener("dragend", stop);
+      window.removeEventListener("drop", stop);
+    };
+  }, []);
+
+  const dropTargets = (sectionIndex: number, fieldIndex: number) => ({
+    dragging,
+    onInsertType: onInsertField
+      ? (type: IntegrationFieldType) => onInsertField(sectionIndex, fieldIndex, type)
+      : undefined,
+    onMoveField: onMoveFieldTo
+      ? (from: FieldLocation) => onMoveFieldTo(from, { sectionIndex, fieldIndex })
+      : undefined,
+  });
+
   return (
     <div className="relative min-w-0 flex-1 overflow-hidden">
       <FormAtmosphere definition={definition} contained />
-      <div className={cn("absolute inset-0 overflow-y-auto", emojiFont)}>
+      <div
+        ref={scrollRef}
+        onDragOver={(event) => {
+          if (acceptsFieldDrag(event)) setDragging(true);
+        }}
+        className={cn("absolute inset-0 overflow-y-auto", emojiFont)}
+      >
         <div className="relative z-10 mx-auto w-full max-w-2xl space-y-4 px-4 py-8 sm:px-6">
           <CanvasBlock
+            dataKey="welcome"
             selected={selection?.kind === "welcome"}
             onSelect={() => onSelect({ kind: "welcome" })}
             onOpenSettings={() => onOpenSettings({ kind: "welcome" })}
@@ -128,6 +208,7 @@ export function FormBuilderCanvas({
           {realSections.map(({ section, sectionIndex }, position) => (
             <div key={section.id} className="space-y-1">
               <CanvasBlock
+                dataKey={`section-${sectionIndex}`}
                 selected={selection?.kind === "section" && selection.sectionIndex === sectionIndex}
                 onSelect={() => onSelect({ kind: "section", sectionIndex })}
                 onOpenSettings={() => onOpenSettings({ kind: "section", sectionIndex })}
@@ -138,11 +219,11 @@ export function FormBuilderCanvas({
                 canMoveDown={position < realSections.length - 1}
               >
                 <Divider label={`Sección ${position + 1}`} />
-                <Input
+                <AutoArea
                   value={section.title ?? ""}
-                  onChange={(event) => onUpdateSection(sectionIndex, { title: event.target.value })}
+                  onChange={(title) => onUpdateSection(sectionIndex, { title })}
                   placeholder="Título de la sección"
-                  className={cn(inline, "mt-3 h-8 text-sm font-medium text-[#87b1e0]")}
+                  className={cn(inline, "mt-3 text-sm font-medium text-[#87b1e0]")}
                 />
                 <AutoArea
                   value={section.subtitle ?? ""}
@@ -152,42 +233,66 @@ export function FormBuilderCanvas({
                 />
               </CanvasBlock>
 
-              {section.fields.length === 0 && (
-                <p className="rounded-2xl border border-dashed border-white/15 px-4 py-6 text-center text-xs text-white/45">
-                  Sección sin preguntas. Elige un campo del panel izquierdo.
-                </p>
+              {section.fields.length === 0 ? (
+                <DropZone
+                  empty
+                  label="Sección sin preguntas. Arrastra un campo aquí o elígelo del panel izquierdo."
+                  {...dropTargets(sectionIndex, 0)}
+                />
+              ) : (
+                <>
+                  <DropZone {...dropTargets(sectionIndex, 0)} />
+                  {section.fields.map((field, fieldIndex) => (
+                    <Fragment key={field.id}>
+                      <CanvasBlock
+                        dataKey={`field-${sectionIndex}-${fieldIndex}`}
+                        selected={
+                          selection?.kind === "field" &&
+                          selection.sectionIndex === sectionIndex &&
+                          selection.fieldIndex === fieldIndex
+                        }
+                        onSelect={() => onSelect({ kind: "field", sectionIndex, fieldIndex })}
+                        onOpenSettings={() =>
+                          onOpenSettings({ kind: "field", sectionIndex, fieldIndex })
+                        }
+                        onDuplicate={() => onDuplicate({ kind: "field", sectionIndex, fieldIndex })}
+                        onMove={(direction) =>
+                          onMove({ kind: "field", sectionIndex, fieldIndex }, direction)
+                        }
+                        onDelete={() => onDelete({ kind: "field", sectionIndex, fieldIndex })}
+                        canMoveUp={position > 0 || fieldIndex > 0}
+                        canMoveDown={
+                          position < realSections.length - 1 ||
+                          fieldIndex < section.fields.length - 1
+                        }
+                        onDragStart={
+                          onMoveFieldTo
+                            ? (event) => {
+                                event.dataTransfer.setData(
+                                  FIELD_MOVE_MIME,
+                                  JSON.stringify({ sectionIndex, fieldIndex }),
+                                );
+                                event.dataTransfer.effectAllowed = "move";
+                                setDragging(true);
+                              }
+                            : undefined
+                        }
+                      >
+                        <FieldBlock
+                          field={field}
+                          onUpdate={(patch) => onUpdateField(sectionIndex, fieldIndex, patch)}
+                        />
+                      </CanvasBlock>
+                      <DropZone {...dropTargets(sectionIndex, fieldIndex + 1)} />
+                    </Fragment>
+                  ))}
+                </>
               )}
-
-              {section.fields.map((field, fieldIndex) => (
-                <CanvasBlock
-                  key={field.id}
-                  selected={
-                    selection?.kind === "field" &&
-                    selection.sectionIndex === sectionIndex &&
-                    selection.fieldIndex === fieldIndex
-                  }
-                  onSelect={() => onSelect({ kind: "field", sectionIndex, fieldIndex })}
-                  onOpenSettings={() => onOpenSettings({ kind: "field", sectionIndex, fieldIndex })}
-                  onDuplicate={() => onDuplicate({ kind: "field", sectionIndex, fieldIndex })}
-                  onMove={(direction) =>
-                    onMove({ kind: "field", sectionIndex, fieldIndex }, direction)
-                  }
-                  onDelete={() => onDelete({ kind: "field", sectionIndex, fieldIndex })}
-                  canMoveUp={position > 0 || fieldIndex > 0}
-                  canMoveDown={
-                    position < realSections.length - 1 || fieldIndex < section.fields.length - 1
-                  }
-                >
-                  <FieldBlock
-                    field={field}
-                    onUpdate={(patch) => onUpdateField(sectionIndex, fieldIndex, patch)}
-                  />
-                </CanvasBlock>
-              ))}
             </div>
           ))}
 
           <CanvasBlock
+            dataKey="ending"
             selected={selection?.kind === "ending"}
             onSelect={() => onSelect({ kind: "ending" })}
             onOpenSettings={() => onOpenSettings({ kind: "ending" })}
@@ -197,17 +302,15 @@ export function FormBuilderCanvas({
               <span className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#87b1e0] text-white">
                 <Check className="h-9 w-9" />
               </span>
-              <Input
+              <AutoArea
                 value={definition.ending.title ?? ""}
-                onChange={(event) =>
-                  onUpdateDefinition({
-                    ending: { ...definition.ending, title: event.target.value },
-                  })
+                onChange={(title) =>
+                  onUpdateDefinition({ ending: { ...definition.ending, title } })
                 }
                 placeholder="Título de la pantalla final"
                 className={cn(
                   inline,
-                  "h-auto py-1 text-center font-heading text-2xl font-bold md:text-2xl",
+                  "text-center font-heading text-2xl font-bold md:text-2xl",
                 )}
               />
               <AutoArea
@@ -238,7 +341,85 @@ function Divider({ label }: { label: string }) {
   );
 }
 
+/** Zona donde se sueltan campos nuevos del catálogo o preguntas que se están moviendo. */
+function DropZone({
+  dragging,
+  empty,
+  label,
+  onInsertType,
+  onMoveField,
+}: {
+  dragging: boolean;
+  empty?: boolean;
+  label?: string;
+  onInsertType?: (type: IntegrationFieldType) => void;
+  onMoveField?: (from: FieldLocation) => void;
+}) {
+  const [over, setOver] = useState(false);
+  const enabled = Boolean(onInsertType || onMoveField);
+
+  if (!enabled && !empty) return null;
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!enabled || !acceptsFieldDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOver(false);
+
+    const move = event.dataTransfer.getData(FIELD_MOVE_MIME);
+    if (move) {
+      try {
+        const from = JSON.parse(move) as FieldLocation;
+        if (
+          Number.isInteger(from?.sectionIndex) &&
+          Number.isInteger(from?.fieldIndex) &&
+          onMoveField
+        ) {
+          onMoveField(from);
+        }
+      } catch {
+        /* payload inválido: se ignora */
+      }
+      return;
+    }
+
+    const type = event.dataTransfer.getData(FIELD_DND_MIME);
+    if (type && onInsertType) onInsertType(type as IntegrationFieldType);
+  };
+
+  const visible = empty || dragging || over;
+
+  return (
+    <div
+      onDragOver={(event) => {
+        if (!enabled || !acceptsFieldDrag(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = Array.from(event.dataTransfer.types).includes(
+          FIELD_MOVE_MIME,
+        )
+          ? "move"
+          : "copy";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={handleDrop}
+      className={cn(
+        "flex items-center justify-center rounded-2xl border border-dashed px-4 text-center text-xs transition-all",
+        empty ? "py-6" : visible ? "py-4" : "h-2 py-0",
+        over
+          ? "border-[#5b8fd4] bg-[#5b8fd4]/10 text-[#87b1e0]"
+          : visible
+            ? "border-white/15 text-white/45"
+            : "border-transparent text-transparent",
+      )}
+    >
+      {over ? "Suelta aquí" : empty ? label : ""}
+    </div>
+  );
+}
+
 function CanvasBlock({
+  dataKey,
   selected,
   onSelect,
   onOpenSettings,
@@ -247,8 +428,10 @@ function CanvasBlock({
   onDelete,
   canMoveUp,
   canMoveDown,
+  onDragStart,
   children,
 }: {
+  dataKey: string;
   selected: boolean;
   onSelect: () => void;
   onOpenSettings: () => void;
@@ -257,18 +440,33 @@ function CanvasBlock({
   onDelete?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
   children: ReactNode;
 }) {
   const hasMenu = Boolean(onDuplicate || onMove || onDelete);
+  /** Solo se arrastra desde el asa: así los textos siguen siendo seleccionables. */
+  const [armed, setArmed] = useState(false);
+
   return (
     <div
+      data-builder-block={dataKey}
       onClick={onSelect}
       onFocusCapture={onSelect}
+      draggable={Boolean(onDragStart) && armed}
+      onDragStart={(event) => {
+        if (!armed || !onDragStart) {
+          event.preventDefault();
+          return;
+        }
+        onDragStart(event);
+      }}
+      onDragEnd={() => setArmed(false)}
       className={cn(
         "relative rounded-2xl border px-4 py-4 transition sm:px-5",
         selected
           ? "border-[#5b8fd4] bg-white/[0.04]"
           : "border-transparent hover:border-white/15 hover:bg-white/[0.02]",
+        armed && "opacity-70",
       )}
     >
       {selected && (
@@ -277,8 +475,13 @@ function CanvasBlock({
           onClick={(event) => event.stopPropagation()}
         >
           <span
-            title="Arrastrar"
-            className="flex h-6 w-6 cursor-grab items-center justify-center text-white/55"
+            title={onDragStart ? "Arrastrar para mover" : "Arrastrar"}
+            onMouseDown={() => onDragStart && setArmed(true)}
+            onMouseUp={() => setArmed(false)}
+            className={cn(
+              "flex h-6 w-6 items-center justify-center text-white/55",
+              onDragStart ? "cursor-grab active:cursor-grabbing" : "cursor-grab",
+            )}
           >
             <GripVertical className="h-4 w-4" />
           </span>
@@ -353,13 +556,23 @@ function AutoArea({
   placeholder: string;
   className?: string;
 }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
   return (
     <Textarea
+      ref={ref}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      rows={Math.min(8, Math.max(1, value.split("\n").length))}
-      className={cn("min-h-0 resize-none py-1", className)}
+      rows={1}
+      className={cn("w-full min-h-0 resize-none overflow-hidden py-1", className)}
     />
   );
 }
@@ -388,11 +601,11 @@ function FieldBlock({
   if (field.type === "explanation") {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-        <Input
+        <AutoArea
           value={field.label ?? ""}
-          onChange={(event) => onUpdate({ label: event.target.value })}
+          onChange={(label) => onUpdate({ label })}
           placeholder="Texto de explicación"
-          className={cn(inline, "h-auto py-1 text-lg font-semibold md:text-lg")}
+          className={cn(inline, "text-lg font-semibold md:text-lg")}
         />
         <AutoArea
           value={field.description ?? ""}
@@ -404,15 +617,40 @@ function FieldBlock({
     );
   }
 
+  if (field.type === "checkbox") {
+    return (
+      <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+        <span className="mt-2 h-5 w-5 shrink-0 rounded-md border border-white/40" />
+        <div className="min-w-0 flex-1">
+          <AutoArea
+            value={field.label ?? ""}
+            onChange={(label) => onUpdate({ label })}
+            placeholder="Texto de la casilla"
+            className={cn(inline, "text-sm leading-relaxed text-white/85")}
+          />
+          <AutoArea
+            value={field.description ?? ""}
+            onChange={(description) => onUpdate({ description })}
+            placeholder="Descripción o ayuda (opcional)"
+            className={cn(inline, "text-xs text-white/55")}
+          />
+        </div>
+        {field.required && <span className="pt-1.5 text-[#87b1e0]">*</span>}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-start gap-1">
-        <Input
-          value={field.label ?? ""}
-          onChange={(event) => onUpdate({ label: event.target.value })}
-          placeholder="Escribe la pregunta"
-          className={cn(inline, "h-auto min-w-0 flex-1 py-1 text-xl font-semibold md:text-xl")}
-        />
+        <div className="min-w-0 flex-1">
+          <AutoArea
+            value={field.label ?? ""}
+            onChange={(label) => onUpdate({ label })}
+            placeholder="Escribe la pregunta"
+            className={cn(inline, "text-xl font-semibold md:text-xl")}
+          />
+        </div>
         {field.required && <span className="pt-2 text-xl text-[#87b1e0]">*</span>}
       </div>
       <AutoArea
@@ -422,14 +660,20 @@ function FieldBlock({
         className={cn(inline, "text-sm text-white/60")}
       />
       <div className="mt-3">
-        <FieldMock field={field} />
+        <FieldMock field={field} onUpdate={onUpdate} />
       </div>
     </div>
   );
 }
 
-/** Maqueta no interactiva del control: se ve como el formulario público, sin capturar respuestas. */
-function FieldMock({ field }: { field: IntegrationField }) {
+/** Maqueta del control: se ve como el formulario público; las opciones sí se editan aquí. */
+function FieldMock({
+  field,
+  onUpdate,
+}: {
+  field: IntegrationField;
+  onUpdate: (patch: Partial<IntegrationField>) => void;
+}) {
   const placeholder = field.placeholder?.trim();
 
   if (field.type === "long_text") {
@@ -454,9 +698,12 @@ function FieldMock({ field }: { field: IntegrationField }) {
 
   if (field.type === "dropdown") {
     return (
-      <div className={cn(mockControl, "h-12 justify-between")}>
-        <span>{placeholder || "Elige una opción"}</span>
-        <ChevronDown className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className={cn(mockControl, "h-12 justify-between")}>
+          <span>{placeholder || "Elige una opción"}</span>
+          <ChevronDown className="h-4 w-4" />
+        </div>
+        <EditableOptions field={field} onUpdate={onUpdate} />
       </div>
     );
   }
@@ -484,81 +731,12 @@ function FieldMock({ field }: { field: IntegrationField }) {
     );
   }
 
-  if (field.type === "yes_no") {
-    const options = field.options?.length
-      ? field.options
-      : [
-          { value: "si", label: "Sí" },
-          { value: "no", label: "No" },
-        ];
-    return (
-      <div className="grid grid-cols-2 gap-3">
-        {options.map((option) => (
-          <div
-            key={option.value}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-medium text-white/80"
-          >
-            {option.label}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (field.type === "single_choice" || field.type === "multiple_choice") {
-    const multiple = field.type === "multiple_choice";
-    const options = [
-      ...(field.options ?? []),
-      ...(multiple && field.allowOther ? [{ value: "otro", label: "Otro" }] : []),
-    ];
-    if (options.length === 0) {
-      return (
-        <p className="rounded-2xl border border-dashed border-white/15 px-4 py-4 text-xs text-white/45">
-          Sin opciones todavía. Ábrelas con el engrane.
-        </p>
-      );
-    }
-    return (
-      <div className="space-y-2.5">
-        {options.map((option) => (
-          <div
-            key={option.value}
-            className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-          >
-            <span
-              className={cn(
-                "mt-0.5 h-5 w-5 shrink-0 border border-white/30",
-                multiple ? "rounded-md" : "rounded-full",
-              )}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-white">{option.label}</p>
-              {(option.acronym || option.description) && (
-                <p className="mt-1 text-xs leading-relaxed text-white/55">
-                  {option.acronym && (
-                    <span className="mr-2 inline-flex rounded-full bg-[#87b1e0]/20 px-2 py-0.5 text-[10px] font-semibold text-[#87b1e0]">
-                      {option.acronym}
-                    </span>
-                  )}
-                  {option.description}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (field.type === "checkbox") {
-    return (
-      <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-        <span className="mt-0.5 h-5 w-5 shrink-0 rounded-md border border-white/40" />
-        <span className="text-sm leading-relaxed text-white/80">
-          {field.label || "Casilla de confirmación"}
-        </span>
-      </div>
-    );
+  if (
+    field.type === "single_choice" ||
+    field.type === "multiple_choice" ||
+    field.type === "yes_no"
+  ) {
+    return <EditableOptions field={field} onUpdate={onUpdate} />;
   }
 
   if (field.type === "image_upload" || field.type === "file") {
@@ -581,6 +759,167 @@ function FieldMock({ field }: { field: IntegrationField }) {
   return (
     <div className={cn(mockControl, "h-12")}>
       {placeholder || `${FIELD_TYPE_LABELS[field.type]}…`}
+    </div>
+  );
+}
+
+/** Opciones editables sobre el lienzo: texto, orden, agregar y quitar. */
+function EditableOptions({
+  field,
+  onUpdate,
+}: {
+  field: IntegrationField;
+  onUpdate: (patch: Partial<IntegrationField>) => void;
+}) {
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const multiple = field.type === "multiple_choice";
+  const options: IntegrationChoice[] =
+    field.options?.length
+      ? field.options
+      : field.type === "yes_no"
+        ? [
+            { value: "si", label: "Sí" },
+            { value: "no", label: "No" },
+          ]
+        : [];
+
+  const commit = (next: IntegrationChoice[]) => onUpdate({ options: next });
+
+  const patchLabel = (index: number, label: string) => {
+    commit(
+      options.map((option, i) =>
+        i === index
+          ? {
+              ...option,
+              label,
+              value:
+                !option.value || /^opcion-/.test(option.value) ? optionValue(label) : option.value,
+            }
+          : option,
+      ),
+    );
+  };
+
+  const insertAfter = (index: number) => {
+    const label = `Opción ${options.length + 1}`;
+    const next = [...options];
+    next.splice(index + 1, 0, { value: optionValue(label), label });
+    commit(next);
+  };
+
+  const reorder = (from: number, to: number) => {
+    if (from === to || from < 0 || from >= options.length) return;
+    const next = [...options];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    commit(next);
+  };
+
+  return (
+    <div className="space-y-2">
+      {options.map((option, index) => (
+        <div
+          key={`${option.value}-${index}`}
+          onDragOver={(event) => {
+            if (!Array.from(event.dataTransfer.types).includes(OPTION_MIME)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOverIndex(index);
+          }}
+          onDragLeave={() => setOverIndex((current) => (current === index ? null : current))}
+          onDrop={(event) => {
+            if (!Array.from(event.dataTransfer.types).includes(OPTION_MIME)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOverIndex(null);
+            const from = Number(event.dataTransfer.getData(OPTION_MIME));
+            if (Number.isInteger(from)) reorder(from, index);
+          }}
+          className={cn(
+            "flex items-start gap-3 rounded-2xl border px-4 py-2 transition",
+            overIndex === index
+              ? "border-[#5b8fd4] bg-[#5b8fd4]/10"
+              : "border-white/10 bg-white/5",
+          )}
+        >
+          <span
+            className={cn(
+              "mt-2.5 h-5 w-5 shrink-0 border border-white/30",
+              multiple ? "rounded-md" : "rounded-full",
+            )}
+          />
+          <div className="min-w-0 flex-1">
+            <AutoArea
+              value={option.label ?? ""}
+              onChange={(label) => patchLabel(index, label)}
+              placeholder="Texto de la opción"
+              className={cn(inline, "text-sm font-medium text-white")}
+            />
+            {(option.acronym || option.description) && (
+              <p className="mt-1 text-xs leading-relaxed text-white/55">
+                {option.acronym && (
+                  <span className="mr-2 inline-flex rounded-full bg-[#87b1e0]/20 px-2 py-0.5 text-[10px] font-semibold text-[#87b1e0]">
+                    {option.acronym}
+                  </span>
+                )}
+                {option.description}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5 pt-1.5">
+            <span
+              draggable
+              onDragStart={(event) => {
+                event.stopPropagation();
+                event.dataTransfer.setData(OPTION_MIME, String(index));
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              onDragEnd={() => setOverIndex(null)}
+              title="Reordenar opción"
+              className={cn(iconButton, "cursor-grab active:cursor-grabbing")}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </span>
+            <button
+              type="button"
+              title="Agregar opción"
+              onClick={() => insertAfter(index)}
+              className={iconButton}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Quitar opción"
+              onClick={() => commit(options.filter((_, i) => i !== index))}
+              className={iconButton}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {field.allowOther && (
+        <div className="flex items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-3">
+          <span
+            className={cn(
+              "h-5 w-5 shrink-0 border border-white/30",
+              multiple ? "rounded-md" : "rounded-full",
+            )}
+          />
+          <span className="text-sm text-white/55">Otro</span>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => insertAfter(options.length - 1)}
+        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-white/15 px-4 py-2 text-xs text-white/50 transition hover:border-[#5b8fd4]/60 hover:text-[#87b1e0]"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Agregar opción
+      </button>
     </div>
   );
 }

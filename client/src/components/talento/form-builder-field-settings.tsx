@@ -328,22 +328,6 @@ function FieldSettings({
                 placeholder="Descripción (opcional)"
                 onChange={(event) => patchOption(index, { description: event.target.value })}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  className="h-8 font-mono text-xs"
-                  value={option.value}
-                  placeholder="valor-interno"
-                  onChange={(event) =>
-                    patchOption(index, { value: event.target.value.trim() || option.value })
-                  }
-                />
-                <Input
-                  className="h-8 text-xs"
-                  value={option.acronym ?? ""}
-                  placeholder="Sigla"
-                  onChange={(event) => patchOption(index, { acronym: event.target.value })}
-                />
-              </div>
             </div>
           ))}
         </div>

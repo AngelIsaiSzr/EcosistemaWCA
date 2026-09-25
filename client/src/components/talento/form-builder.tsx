@@ -197,6 +197,45 @@ export function IntegrationFormBuilder({
     });
   };
 
+  /** Inserta un campo en una posición exacta (arrastre desde el catálogo). */
+  const insertFieldAt = (
+    sectionIndex: number,
+    fieldIndex: number,
+    type: IntegrationFieldType,
+  ) => {
+    const section = value.sections[sectionIndex];
+    if (!section) return;
+    const fields = [...section.fields];
+    const index = Math.max(0, Math.min(fieldIndex, fields.length));
+    fields.splice(index, 0, createEmptyField(type));
+    const sections = value.sections.map((item, i) =>
+      i === sectionIndex ? { ...item, fields } : item,
+    );
+    onChange({ ...value, sections });
+    setSelection({ kind: "field", sectionIndex, fieldIndex: index });
+  };
+
+  /** Mueve una pregunta a una posición concreta, dentro o entre secciones. */
+  const moveFieldTo = (
+    from: { sectionIndex: number; fieldIndex: number },
+    to: { sectionIndex: number; fieldIndex: number },
+  ) => {
+    const sections = value.sections.map((section) => ({ ...section, fields: [...section.fields] }));
+    const source = sections[from.sectionIndex];
+    const target = sections[to.sectionIndex];
+    if (!source || !target) return;
+    const [field] = source.fields.splice(from.fieldIndex, 1);
+    if (!field) return;
+
+    let index = to.fieldIndex;
+    if (from.sectionIndex === to.sectionIndex && from.fieldIndex < to.fieldIndex) index -= 1;
+    index = Math.max(0, Math.min(index, target.fields.length));
+    target.fields.splice(index, 0, field);
+
+    onChange({ ...value, sections });
+    setSelection({ kind: "field", sectionIndex: to.sectionIndex, fieldIndex: index });
+  };
+
   const handlePick = (item: CatalogItem) => {
     if (item.kind === "structure") {
       if (item.id === "welcome") setSelection({ kind: "welcome" });
@@ -444,6 +483,8 @@ export function IntegrationFormBuilder({
           onDuplicate={duplicateBlock}
           onMove={moveBlock}
           onDelete={deleteBlock}
+          onInsertField={insertFieldAt}
+          onMoveFieldTo={moveFieldTo}
         />
       ) : (
         <section className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">

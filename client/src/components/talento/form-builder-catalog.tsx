@@ -3,6 +3,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FORM_CATALOG, type CatalogItem } from "./form-builder-catalog-data";
+import { FIELD_DND_MIME } from "./form-builder-dnd";
 
 export function FormBuilderCatalog({ onPick }: { onPick: (item: CatalogItem) => void }) {
   const [query, setQuery] = useState("");
@@ -24,7 +25,7 @@ export function FormBuilderCatalog({ onPick }: { onPick: (item: CatalogItem) => 
         <div>
           <p className="font-heading text-sm font-semibold">Campos de formulario</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Toca un elemento para agregarlo al formulario.
+            Toca un elemento para agregarlo, o arrástralo al lugar exacto del formulario.
           </p>
         </div>
         <div className="relative">
@@ -67,12 +68,26 @@ export function FormBuilderCatalog({ onPick }: { onPick: (item: CatalogItem) => 
                   {category.items.map((item) => {
                     const Icon = item.icon;
                     const key = item.kind === "structure" ? `structure-${item.id}` : `field-${item.type}`;
+                    const isField = item.kind === "field";
                     return (
                       <button
                         key={key}
                         type="button"
                         onClick={() => onPick(item)}
-                        className="flex w-full min-w-0 items-center gap-2.5 rounded-xl border bg-card px-2 py-1.5 text-left transition hover:border-[#5b8fd4]/60 hover:bg-muted"
+                        draggable={isField}
+                        onDragStart={
+                          isField
+                            ? (event) => {
+                                event.dataTransfer.setData(FIELD_DND_MIME, item.type);
+                                event.dataTransfer.setData("text/plain", item.label);
+                                event.dataTransfer.effectAllowed = "copy";
+                              }
+                            : undefined
+                        }
+                        className={cn(
+                          "flex w-full min-w-0 items-center gap-2.5 rounded-xl border bg-card px-2 py-1.5 text-left transition hover:border-[#5b8fd4]/60 hover:bg-muted",
+                          isField && "cursor-grab active:cursor-grabbing",
+                        )}
                       >
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-[#5b8fd4]">
                           <Icon className="h-4 w-4" />
