@@ -38,9 +38,6 @@ const formSchema = insertQrCodeSchema.extend({
   targetUrl: z.string().min(1, "El enlace es requerido"),
 });
 
-/** Altura aprox. de 4 filas de QR guardados (fila + gap). */
-const SAVED_LIST_MAX_H = "max-h-[17.5rem]";
-
 function resolveTargetUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
@@ -376,14 +373,14 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex h-full min-w-0 flex-col">
-              <CardHeader>
+            <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+              <CardHeader className="shrink-0">
                 <CardTitle>Guardados</CardTitle>
                 <CardDescription>
                   {items.length} código{items.length === 1 ? "" : "s"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex min-h-0 flex-1 flex-col">
+              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4">
                 {listLoading ? (
                   <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                     Cargando…
@@ -393,7 +390,7 @@ export default function AdminQrPage() {
                     Aún no hay códigos QR guardados.
                   </p>
                 ) : (
-                  <ul className={`${SAVED_LIST_MAX_H} space-y-2 overflow-y-auto pr-1`}>
+                  <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
                     {items.map((item) => {
                       const encoded = encodeUrlForQr(item);
                       return (
