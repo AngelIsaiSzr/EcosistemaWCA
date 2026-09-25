@@ -231,8 +231,8 @@ export default function AdminQrPage() {
             </Button>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            <Card>
+          <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -269,7 +269,7 @@ export default function AdminQrPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     className="shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
                     onClick={() => saveMutation.mutate()}
@@ -297,7 +297,7 @@ export default function AdminQrPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <QrCodeIcon className="h-5 w-5" />
@@ -305,12 +305,12 @@ export default function AdminQrPage() {
                 </CardTitle>
                 <CardDescription>Se actualiza al cambiar el enlace.</CardDescription>
               </CardHeader>
-              <CardContent className="flex min-h-[280px] items-center justify-center">
+              <CardContent className="flex min-h-[220px] items-center justify-center">
                 {previewDataUrl ? (
                   <img
                     src={previewDataUrl}
                     alt="Vista previa del código QR"
-                    className="h-64 w-64 rounded-xl border bg-white p-3"
+                    className="h-48 w-48 rounded-xl border bg-white p-3 sm:h-56 sm:w-56"
                   />
                 ) : (
                   <p className="px-4 text-center text-sm text-muted-foreground">
@@ -319,68 +319,65 @@ export default function AdminQrPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Guardados</CardTitle>
-              <CardDescription>
-                {items.length} código{items.length === 1 ? "" : "s"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {listLoading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Cargando…</p>
-              ) : items.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Aún no hay códigos QR guardados.
-                </p>
-              ) : (
-                <ul className="divide-y rounded-xl border">
-                  {items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{item.name || "Sin nombre"}</p>
-                        <p className="truncate text-xs text-muted-foreground">{item.targetUrl}</p>
-                      </div>
-                      <div className="flex shrink-0 flex-nowrap items-center gap-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => loadIntoForm(item)}
-                        >
-                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                          Editar
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => downloadPng(item.name, item.targetUrl)}
-                        >
-                          <Download className="mr-1.5 h-3.5 w-3.5" />
-                          PNG
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setToDelete(item.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+            <Card className="min-w-0">
+              <CardHeader>
+                <CardTitle>Guardados</CardTitle>
+                <CardDescription>
+                  {items.length} código{items.length === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {listLoading ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">Cargando…</p>
+                ) : items.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Aún no hay códigos QR guardados.
+                  </p>
+                ) : (
+                  <ul className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+                    {items.map((item) => (
+                      <li key={item.id} className="rounded-xl border px-3 py-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{item.name || "Sin nombre"}</p>
+                          <p className="truncate text-xs text-muted-foreground">{item.targetUrl}</p>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => loadIntoForm(item)}
+                          >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadPng(item.name, item.targetUrl)}
+                          >
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                            PNG
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(item.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </main>
       </div>
 
