@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, CircleCheck } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CircleCheck, Star, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,12 +19,14 @@ import {
   PHONE_COUNTRIES,
   countryFlagUrl,
   getAllFields,
+  isDisplayOnlyField,
   isFieldVisible,
   isSectionVisible,
   isValidEmail,
   isValidHttpUrl,
   isValidPhoneNumber,
   normalizeUrl,
+  type IntegrationFileAnswer,
 } from "@shared/integration-form";
 import { WcaLogo } from "@/components/integration/wca-logo";
 
@@ -63,12 +65,18 @@ function visibleFields(fields: IntegrationField[], answers: Answers) {
 }
 
 function validateField(field: IntegrationField, value: unknown): string | null {
+  if (isDisplayOnlyField(field.type)) return null;
+
   const empty =
     value === undefined ||
     value === null ||
     value === "" ||
     (typeof value === "string" && !value.trim()) ||
-    (Array.isArray(value) && value.length === 0);
+    (Array.isArray(value) && value.length === 0) ||
+    (field.type === "file" &&
+      typeof value === "object" &&
+      value !== null &&
+      !(value as IntegrationFileAnswer).url);
 
   if (field.type === "checkbox") {
     if (field.required && value !== true) return "Debes aceptar para continuar.";
@@ -93,12 +101,23 @@ function validateField(field: IntegrationField, value: unknown): string | null {
   if (field.type === "url" && !isValidHttpUrl(String(value))) {
     return "Ingresa un enlace válido (puedes pegar LinkedIn o Drive con o sin https).";
   }
-  if (field.type === "number") {
+  if (field.type === "number" || field.type === "rating") {
     const num = Number(value);
-    if (Number.isNaN(num) || !Number.isInteger(num)) return "Ingresa una edad en números enteros.";
-    const min = field.min ?? 0;
-    const max = field.max ?? 100;
-    if (num < min || num > max) return `La edad debe estar entre ${min} y ${max} años.`;
+    if (Number.isNaN(num) || (field.type === "number" && !Number.isInteger(num))) {
+      return field.type === "rating" ? "Elige una calificación." : "Ingresa un número entero.";
+    }
+    const min = field.min ?? (field.type === "rating" ? 1 : 0);
+    const max = field.max ?? (field.type === "rating" ? 5 : 100);
+    if (num < min || num > max) return `El valor debe estar entre ${min} y ${max}.`;
+  }
+  if (field.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    return "Ingresa una fecha válida.";
+  }
+  if (field.type === "time" && !/^\d{2}:\d{2}$/.test(String(value))) {
+    return "Ingresa una hora válida.";
+  }
+  if (field.type === "yes_no" && value !== "si" && value !== "no") {
+    return "Elige Sí o No.";
   }
   return null;
 }
@@ -396,6 +415,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
                         field={field}
                         value={answers[field.id]}
                         error={errors[field.id]}
+                        slug={slug}
                         otherValue={otherValues[field.id] ?? ""}
                         onOtherChange={(text) => setOtherValues((prev) => ({ ...prev, [field.id]: text }))}
                         onChange={(value) => setValue(field.id, value)}
@@ -452,6 +472,7 @@ function FieldControl({
   onChange,
   otherValue,
   onOtherChange,
+  slug,
 }: {
   field: IntegrationField;
   value: unknown;
@@ -459,8 +480,10 @@ function FieldControl({
   onChange: (value: unknown) => void;
   otherValue: string;
   onOtherChange: (value: string) => void;
+  slug: string;
 }) {
   const selected = Array.isArray(value) ? (value as string[]) : [];
+  const [uploading, setUploading] = useState(false);
 
   const toggleMulti = (optionValue: string) => {
     if (selected.includes(optionValue)) {
@@ -469,6 +492,48 @@ function FieldControl({
       onChange([...selected, optionValue]);
     }
   };
+
+  const uploadFile = async (file: File, kind: "image" | "file") => {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch(
+        `/api/integration/public/${encodeURIComponent(slug)}/upload?kind=${kind}`,
+        { method: "POST", body, credentials: "include" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Error al subir");
+      if (kind === "image") onChange(data.url);
+      else onChange({ name: data.name, url: data.url, size: data.size } satisfies IntegrationFileAnswer);
+    } catch {
+      /* keep previous */
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (field.type === "separator") {
+    return (
+      <div className="py-2">
+        <div className="border-t border-dashed border-white/25" />
+        {field.label && field.label !== "Separador" && (
+          <p className="mt-2 text-center text-xs uppercase tracking-wide text-white/40">{field.label}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (field.type === "explanation") {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+        <p className="text-lg font-semibold text-white">{field.label}</p>
+        {field.description && (
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70">{field.description}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -540,6 +605,115 @@ function FieldControl({
           />
         )}
         {field.type === "phone" && <PhoneField value={value} onChange={onChange} />}
+        {field.type === "date" && (
+          <Input type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={controlClass} />
+        )}
+        {field.type === "time" && (
+          <Input type="time" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={controlClass} />
+        )}
+        {field.type === "yes_no" && (
+          <div className="grid grid-cols-2 gap-3">
+            {(field.options?.length
+              ? field.options
+              : [
+                  { value: "si", label: "Sí" },
+                  { value: "no", label: "No" },
+                ]
+            ).map((option) => {
+              const active = value === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  className={cn(
+                    "rounded-2xl border px-4 py-4 text-center font-medium transition",
+                    active ? "border-[#87b1e0] bg-[#87b1e0]/15 text-white" : "border-white/10 bg-white/5 text-white/80",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {field.type === "dropdown" && (
+          <Select value={String(value ?? "") || undefined} onValueChange={onChange}>
+            <SelectTrigger className={controlClass}>
+              <SelectValue placeholder={field.placeholder || "Elige una opción"} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {field.type === "rating" && (
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: (field.max ?? 5) - (field.min ?? 1) + 1 }, (_, i) => (field.min ?? 1) + i).map(
+              (n) => {
+                const active = Number(value) >= n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => onChange(n)}
+                    className="rounded-lg p-1 transition hover:scale-110"
+                    aria-label={`${n} estrellas`}
+                  >
+                    <Star className={cn("h-8 w-8", active ? "fill-[#87b1e0] text-[#87b1e0]" : "text-white/30")} />
+                  </button>
+                );
+              },
+            )}
+          </div>
+        )}
+        {(field.type === "image_upload" || field.type === "file") && (
+          <div className="space-y-3">
+            <label
+              className={cn(
+                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 py-8 text-sm text-white/70 transition hover:border-[#87b1e0]/50",
+                uploading && "opacity-60",
+              )}
+            >
+              <Upload className="h-6 w-6 text-[#87b1e0]" />
+              <span>
+                {uploading
+                  ? "Subiendo…"
+                  : field.type === "image_upload"
+                    ? "Elige una imagen"
+                    : "Elige un archivo"}
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept={field.type === "image_upload" ? "image/jpeg,image/png,image/webp,image/gif" : undefined}
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadFile(file, field.type === "image_upload" ? "image" : "file");
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {field.type === "image_upload" && typeof value === "string" && value ? (
+              <img src={value} alt="" className="max-h-40 rounded-xl border border-white/10 object-contain" />
+            ) : null}
+            {field.type === "file" && value && typeof value === "object" ? (
+              <a
+                href={(value as IntegrationFileAnswer).url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[#87b1e0] underline-offset-2 hover:underline"
+              >
+                {(value as IntegrationFileAnswer).name || "Archivo subido"}
+              </a>
+            ) : null}
+          </div>
+        )}
         {field.type === "single_choice" && (
           <div className="space-y-3">
             {field.options?.map((option) => {

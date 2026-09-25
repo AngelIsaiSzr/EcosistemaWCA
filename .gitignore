@@ -8,3 +8,6 @@ vite.config.ts.*
 
 # Google Cloud credentials
 credentials/
+
+# Archivos subidos desde los formularios
+uploads/

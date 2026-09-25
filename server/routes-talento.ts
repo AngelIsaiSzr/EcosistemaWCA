@@ -1,4 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
@@ -15,6 +16,7 @@ import {
   formatAnswerForSheet,
   getAllFields,
   getSheetHeaders,
+  isDisplayOnlyField,
   isFieldVisible,
   isValidEmail,
   isValidHttpUrl,
@@ -22,12 +24,17 @@ import {
   normalizeUrl,
   sheetTabFilename,
   slugify,
+  type IntegrationFileAnswer,
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet, updateIntegrationCellInSheet } from "./services/google-sheets";
 import { ensureIntegrationTables } from "./db/ensure-integration-tables";
 import { sendTransactionalEmail } from "./services/email";
 import { DIRECTOR_EMAIL_CONTACT } from "@shared/director-emails";
 import type { IntegrationForm } from "@shared/schema";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import { randomBytes } from "crypto";
 
 const TALENTO_ROLE = "talento";
 const RESERVED_FORM_SLUGS = new Set([DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_SLUG]);
@@ -89,13 +96,19 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
 
   for (const field of getAllFields(definition)) {
     if (!isFieldVisible(field, answers)) continue;
+    if (isDisplayOnlyField(field.type)) continue;
+
     const value = answers[field.id];
     const empty =
       value === undefined ||
       value === null ||
       value === "" ||
       (typeof value === "string" && !value.trim()) ||
-      (Array.isArray(value) && value.length === 0);
+      (Array.isArray(value) && value.length === 0) ||
+      (field.type === "file" &&
+        typeof value === "object" &&
+        value !== null &&
+        !(value as IntegrationFileAnswer).url);
 
     if (field.type === "checkbox") {
       if (field.required && value !== true && value !== "true") {
@@ -131,16 +144,38 @@ function validateAnswers(definition: IntegrationFormDefinition, answers: Record<
     if (field.type === "url" && !isValidHttpUrl(String(value))) {
       errors[field.id] = "Ingresa un enlace válido (LinkedIn, Drive u otro).";
     }
-    if (field.type === "number") {
+    if (field.type === "number" || field.type === "rating") {
       const num = Number(value);
-      if (Number.isNaN(num) || !Number.isInteger(num)) {
-        errors[field.id] = "Ingresa un número entero.";
+      if (Number.isNaN(num) || (field.type === "number" && !Number.isInteger(num))) {
+        errors[field.id] = field.type === "rating" ? "Elige una calificación." : "Ingresa un número entero.";
       } else {
-        const min = field.min ?? 0;
-        const max = field.max ?? 100;
+        const min = field.min ?? (field.type === "rating" ? 1 : 0);
+        const max = field.max ?? (field.type === "rating" ? 5 : 100);
         if (num < min || num > max) {
           errors[field.id] = `El valor debe estar entre ${min} y ${max}.`;
         }
+      }
+    }
+    if (field.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+      errors[field.id] = "Ingresa una fecha válida.";
+    }
+    if (field.type === "time" && !/^\d{2}:\d{2}$/.test(String(value))) {
+      errors[field.id] = "Ingresa una hora válida.";
+    }
+    if (field.type === "yes_no" && value !== "si" && value !== "no") {
+      errors[field.id] = "Elige Sí o No.";
+    }
+    if (
+      (field.type === "single_choice" || field.type === "dropdown") &&
+      field.options?.length &&
+      !field.options.some((o) => o.value === value) &&
+      !(field.allowOther && value)
+    ) {
+      errors[field.id] = "Elige una opción válida.";
+    }
+    if (field.type === "image_upload" && typeof value === "string" && !value.startsWith("/")) {
+      if (!isValidHttpUrl(value) && !value.startsWith("data:")) {
+        errors[field.id] = "La imagen no es válida.";
       }
     }
   }
@@ -289,6 +324,74 @@ export function registerTalentoRoutes(app: Express) {
     .catch((error) => {
       console.error("No se pudo inicializar Talento y Bienestar:", error);
     });
+
+  const FORM_UPLOAD_ROOT = path.resolve(process.cwd(), "uploads", "form-files");
+  fs.mkdirSync(FORM_UPLOAD_ROOT, { recursive: true });
+  app.use("/media/form-files", express.static(FORM_UPLOAD_ROOT, { maxAge: "7d" }));
+
+  const memoryUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  });
+
+  app.post(
+    "/api/integration/public/:slug/upload",
+    memoryUpload.single("file"),
+    async (req, res) => {
+      try {
+        await ensureIntegrationTables();
+        const form = await resolveFormBySlugParam(req.params.slug);
+        if (!form || !form.isPublished) {
+          return res.status(404).json({ message: "Formulario no encontrado" });
+        }
+        if (!canAccessRestrictedForm(form, req)) {
+          return res.status(403).json({ message: "Acceso restringido" });
+        }
+        const file = req.file;
+        if (!file) return res.status(400).json({ message: "No se recibió archivo" });
+
+        const kind = String(req.query.kind || req.body?.kind || "file");
+        const isImage = kind === "image" || file.mimetype.startsWith("image/");
+        const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        const allowedFiles = [
+          ...allowedImages,
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "text/plain",
+        ];
+
+        if (isImage) {
+          if (!allowedImages.includes(file.mimetype)) {
+            return res.status(400).json({ message: "Formato de imagen no permitido" });
+          }
+          if (file.size > 5 * 1024 * 1024) {
+            return res.status(400).json({ message: "La imagen no puede superar 5 MB" });
+          }
+        } else if (!allowedFiles.includes(file.mimetype)) {
+          return res.status(400).json({ message: "Tipo de archivo no permitido" });
+        }
+
+        const dir = path.join(FORM_UPLOAD_ROOT, String(form.id));
+        fs.mkdirSync(dir, { recursive: true });
+        const rawExt = path.extname(file.originalname).replace(/[^.a-zA-Z0-9]/g, "").slice(0, 12);
+        const ext = rawExt ? (rawExt.startsWith(".") ? rawExt : `.${rawExt}`) : "";
+        const safeName = `${Date.now()}-${randomBytes(6).toString("hex")}${ext}`;
+        fs.writeFileSync(path.join(dir, safeName), file.buffer);
+        const url = `/media/form-files/${form.id}/${safeName}`;
+        res.json({
+          url,
+          name: file.originalname,
+          size: file.size,
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "No se pudo subir el archivo" });
+      }
+    },
+  );
 
   app.get("/api/integration/public", async (req, res) => {
     try {

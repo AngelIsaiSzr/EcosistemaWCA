@@ -73,6 +73,26 @@ function AnswerBadges({
   raw: unknown;
   formatted: string;
 }) {
+  if (field.type === "image_upload" && typeof raw === "string" && raw) {
+    return (
+      <a href={raw} target="_blank" rel="noopener noreferrer" className="inline-block">
+        <img src={raw} alt="" className="max-h-16 max-w-[120px] rounded-md border object-cover" />
+      </a>
+    );
+  }
+  if (field.type === "file" && raw && typeof raw === "object" && "url" in (raw as object)) {
+    const file = raw as { name?: string; url: string };
+    return (
+      <a
+        href={file.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-[#5b8fd4] underline-offset-2 hover:underline"
+      >
+        {file.name || "Descargar"}
+      </a>
+    );
+  }
   if (Array.isArray(raw)) {
     return (
       <div className="flex flex-wrap gap-1.5">

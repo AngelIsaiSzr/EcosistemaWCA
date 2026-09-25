@@ -7,7 +7,27 @@ export type IntegrationFieldType =
   | "url"
   | "single_choice"
   | "multiple_choice"
-  | "checkbox";
+  | "checkbox"
+  | "yes_no"
+  | "dropdown"
+  | "date"
+  | "time"
+  | "rating"
+  | "explanation"
+  | "separator"
+  | "image_upload"
+  | "file";
+
+/** Campos que no guardan respuesta (solo layout / copy). */
+export function isDisplayOnlyField(type: IntegrationFieldType): boolean {
+  return type === "explanation" || type === "separator";
+}
+
+export type IntegrationFileAnswer = {
+  name: string;
+  url: string;
+  size?: number;
+};
 
 export interface IntegrationChoice {
   value: string;
@@ -944,6 +964,15 @@ export const FIELD_TYPE_LABELS: Record<IntegrationFieldType, string> = {
   single_choice: "Opción única",
   multiple_choice: "Varias opciones",
   checkbox: "Casilla",
+  yes_no: "Sí / No",
+  dropdown: "Desplegable",
+  date: "Fecha",
+  time: "Hora",
+  rating: "Calificación",
+  explanation: "Explicación",
+  separator: "Separador",
+  image_upload: "Subir imagen",
+  file: "Subir archivo",
 };
 
 export function countryFlagUrl(code: string) {
@@ -978,6 +1007,38 @@ export function isValidPhoneNumber(value: string): boolean {
 
 export function newFieldId(prefix = "campo") {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+export function createEmptyField(type: IntegrationFieldType): IntegrationField {
+  const base: IntegrationField = {
+    id: newFieldId(),
+    type,
+    label:
+      type === "explanation"
+        ? "Texto de explicación"
+        : type === "separator"
+          ? "Separador"
+          : "Nueva pregunta",
+    required: !isDisplayOnlyField(type),
+  };
+  if (type === "single_choice" || type === "multiple_choice" || type === "dropdown") {
+    base.options = [{ value: "opcion-1", label: "Opción 1" }];
+  }
+  if (type === "yes_no") {
+    base.options = [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ];
+  }
+  if (type === "rating") {
+    base.min = 1;
+    base.max = 5;
+  }
+  if (type === "number") {
+    base.min = 0;
+    base.max = 100;
+  }
+  return base;
 }
 
 export function getAllFields(definition: IntegrationFormDefinition): IntegrationField[] {
@@ -1129,12 +1190,27 @@ export function formatAnswerForSheet(
   value: unknown,
 ): string {
   if (value === undefined || value === null || value === "") return "";
+  if (isDisplayOnlyField(field.type)) return "";
   if (field.type === "phone" && typeof value === "object") {
     const phone = value as { dial?: string; number?: string };
     return `${phone.dial ?? ""} ${phone.number ?? ""}`.trim();
   }
+  if (field.type === "file" && typeof value === "object" && value !== null) {
+    const file = value as IntegrationFileAnswer;
+    return file.url ? `${file.name || "archivo"} (${file.url})` : "";
+  }
+  if (field.type === "image_upload" && typeof value === "string") {
+    return value;
+  }
+  if (field.type === "yes_no") {
+    if (value === "si" || value === true) return "Sí";
+    if (value === "no" || value === false) return "No";
+  }
   if (field.type === "checkbox") {
     return value === true || value === "true" ? "Sí" : "No";
+  }
+  if (field.type === "rating") {
+    return String(value);
   }
   if (Array.isArray(value)) {
     return value
