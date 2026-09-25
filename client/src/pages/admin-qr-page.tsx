@@ -203,27 +203,35 @@ export default function AdminQrPage() {
   return (
     <>
       <Helmet>
-        <title>Códigos QR | Administración</title>
+        <title>Códigos QR | Ecosistema WCA</title>
       </Helmet>
       <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
-          <div className="mb-8">
-            <Link
-              href="/admin"
-              className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Administración
-            </Link>
-            <h1 className="font-heading text-3xl font-bold sm:text-4xl">Códigos QR</h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Genera QR propios que apuntan directo al enlace que elijas (formularios, páginas o URLs
-              externas), sin servicios de terceros.
-            </p>
+        <main className="container mx-auto px-4 pb-16 pt-24">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
+                Códigos QR
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">Códigos QR</h1>
+              <p className="mt-2 text-muted-foreground">
+                Genera QR propios que apuntan directo al enlace que elijas (formularios, páginas o
+                URLs externas), sin servicios de terceros.
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al panel
+              </Link>
+            </Button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-8 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -261,9 +269,9 @@ export default function AdminQrPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
                   <Button
-                    className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                    className="shrink-0 bg-[#5b8fd4] hover:bg-[#4a7fc4]"
                     onClick={() => saveMutation.mutate()}
                     disabled={saveMutation.isPending || !name.trim() || !resolvedUrl}
                   >
@@ -273,6 +281,7 @@ export default function AdminQrPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    className="shrink-0"
                     disabled={!resolvedUrl || Boolean(previewError)}
                     onClick={() => downloadPng(name || "qr", resolvedUrl)}
                   >
@@ -280,7 +289,7 @@ export default function AdminQrPage() {
                     Descargar PNG
                   </Button>
                   {editing && (
-                    <Button type="button" variant="ghost" onClick={resetForm}>
+                    <Button type="button" variant="ghost" className="shrink-0" onClick={resetForm}>
                       Cancelar
                     </Button>
                   )}
@@ -337,7 +346,7 @@ export default function AdminQrPage() {
                         <p className="font-medium">{item.name || "Sin nombre"}</p>
                         <p className="truncate text-xs text-muted-foreground">{item.targetUrl}</p>
                       </div>
-                      <div className="flex shrink-0 flex-wrap gap-1">
+                      <div className="flex shrink-0 flex-nowrap items-center gap-1">
                         <Button
                           type="button"
                           size="sm"

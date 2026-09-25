@@ -149,7 +149,7 @@ export default function AdminCardsPage() {
             <div>
               <p className="text-sm text-muted-foreground">
                 <Link href="/talento" className="hover:text-foreground">
-                  Talento
+                  Inicio
                 </Link>
                 {" › "}
                 Tarjetas

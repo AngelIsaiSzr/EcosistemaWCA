@@ -8,10 +8,13 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { orgChartPeople } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import type { IntegrationFormDefinition } from "@shared/integration-form";
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"]);
 const UPLOAD_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 const UPLOAD_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+type LibraryItem = { url: string; label: string; source: string };
 
 function requireStaff(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated() || (req.user.role !== "admin" && req.user.role !== "talento")) {
@@ -30,7 +33,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 function walkMediaDir(
   dir: string,
   baseUrl: string,
-  out: { url: string; label: string; source: string }[],
+  out: LibraryItem[],
   source = "media",
 ) {
   if (!fs.existsSync(dir)) return;
@@ -57,7 +60,7 @@ function walkMediaDir(
 }
 
 function pushUrl(
-  out: Map<string, { url: string; label: string; source: string }>,
+  out: Map<string, LibraryItem>,
   url: string | null | undefined,
   label: string,
   source: string,
@@ -67,21 +70,154 @@ function pushUrl(
   if (!out.has(u)) out.set(u, { url: u, label, source });
 }
 
-function resolveLibraryFile(libraryRoot: string, url: string): string | null {
-  const trimmed = (url || "").trim();
-  const prefix = "/media/library/";
-  if (!trimmed.startsWith(prefix)) return null;
-  const relative = trimmed.slice(prefix.length);
+function isInsideRoot(root: string, resolved: string) {
+  const normalizedRoot = path.resolve(root);
+  const normalized = path.resolve(resolved);
+  return normalized === normalizedRoot || normalized.startsWith(normalizedRoot + path.sep);
+}
+
+function resolveUnderRoot(root: string, relative: string): string | null {
   if (!relative || relative.includes("..") || path.isAbsolute(relative)) return null;
-  const resolved = path.resolve(libraryRoot, relative);
-  if (!resolved.startsWith(libraryRoot + path.sep) && resolved !== libraryRoot) return null;
+  const resolved = path.resolve(root, relative);
+  if (!isInsideRoot(root, resolved)) return null;
   return resolved;
+}
+
+type ManagedRoots = {
+  libraryRoot: string;
+  formFilesRoot: string;
+  publicMediaRoots: string[];
+};
+
+function resolveManagedFile(url: string, roots: ManagedRoots): string | null {
+  const trimmed = (url || "").trim().split("?")[0] || "";
+  if (!trimmed.startsWith("/media/")) return null;
+
+  if (trimmed.startsWith("/media/library/")) {
+    return resolveUnderRoot(roots.libraryRoot, trimmed.slice("/media/library/".length));
+  }
+  if (trimmed.startsWith("/media/form-files/")) {
+    return resolveUnderRoot(roots.formFilesRoot, trimmed.slice("/media/form-files/".length));
+  }
+  // Sitio estático: /media/foo.png
+  const relative = trimmed.slice("/media/".length);
+  for (const root of roots.publicMediaRoots) {
+    const resolved = resolveUnderRoot(root, relative);
+    if (resolved && fs.existsSync(resolved)) return resolved;
+  }
+  // Prefer first public root even if missing (for overwrite create)
+  if (roots.publicMediaRoots[0]) {
+    return resolveUnderRoot(roots.publicMediaRoots[0], relative);
+  }
+  return null;
+}
+
+async function rewriteImageReferences(oldUrl: string, newUrl: string | null) {
+  const old = oldUrl.trim();
+  if (!old) return;
+  const next = (newUrl ?? "").trim();
+
+  try {
+    const team = await storage.getAllTeamMembers();
+    for (const m of team) {
+      if ((m.image || "").trim() === old) {
+        await storage.updateTeamMember(m.id, { image: next });
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const cards = await storage.getAllPresentationCards();
+    for (const c of cards) {
+      const patch: Record<string, unknown> = {};
+      if ((c.image || "").trim() === old) patch.image = next;
+      const theme = (c.theme || {}) as { backgroundImage?: string };
+      if ((theme.backgroundImage || "").trim() === old) {
+        patch.theme = { ...theme, backgroundImage: next };
+      }
+      if (Object.keys(patch).length) {
+        await storage.updatePresentationCard(c.id, patch as never);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const testimonials = await storage.getAllTestimonials();
+    for (const t of testimonials) {
+      if ((t.image || "").trim() === old) {
+        await storage.updateTestimonial(t.id, { image: next });
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const allies = await storage.getAllAllies();
+    for (const a of allies) {
+      if ((a.image || "").trim() === old) {
+        await storage.updateAlly(a.id, { image: next });
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const people = await db.select().from(orgChartPeople);
+    for (const p of people) {
+      if ((p.photoUrl || "").trim() === old) {
+        await db
+          .update(orgChartPeople)
+          .set({ photoUrl: next || null, updatedAt: new Date() })
+          .where(eq(orgChartPeople.id, p.id));
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const forms = await storage.listIntegrationForms();
+    for (const form of forms) {
+      const schema = (form.schema || {}) as IntegrationFormDefinition;
+      const bg = schema.theme?.backgroundImage?.trim() || "";
+      if (bg !== old) continue;
+      const nextSchema: IntegrationFormDefinition = {
+        ...schema,
+        theme: {
+          ...schema.theme,
+          backgroundImage: next,
+        },
+      };
+      await storage.updateIntegrationForm(form.id, { schema: nextSchema });
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function registerMediaLibraryRoutes(app: Express) {
   const LIBRARY_UPLOAD_ROOT = path.resolve(process.cwd(), "uploads", "media-library");
+  const FORM_FILES_ROOT = path.resolve(process.cwd(), "uploads", "form-files");
+  const PUBLIC_MEDIA_ROOTS = [
+    path.resolve(process.cwd(), "client", "public", "media"),
+    path.resolve(process.cwd(), "dist", "public", "media"),
+    path.resolve(process.cwd(), "public", "media"),
+  ];
   fs.mkdirSync(LIBRARY_UPLOAD_ROOT, { recursive: true });
+  fs.mkdirSync(FORM_FILES_ROOT, { recursive: true });
   app.use("/media/library", express.static(LIBRARY_UPLOAD_ROOT, { maxAge: "7d" }));
+
+  const roots: ManagedRoots = {
+    libraryRoot: LIBRARY_UPLOAD_ROOT,
+    formFilesRoot: FORM_FILES_ROOT,
+    publicMediaRoots: PUBLIC_MEDIA_ROOTS,
+  };
 
   const memoryUpload = multer({
     storage: multer.memoryStorage(),
@@ -90,18 +226,14 @@ export function registerMediaLibraryRoutes(app: Express) {
 
   app.get("/api/media/library", requireStaff, async (_req, res) => {
     try {
-      const byUrl = new Map<string, { url: string; label: string; source: string }>();
+      const byUrl = new Map<string, LibraryItem>();
 
-      const mediaRoots = [
-        path.resolve(process.cwd(), "client", "public", "media"),
-        path.resolve(process.cwd(), "dist", "public", "media"),
-        path.resolve(process.cwd(), "public", "media"),
-      ];
-      const fileItems: { url: string; label: string; source: string }[] = [];
-      for (const root of mediaRoots) {
+      const fileItems: LibraryItem[] = [];
+      for (const root of PUBLIC_MEDIA_ROOTS) {
         walkMediaDir(root, "/media", fileItems, "media");
       }
       walkMediaDir(LIBRARY_UPLOAD_ROOT, "/media/library", fileItems, "subida");
+      walkMediaDir(FORM_FILES_ROOT, "/media/form-files", fileItems, "formularios");
       for (const item of fileItems) {
         if (!byUrl.has(item.url)) byUrl.set(item.url, item);
       }
@@ -156,6 +288,17 @@ export function registerMediaLibraryRoutes(app: Express) {
         /* ignore */
       }
 
+      try {
+        const forms = await storage.listIntegrationForms();
+        for (const form of forms) {
+          const schema = form.schema as IntegrationFormDefinition | null;
+          const bg = schema?.theme?.backgroundImage;
+          pushUrl(byUrl, bg, `${form.title} (fondo)`, "formularios");
+        }
+      } catch {
+        /* ignore */
+      }
+
       const items = Array.from(byUrl.values()).sort((a, b) =>
         a.label.localeCompare(b.label, "es"),
       );
@@ -202,16 +345,14 @@ export function registerMediaLibraryRoutes(app: Express) {
   app.delete("/api/media/library", requireAdmin, async (req, res) => {
     try {
       const url = String(req.body?.url || "").trim();
-      const filePath = resolveLibraryFile(LIBRARY_UPLOAD_ROOT, url);
-      if (!filePath) {
-        return res.status(400).json({
-          message: "Solo se pueden borrar imágenes subidas a /media/library/",
-        });
+      if (!url) {
+        return res.status(400).json({ message: "Falta la URL de la imagen" });
       }
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "Archivo no encontrado" });
+      const filePath = resolveManagedFile(url, roots);
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
       }
-      fs.unlinkSync(filePath);
+      await rewriteImageReferences(url, "");
       res.json({ message: "Imagen eliminada", url });
     } catch (error) {
       console.error("DELETE /api/media/library", error);
@@ -226,14 +367,8 @@ export function registerMediaLibraryRoutes(app: Express) {
     async (req, res) => {
       try {
         const url = String(req.body?.url || req.query.url || "").trim();
-        const filePath = resolveLibraryFile(LIBRARY_UPLOAD_ROOT, url);
-        if (!filePath) {
-          return res.status(400).json({
-            message: "Solo se pueden reemplazar imágenes subidas a /media/library/",
-          });
-        }
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ message: "Archivo no encontrado" });
+        if (!url) {
+          return res.status(400).json({ message: "Falta la URL de la imagen" });
         }
         const file = req.file;
         if (!file) {
@@ -245,13 +380,33 @@ export function registerMediaLibraryRoutes(app: Express) {
             message: "Solo se permiten imágenes PNG, JPEG o WebP",
           });
         }
-        // Conservar la misma URL pública (mismo nombre de archivo).
-        fs.writeFileSync(filePath, file.buffer);
-        res.json({
-          url,
-          label: path.basename(filePath),
-          replaced: true,
-        });
+
+        const existingPath = resolveManagedFile(url, roots);
+        if (existingPath && (fs.existsSync(existingPath) || url.startsWith("/media/"))) {
+          const dir = path.dirname(existingPath);
+          fs.mkdirSync(dir, { recursive: true });
+          // Conservar la misma URL pública cuando el archivo vive en /media/...
+          fs.writeFileSync(existingPath, file.buffer);
+          await rewriteImageReferences(url, url);
+          return res.json({
+            url,
+            label: path.basename(existingPath),
+            replaced: true,
+          });
+        }
+
+        // URL externa u oriunda no local: subir a biblioteca y reescribir referencias.
+        const safeBase = path
+          .basename(file.originalname, ext)
+          .replace(/[^a-zA-Z0-9._-]+/g, "-")
+          .replace(/-+/g, "-")
+          .slice(0, 60)
+          .replace(/^-|-$/g, "") || "imagen";
+        const safeName = `${Date.now()}-${randomBytes(4).toString("hex")}-${safeBase}${ext}`;
+        const nextUrl = `/media/library/${safeName}`;
+        fs.writeFileSync(path.join(LIBRARY_UPLOAD_ROOT, safeName), file.buffer);
+        await rewriteImageReferences(url, nextUrl);
+        res.json({ url: nextUrl, label: file.originalname || safeName, replaced: true });
       } catch (error) {
         console.error("POST /api/media/library/replace", error);
         res.status(500).json({ message: "No se pudo reemplazar la imagen" });

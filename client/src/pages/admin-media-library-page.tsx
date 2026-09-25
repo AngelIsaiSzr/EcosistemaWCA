@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Images, Loader2, Replace, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, Replace, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,7 @@ type LibraryItem = {
 const SOURCE_LABEL: Record<string, string> = {
   media: "Sitio",
   subida: "Subidas",
+  formularios: "Formularios",
   equipo: "Equipo",
   tarjeta: "Tarjetas",
   testimonio: "Testimonios",
@@ -82,7 +83,9 @@ export default function AdminMediaLibraryPage() {
 
   const sources = useMemo(() => {
     const set = new Set(items.map((i) => i.source));
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) =>
+      (SOURCE_LABEL[a] || a).localeCompare(SOURCE_LABEL[b] || b, "es"),
+    );
   }, [items]);
 
   const invalidate = () =>
@@ -167,30 +170,27 @@ export default function AdminMediaLibraryPage() {
   return (
     <>
       <Helmet>
-        <title>Biblioteca de imágenes | Administración</title>
+        <title>Biblioteca de imágenes | Ecosistema WCA</title>
       </Helmet>
       <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="container mx-auto max-w-6xl px-4 pb-16 pt-24">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <main className="container mx-auto px-4 pb-16 pt-24">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <Link
-                href="/admin"
-                className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Administración
-              </Link>
-              <h1 className="flex items-center gap-2 font-heading text-3xl font-bold sm:text-4xl">
-                <Images className="h-8 w-8" />
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
                 Biblioteca de imágenes
-              </h1>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
-                {items.length} imagen{items.length === 1 ? "" : "es"} en la plataforma. Puedes
-                subir, reemplazar o borrar solo las de la carpeta de subidas.
+              </p>
+              <h1 className="mt-1 font-heading text-4xl font-bold">Biblioteca de imágenes</h1>
+              <p className="mt-2 text-muted-foreground">
+                {items.length} imagen{items.length === 1 ? "" : "es"} en la plataforma. Como admin
+                puedes subir, reemplazar o borrar cualquiera.
               </p>
             </div>
-            <div>
+            <div className="flex flex-wrap gap-2">
               <input
                 ref={uploadRef}
                 type="file"
@@ -222,6 +222,12 @@ export default function AdminMediaLibraryPage() {
                   <Upload className="mr-2 h-4 w-4" />
                 )}
                 Subir
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/admin">
+                  <ArrowLeft className="h-4 w-4" />
+                  Volver al panel
+                </Link>
               </Button>
             </div>
           </div>
@@ -272,63 +278,57 @@ export default function AdminMediaLibraryPage() {
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {filtered.map((item) => {
-                const canMutate = item.source === "subida" || item.url.startsWith("/media/library/");
-                return (
-                  <div
-                    key={`${item.source}-${item.url}`}
-                    className="overflow-hidden rounded-xl border bg-card"
-                  >
-                    <div className="aspect-square bg-muted">
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.opacity = "0.25";
-                        }}
-                      />
+              {filtered.map((item) => (
+                <div
+                  key={`${item.source}-${item.url}`}
+                  className="overflow-hidden rounded-xl border bg-card"
+                >
+                  <div className="aspect-square bg-muted">
+                    <img
+                      src={item.url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.opacity = "0.25";
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2 p-2.5">
+                    <div>
+                      <p className="truncate text-xs font-medium">{item.label}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">
+                        {SOURCE_LABEL[item.source] || item.source}
+                      </p>
                     </div>
-                    <div className="space-y-2 p-2.5">
-                      <div>
-                        <p className="truncate text-xs font-medium">{item.label}</p>
-                        <p className="truncate text-[10px] text-muted-foreground">
-                          {SOURCE_LABEL[item.source] || item.source}
-                          {!canMutate ? " · solo lectura" : ""}
-                        </p>
-                      </div>
-                      {canMutate && (
-                        <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 flex-1 px-2 text-[11px]"
-                            disabled={uploading}
-                            onClick={() => {
-                              setReplacingUrl(item.url);
-                              replaceRef.current?.click();
-                            }}
-                          >
-                            <Replace className="mr-1 h-3 w-3" />
-                            Reemplazar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(item)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 flex-1 px-2 text-[11px]"
+                        disabled={uploading}
+                        onClick={() => {
+                          setReplacingUrl(item.url);
+                          replaceRef.current?.click();
+                        }}
+                      >
+                        <Replace className="mr-1 h-3 w-3" />
+                        Reemplazar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-destructive hover:text-destructive"
+                        onClick={() => setToDelete(item)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </main>
@@ -339,8 +339,8 @@ export default function AdminMediaLibraryPage() {
           <DialogHeader>
             <DialogTitle>Eliminar imagen</DialogTitle>
             <DialogDescription>
-              Se borrará el archivo de la biblioteca. Si alguna ficha aún apunta a esta URL, la
-              imagen dejará de verse ahí.
+              Se eliminará el archivo (si es local) y se limpiarán las referencias en equipo,
+              tarjetas, formularios y demás.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

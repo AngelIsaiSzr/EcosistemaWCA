@@ -297,7 +297,7 @@ export function PresentationCardEditor({
                   {mode === "admin" ? (
                     <>
                       <Link href="/talento" className="hover:text-foreground">
-                        Talento
+                        Inicio
                       </Link>
                       {" › "}
                       <Link href="/talento/tarjetas" className="hover:text-foreground">
