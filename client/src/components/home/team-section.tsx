@@ -64,10 +64,10 @@ function TeamMemberCard({
               href={member.twitter}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted transition-colors hover:text-[#1DA1F2]"
-              aria-label="Sígueme en Twitter"
+              className="text-muted transition-colors hover:text-white"
+              aria-label="Sígueme en X"
             >
-              <i className="fab fa-twitter" />
+              <i className="fab fa-x-twitter" />
             </a>
           )}
           {member.instagram && (

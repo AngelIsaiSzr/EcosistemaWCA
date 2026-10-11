@@ -336,7 +336,6 @@ export const CARD_FA_ICONS: { className: string; label: string }[] = [
   { className: "fas fa-qrcode", label: "QR" },
   { className: "fab fa-linkedin-in", label: "LinkedIn" },
   { className: "fab fa-instagram", label: "Instagram" },
-  { className: "fab fa-twitter", label: "Twitter" },
   { className: "fab fa-x-twitter", label: "X" },
   { className: "fab fa-github", label: "GitHub" },
   { className: "fab fa-youtube", label: "YouTube" },

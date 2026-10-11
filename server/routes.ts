@@ -15,6 +15,7 @@ import { registerIneditoLandingRoutes } from "./routes-inedito-landing";
 import { registerOrgChartRoutes } from "./routes-org-chart";
 import { registerLearningRoutes } from "./routes-learning";
 import { registerCertificateRoutes } from "./routes-certificates";
+import { registerSiteContentRoutes } from "./routes-site-content";
 import { ensureTeamColumns } from "./db/ensure-team-columns";
 import { ensureAlliesAndCountriesTables } from "./db/ensure-allies-countries";
 import { ensureQrCodesTable } from "./db/ensure-qr-codes";
@@ -86,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerOrgChartRoutes(app);
   registerLearningRoutes(app);
   registerCertificateRoutes(app);
+  registerSiteContentRoutes(app);
   ensureAdminAccount().catch((error) => {
     console.error("No se pudo asegurar la cuenta admin:", error);
   });

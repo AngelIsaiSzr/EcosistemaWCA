@@ -1,7 +1,11 @@
 import { Link } from 'wouter';
+import { getSocialLinks, useSiteContent } from '@/lib/site-content';
+import { SmartLink } from '@/components/ui/smart-link';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const footer = useSiteContent('footer');
+  const contact = useSiteContent('contact');
   
   return (
     <footer className="bg-primary-900 pt-16 pb-8">
@@ -15,21 +19,14 @@ export default function Footer() {
               <span className="font-heading font-bold text-xl text-accent-blue" style={{ fontFamily: 'Cocomat Pro, sans-serif' }}>Ecosistema WCA</span>
             </div>
             <p className="text-muted mb-6 text-justify pr-0 xl:pr-11">
-              La Primera Academia Tecnológica, Multidisciplinaria y Colaborativa, comprometida con la educación de calidad y la reducción del analfabetismo digital creciente en el mundo.
+              {footer.description}
             </p>
             <div className="flex space-x-4">
-              <a href="https://facebook.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en Facebook">
-                <i className="fab fa-facebook-f"></i>
-              </a>
-              <a href="https://instagram.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en Instagram">
-                <i className="fab fa-instagram"></i>
-              </a>
-              <a href="https://youtube.com/@ecosistemawca" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-red" aria-label="Síguenos en YouTube">
-                <i className="fab fa-youtube"></i>
-              </a>
-              <a href="https://linkedin.com/in/ecosistemawca/" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue" aria-label="Síguenos en LinkedIn">
-                <i className="fab fa-linkedin-in"></i>
-              </a>
+              {getSocialLinks(contact).map((social) => (
+                <a key={social.id} href={social.href} target="_blank" rel="noopener noreferrer" className={`text-muted ${social.footerHover}`} aria-label={`Síguenos en ${social.label}`}>
+                  <i className={social.icon}></i>
+                </a>
+              ))}
             </div>
           </div>
           
@@ -58,11 +55,11 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-heading font-semibold mb-6">Recursos</h3>
             <ul className="space-y-4">
-              <li><a href="" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue">Historia, Origen y Propósito</a></li>
-              <li><a href="" className="text-muted hover-accent-blue">Tutoriales</a></li>
-              <li><a href="/merch" target="_blank" rel="noopener noreferrer" className="text-muted hover-accent-blue">Merch Oficial</a></li>
-              <li><a href="" className="text-muted hover-accent-blue">Documentación</a></li>
-              <li><a href="" className="text-muted hover-accent-blue">Blog y Comunidad</a></li>
+              {footer.resources.map((item, i) => (
+                <li key={`${item.label}-${i}`}>
+                  <SmartLink href={item.href} className="text-muted hover-accent-blue">{item.label}</SmartLink>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -70,7 +67,7 @@ export default function Footer() {
         <div className="border-t border-secondary-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-muted text-sm mb-4 md:mb-0">
-              © {currentYear} Ecosistema WCA. Todos los derechos reservados.
+              © {currentYear} {footer.copyright}
             </p>
             <div className="flex space-x-6">
               <Link href="/terms" className="text-muted hover-accent-blue text-sm">Términos y Condiciones</Link>

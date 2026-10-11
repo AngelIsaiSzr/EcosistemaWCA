@@ -13,6 +13,7 @@ import Footer from "@/components/layout/footer";
 import { SITE_URL } from "@/utils/titles";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getSocialLinks, useSiteContent } from "@/lib/site-content";
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +26,7 @@ type ContactFormValues = z.infer<typeof insertContactSchema>;
 
 export default function ContactSection() {
   const { toast } = useToast();
+  const contact = useSiteContent("contact");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Set up form with validation
@@ -91,10 +93,10 @@ export default function ContactSection() {
             <div className="container mx-auto px-4">
               <div className="max-w-3xl mx-auto text-center">
                 <h1 className="text-4xl md:text-5xl font-heading font-bold mt-6 mb-4">
-                  Contacto
+                  {contact.pageTitle}
                 </h1>
                 <p className="text-muted text-lg">
-                  ¿Tienes alguna pregunta o sugerencia? Estamos aquí para ayudarte.
+                  {contact.pageSubtitle}
                 </p>
               </div>
             </div>
@@ -111,9 +113,9 @@ export default function ContactSection() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5 }}
                 >
-                  <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">Envíanos un mensaje</h2>
+                  <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6">{contact.formTitle}</h2>
                   <p className="text-muted mb-6">
-                    Si tienes alguna pregunta, sugerencia o simplemente quieres saludarnos, completa el formulario y te responderemos lo antes posible. ¡Estamos ansiosos por escucharte!
+                    {contact.formText}
                   </p>
 
                   <div className="space-y-6 mb-10">
@@ -123,7 +125,7 @@ export default function ContactSection() {
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">Ubicación</h3>
-                        <p className="text-muted">Monterrey, Nuevo León, MX</p>
+                        <p className="text-muted">{contact.location}</p>
                       </div>
                     </div>
 
@@ -133,7 +135,7 @@ export default function ContactSection() {
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">Email</h3>
-                        <p className="text-muted">info@ecosistemawca.com</p>
+                        <p className="text-muted">{contact.email}</p>
                       </div>
                     </div>
 
@@ -143,7 +145,7 @@ export default function ContactSection() {
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">Teléfono</h3>
-                        <p className="text-muted">+52 784 110 0108</p>
+                        <p className="text-muted">{contact.phone}</p>
                       </div>
                     </div>
                   </div>
@@ -151,21 +153,11 @@ export default function ContactSection() {
                   <div>
                     <h3 className="font-medium text-lg mb-3">Síguenos</h3>
                     <div className="flex space-x-4">
-                      <a href="https://facebook.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en Facebook">
-                        <i className="fab fa-facebook-f"></i>
-                      </a>
-                      <a href="https://x.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-yellow hover:text-white transition-colors" aria-label="Síguenos en Twitter">
-                        <i className="fab fa-twitter"></i>
-                      </a>
-                      <a href="https://instagram.com/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-white transition-colors" aria-label="Síguenos en Instagram">
-                        <i className="fab fa-instagram"></i>
-                      </a>
-                      <a href="https://linkedin.com/in/ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-blue hover:text-white transition-colors" aria-label="Síguenos en LinkedIn">
-                        <i className="fab fa-linkedin-in"></i>
-                      </a>
-                      <a href="https://youtube.com/@ecosistemawca" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted hover:bg-accent-red hover:text-primary-900 transition-colors" aria-label="Síguenos en YouTube">
-                        <i className="fab fa-youtube"></i>
-                      </a>
+                      {getSocialLinks(contact).map((social) => (
+                        <a key={social.id} href={social.href} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full bg-secondary-800 flex items-center justify-center text-muted ${social.hoverClass} hover:text-white transition-colors`} aria-label={`Síguenos en ${social.label}`}>
+                          <i className={social.icon}></i>
+                        </a>
+                      ))}
                     </div>
                   </div>
                 </motion.div>

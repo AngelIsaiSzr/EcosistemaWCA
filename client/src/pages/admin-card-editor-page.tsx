@@ -723,7 +723,7 @@ export function PresentationCardEditor({
                     [
                       ["linkedIn", "LinkedIn"],
                       ["instagram", "Instagram"],
-                      ["twitter", "Twitter / X"],
+                      ["twitter", "X (antes Twitter)"],
                       ["github", "GitHub"],
                       ["youtube", "YouTube"],
                       ["tiktok", "TikTok"],

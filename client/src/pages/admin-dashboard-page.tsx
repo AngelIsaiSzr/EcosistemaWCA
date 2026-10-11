@@ -8,9 +8,11 @@ import {
   Images,
   Mail,
   MessageSquareQuote,
+  PenLine,
   QrCode,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSiteContentData } from "@/lib/site-content";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
 import { Ally, Country, Course, QrCode as QrCodeRecord, Testimonial } from "@shared/schema";
@@ -65,6 +67,7 @@ export default function AdminDashboardPage() {
       return res.json();
     },
   });
+  const { data: siteContent } = useSiteContentData();
   const { data: mediaLibrary } = useQuery<{ items: unknown[] }>({
     queryKey: ["/api/media/library"],
     enabled: user?.role === "admin",
@@ -84,6 +87,15 @@ export default function AdminDashboardPage() {
   }
 
   const options: AdminOption[] = [
+    {
+      id: "textos",
+      title: "Textos del sitio",
+      description: "Edita textos, botones, datos de contacto y redes de las páginas públicas.",
+      href: "/admin/textos",
+      icon: PenLine,
+      count: siteContent ? Object.keys(siteContent.meta ?? {}).length : null,
+      countLabel: "secciones personalizadas",
+    },
     {
       id: "programas",
       title: "Programas",

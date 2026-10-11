@@ -47,7 +47,7 @@ const SOCIALS: Array<{
 }> = [
   { key: "linkedIn", label: "LinkedIn", href: (v) => v, icon: "fab fa-linkedin-in", color: "#0A66C2" },
   { key: "instagram", label: "Instagram", href: (v) => v, icon: "fab fa-instagram", color: "#E4405F" },
-  { key: "twitter", label: "Twitter/X", href: (v) => v, icon: "fab fa-twitter", color: "#1DA1F2" },
+  { key: "twitter", label: "X", href: (v) => v, icon: "fab fa-x-twitter", color: "#fff" },
   { key: "github", label: "GitHub", href: (v) => v, icon: "fab fa-github", color: "#fff" },
   { key: "youtube", label: "YouTube", href: (v) => v, icon: "fab fa-youtube", color: "#FF0000" },
   { key: "tiktok", label: "TikTok", href: (v) => v, icon: "fab fa-tiktok", color: "#69C9D0" },

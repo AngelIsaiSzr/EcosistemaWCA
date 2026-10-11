@@ -51,6 +51,7 @@ import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
 import ProgramLearningPage from "@/pages/program-learning-page";
 import AdminProgramContentPage from "@/pages/admin-program-content-page";
+import AdminSiteContentPage from "@/pages/admin-site-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { GoogleAnalytics } from "@/components/layout/google-analytics";
 import TalentoOrganigramaPage from "@/pages/talento-organigrama-page";
@@ -139,6 +140,7 @@ function Router() {
         <RoleProtectedRoute path="/admin/aliados" component={AdminAlliesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/paises" component={AdminCountriesPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/qr" component={AdminQrPage} roles={["admin"]} />
+        <RoleProtectedRoute path="/admin/textos" component={AdminSiteContentPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/biblioteca" component={AdminMediaLibraryPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/programas/:slug/contenido" component={AdminProgramContentPage} roles={["admin"]} />
         <RoleProtectedRoute path="/admin/:section" component={AdminPage} roles={["admin"]} />
