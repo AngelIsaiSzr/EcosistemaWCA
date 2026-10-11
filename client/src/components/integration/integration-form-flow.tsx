@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, CircleCheck, Star, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -187,6 +188,18 @@ function initialStep(definition: IntegrationFormDefinition, slug: string, previe
   return Math.min(Math.max(0, Math.floor(draft.step)), max);
 }
 
+function hasSavedProgress(definition: IntegrationFormDefinition, slug: string): boolean {
+  const draft = readDraft(slug);
+  if (!draft) return false;
+  if (typeof draft.step === "number" && draft.step > 0) return true;
+  const empty = emptyAnswers(definition);
+  const answersChanged = Object.entries(draft.answers ?? {}).some(
+    ([key, value]) => JSON.stringify(value ?? "") !== JSON.stringify(empty[key] ?? ""),
+  );
+  const hasOther = Object.values(draft.otherValues ?? {}).some((v) => String(v).trim());
+  return answersChanged || hasOther;
+}
+
 function initialOtherValues(slug: string, preview?: boolean): Record<string, string> {
   if (preview) return {};
   const draft = readDraft(slug);
@@ -206,6 +219,17 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   );
 
   const section = sections[step];
+  const { toast } = useToast();
+  const [restoredDraft] = useState(() => !preview && hasSavedProgress(definition, slug));
+
+  useEffect(() => {
+    if (!restoredDraft) return;
+    toast({
+      title: "Se restauró tu progreso",
+      description: "Continuamos donde te quedaste.",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir el formulario
+  }, []);
 
   // Persistir progreso en caché local (sirve sin cuenta; con cuenta sigue siendo por dispositivo).
   useEffect(() => {

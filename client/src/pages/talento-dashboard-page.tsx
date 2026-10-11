@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Eye,
-  Globe2,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
+import { FormIconPicker } from "@/components/talento/form-icon-picker";
 import { DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_SLUG } from "@shared/integration-form";
 import { IntegrationForm } from "@shared/schema";
 
@@ -72,6 +72,28 @@ export default function TalentoDashboardPage() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
+    },
+  });
+
+  const iconMutation = useMutation({
+    mutationFn: async ({ slug, icon }: { slug: string; icon: string }) => {
+      const res = await apiRequest("PATCH", `/api/talento/forms/${slug}`, { icon });
+      return res.json();
+    },
+    onMutate: async ({ slug, icon }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/talento/forms"] });
+      const previous = queryClient.getQueryData<FormListItem[]>(["/api/talento/forms"]);
+      queryClient.setQueryData<FormListItem[]>(["/api/talento/forms"], (old) =>
+        old?.map((f) => (f.slug === slug ? { ...f, icon } : f)),
+      );
+      return { previous };
+    },
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["/api/talento/forms"], context.previous);
+      toast({ title: "No se pudo cambiar el icono", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/talento/forms"] });
     },
   });
@@ -194,14 +216,16 @@ export default function TalentoDashboardPage() {
                     key={form.id}
                     className="group relative flex items-start gap-3 rounded-2xl border bg-card p-5 transition hover:border-[#5b8fd4]/40 hover:shadow-sm"
                   >
+                    <FormIconPicker
+                      value={form.icon}
+                      disabled={iconMutation.isPending}
+                      onChange={(icon) => iconMutation.mutate({ slug: form.slug, icon })}
+                    />
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-start gap-3 text-left"
                       onClick={() => navigate(`/talento/formularios/${form.slug}`)}
                     >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#5b8fd4]/15 ring-1 ring-[#5b8fd4]/25">
-                        <Globe2 className="h-5 w-5 text-[#5b8fd4]" />
-                      </div>
                       <div className="min-w-0 flex-1 pt-0.5">
                         <div className="flex items-start gap-1.5 pr-8">
                           <h2 className="line-clamp-2 font-heading text-base font-semibold leading-snug tracking-tight">

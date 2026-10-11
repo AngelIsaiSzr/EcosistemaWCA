@@ -34,7 +34,7 @@ type AutomationPayload = {
   logs: EmailAutomationLog[];
   stats: { officialSent: number };
   senders: Array<{ id: string; label: string; fromEmail: string; description: string }>;
-  senderAvailability: { contacto: boolean; tec_angel: boolean };
+  senderAvailability: Record<string, boolean>;
   semesters: Array<{ id: string; label: string; classStart: string; classEnd: string }>;
   preview: {
     today: string;
@@ -64,6 +64,8 @@ export default function AdminEmailAutomationPage() {
   const { toast } = useToast();
 
   const [recipientsText, setRecipientsText] = useState("");
+  const [ccText, setCcText] = useState("");
+  const [bccText, setBccText] = useState("");
   const [sendHour, setSendHour] = useState(9);
   const [enabled, setEnabled] = useState(false);
   const [senderId, setSenderId] = useState("contacto");
@@ -101,6 +103,8 @@ export default function AdminEmailAutomationPage() {
     if (!data?.settings) return;
     setEnabled(data.settings.enabled);
     setRecipientsText((data.settings.recipients ?? []).join("\n"));
+    setCcText((data.settings.ccRecipients ?? []).join("\n"));
+    setBccText((data.settings.bccRecipients ?? []).join("\n"));
     setSendHour(data.settings.sendHour);
     setSenderId(data.settings.senderId || "contacto");
     setSemesterId(data.settings.activeSemester || data.preview.activeSemester || "AD26");
@@ -112,6 +116,8 @@ export default function AdminEmailAutomationPage() {
       const res = await apiRequest("PATCH", "/api/admin/email-automation/settings", {
         enabled,
         recipients: recipientsText,
+        ccRecipients: ccText,
+        bccRecipients: bccText,
         sendHour,
         senderId,
       });
@@ -330,10 +336,7 @@ export default function AdminEmailAutomationPage() {
                         onChange={(e) => setSenderId(e.target.value)}
                       >
                         {(data?.senders ?? []).map((s) => {
-                          const available =
-                            s.id === "tec_angel"
-                              ? data?.senderAvailability?.tec_angel
-                              : data?.senderAvailability?.contacto;
+                          const available = !!data?.senderAvailability?.[s.id];
                           return (
                             <option key={s.id} value={s.id} disabled={!available}>
                               {s.label}
@@ -357,9 +360,33 @@ export default function AdminEmailAutomationPage() {
                         placeholder={"nombre@tec.mx\notro@gmail.com"}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Uno por línea. Se envía un correo individual a cada destinatario.
+                        Uno por línea. Sin CC/CCO se envía un correo individual a cada destinatario.
                       </p>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cc">Copia (CC)</Label>
+                      <Textarea
+                        id="cc"
+                        rows={3}
+                        value={ccText}
+                        onChange={(e) => setCcText(e.target.value)}
+                        placeholder="nombre@ecosistemawca.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bcc">Copia oculta (CCO)</Label>
+                      <Textarea
+                        id="bcc"
+                        rows={3}
+                        value={bccText}
+                        onChange={(e) => setBccText(e.target.value)}
+                        placeholder="nombre@ecosistemawca.com"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Con CC o CCO se manda un solo correo: los directores aparecen juntos en “Para”,
+                      los de CC se ven y los de CCO quedan ocultos. Útil para copiar a sus correos WCA.
+                    </p>
                     <div className="space-y-2">
                       <Label htmlFor="sendHour">Hora de envío (0–23)</Label>
                       <Input

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +43,16 @@ type EditorSnapshot = {
   accessMode: "public" | "restricted";
   allowedUserIds: number[];
   allowMultipleSubmissions: boolean;
+  notifyEnabled: boolean;
+  notifySenderId: string;
+  notifyRecipientsText: string;
   definition: IntegrationFormDefinition;
+};
+
+type EmailSendersPayload = {
+  senders: Array<{ id: string; label: string }>;
+  availability: Record<string, boolean>;
+  defaultRecipient: string;
 };
 
 function snapshotKey(snap: EditorSnapshot) {
@@ -60,6 +70,9 @@ function formToSnapshot(form: IntegrationForm): EditorSnapshot {
     accessMode: form.accessMode === "restricted" ? "restricted" : "public",
     allowedUserIds: Array.isArray(form.allowedUserIds) ? [...form.allowedUserIds] : [],
     allowMultipleSubmissions: Boolean(form.allowMultipleSubmissions),
+    notifyEnabled: form.notifyEnabled !== false,
+    notifySenderId: form.notifySenderId || "contacto",
+    notifyRecipientsText: (Array.isArray(form.notifyRecipients) ? form.notifyRecipients : []).join("\n"),
     definition: (form.schema as IntegrationFormDefinition) ?? DEFAULT_INTEGRATION_FORM,
   };
 }
@@ -79,6 +92,9 @@ export default function TalentoFormEditorPage({
   const [accessMode, setAccessMode] = useState<"public" | "restricted">("public");
   const [allowedUserIds, setAllowedUserIds] = useState<number[]>([]);
   const [allowMultipleSubmissions, setAllowMultipleSubmissions] = useState(false);
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [notifySenderId, setNotifySenderId] = useState("contacto");
+  const [notifyRecipientsText, setNotifyRecipientsText] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [definition, setDefinition] = useState<IntegrationFormDefinition>(DEFAULT_INTEGRATION_FORM);
   const [baseline, setBaseline] = useState<EditorSnapshot | null>(null);
@@ -109,6 +125,16 @@ export default function TalentoFormEditorPage({
     enabled: user?.role === "talento",
   });
 
+  const { data: emailSenders } = useQuery<EmailSendersPayload>({
+    queryKey: ["/api/talento/email-senders"],
+    queryFn: async () => {
+      const res = await fetch("/api/talento/email-senders", { credentials: "include" });
+      if (!res.ok) throw new Error("No se pudieron cargar los remitentes");
+      return res.json();
+    },
+    enabled: user?.role === "talento",
+  });
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "talento")) {
       navigate("/auth");
@@ -124,6 +150,9 @@ export default function TalentoFormEditorPage({
     setAccessMode(snap.accessMode);
     setAllowedUserIds(snap.allowedUserIds);
     setAllowMultipleSubmissions(snap.allowMultipleSubmissions);
+    setNotifyEnabled(snap.notifyEnabled);
+    setNotifySenderId(snap.notifySenderId);
+    setNotifyRecipientsText(snap.notifyRecipientsText);
     setDefinition(snap.definition);
     setBaseline(snap);
   }, [form]);
@@ -136,9 +165,23 @@ export default function TalentoFormEditorPage({
       accessMode,
       allowedUserIds,
       allowMultipleSubmissions,
+      notifyEnabled,
+      notifySenderId,
+      notifyRecipientsText,
       definition,
     }),
-    [title, slug, published, accessMode, allowedUserIds, allowMultipleSubmissions, definition],
+    [
+      title,
+      slug,
+      published,
+      accessMode,
+      allowedUserIds,
+      allowMultipleSubmissions,
+      notifyEnabled,
+      notifySenderId,
+      notifyRecipientsText,
+      definition,
+    ],
   );
 
   const dirty = useMemo(() => {
@@ -191,6 +234,9 @@ export default function TalentoFormEditorPage({
         accessMode,
         allowedUserIds: accessMode === "restricted" ? allowedUserIds : [],
         allowMultipleSubmissions,
+        notifyEnabled,
+        notifySenderId,
+        notifyRecipients: notifyRecipientsText,
         schema: { ...definition, title: definition.title || title },
       });
       return res.json() as Promise<IntegrationForm>;
@@ -207,6 +253,9 @@ export default function TalentoFormEditorPage({
         setAccessMode(snap.accessMode);
         setAllowedUserIds(snap.allowedUserIds);
         setAllowMultipleSubmissions(snap.allowMultipleSubmissions);
+        setNotifyEnabled(snap.notifyEnabled);
+        setNotifySenderId(snap.notifySenderId);
+        setNotifyRecipientsText(snap.notifyRecipientsText);
         setDefinition(snap.definition);
         setBaseline(snap);
         if (updated.slug && updated.slug !== formSlug) {
@@ -432,6 +481,60 @@ export default function TalentoFormEditorPage({
                       );
                     })
                   )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6 space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-heading text-lg font-semibold">Notificación de respuestas</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Cada respuesta nueva se envía por correo con todas las respuestas. Al contestar ese
+                  correo le respondes directo a quien llenó el formulario.
+                </p>
+              </div>
+              <Switch checked={notifyEnabled} onCheckedChange={setNotifyEnabled} />
+            </div>
+
+            {notifyEnabled && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="min-w-0">
+                  <Label htmlFor="notify-sender">Enviar desde</Label>
+                  <select
+                    id="notify-sender"
+                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={notifySenderId}
+                    onChange={(e) => setNotifySenderId(e.target.value)}
+                  >
+                    {(emailSenders?.senders ?? [{ id: "contacto", label: "contacto@ecosistemawca.com" }]).map(
+                      (s) => {
+                        const available = emailSenders?.availability?.[s.id] ?? s.id === "contacto";
+                        return (
+                          <option key={s.id} value={s.id} disabled={!available}>
+                            {s.label}
+                            {!available ? " (no configurado en servidor)" : ""}
+                          </option>
+                        );
+                      },
+                    )}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <Label htmlFor="notify-recipients">Enviar a</Label>
+                  <Textarea
+                    id="notify-recipients"
+                    className="mt-1"
+                    rows={3}
+                    value={notifyRecipientsText}
+                    onChange={(e) => setNotifyRecipientsText(e.target.value)}
+                    placeholder={emailSenders?.defaultRecipient ?? "contacto@ecosistemawca.com"}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Uno por línea. Si lo dejas vacío llega a{" "}
+                    {emailSenders?.defaultRecipient ?? "contacto@ecosistemawca.com"}.
+                  </p>
                 </div>
               </div>
             )}

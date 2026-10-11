@@ -240,6 +240,14 @@ export const integrationForms = pgTable("integration_forms", {
   allowedUserIds: jsonb("allowed_user_ids").$type<number[]>().notNull().default([]),
   /** Si es true, el mismo correo puede enviar varias respuestas */
   allowMultipleSubmissions: boolean("allow_multiple_submissions").notNull().default(false),
+  /** Nombre de icono del catálogo de formularios (null = predeterminado) */
+  icon: text("icon"),
+  /** Aviso por correo al recibir una respuesta */
+  notifyEnabled: boolean("notify_enabled").notNull().default(true),
+  /** contacto | tec_angel | id de SMTP_EXTRA_SENDERS */
+  notifySenderId: text("notify_sender_id").notNull().default("contacto"),
+  /** Vacío = contacto@ecosistemawca.com */
+  notifyRecipients: jsonb("notify_recipients").$type<string[]>().notNull().default([]),
   pinnedAt: timestamp("pinned_at"),
   viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -278,12 +286,14 @@ export const emailAutomationSettings = pgTable("email_automation_settings", {
   id: serial("id").primaryKey(),
   enabled: boolean("enabled").notNull().default(false),
   recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
+  ccRecipients: jsonb("cc_recipients").$type<string[]>().notNull().default([]),
+  bccRecipients: jsonb("bcc_recipients").$type<string[]>().notNull().default([]),
   startDate: text("start_date").notNull().default("2026-09-14"),
   /** Hora local America/Mexico_City (0-23) para el envío semanal. */
   sendHour: integer("send_hour").notNull().default(9),
   /** 1 = lunes … 7 = domingo (ISO). */
   sendWeekday: integer("send_weekday").notNull().default(1),
-  /** contacto | tec_angel */
+  /** contacto | tec_angel | id de SMTP_EXTRA_SENDERS */
   senderId: text("sender_id").notNull().default("contacto"),
   /** AD26 | FJ26 */
   activeSemester: text("active_semester").notNull().default("AD26"),

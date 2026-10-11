@@ -8,7 +8,6 @@ import {
   emailWeekTemplates,
 } from "@shared/schema";
 import {
-  EMAIL_SENDER_PROFILES,
   isValidRecipientEmail,
   parseRecipientList,
   SEMESTER_CALENDARS,
@@ -23,7 +22,7 @@ import {
   startDirectorEmailScheduler,
   getMexicoCalendarParts,
 } from "./services/director-email-scheduler";
-import { getSenderAvailability } from "./services/email";
+import { getSenderAvailability, isKnownSender, listSenderProfiles } from "./services/email";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated() || req.user.role !== "admin") {
@@ -35,8 +34,10 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 const settingsSchema = z.object({
   enabled: z.boolean().optional(),
   recipients: z.union([z.array(z.string()), z.string()]).optional(),
+  ccRecipients: z.union([z.array(z.string()), z.string()]).optional(),
+  bccRecipients: z.union([z.array(z.string()), z.string()]).optional(),
   sendHour: z.number().int().min(0).max(23).optional(),
-  senderId: z.enum(["contacto", "tec_angel"]).optional(),
+  senderId: z.string().refine(isKnownSender, "Remitente no válido").optional(),
   activeSemester: z.enum(["AD26", "FJ26"]).optional(),
 });
 
@@ -109,7 +110,7 @@ export function registerEmailAutomationRoutes(app: Express) {
         stats: {
           officialSent: Number(officialCount?.value ?? 0),
         },
-        senders: EMAIL_SENDER_PROFILES,
+        senders: listSenderProfiles(),
         senderAvailability: getSenderAvailability(),
         semesters: Object.values(SEMESTER_CALENDARS).map((s) => ({
           id: s.id,
@@ -173,10 +174,12 @@ export function registerEmailAutomationRoutes(app: Express) {
           ? parseRecipientList(parsed.data.recipients)
           : undefined;
 
-      if (parsed.data.senderId === "tec_angel" && !getSenderAvailability().tec_angel) {
+      if (parsed.data.senderId && !getSenderAvailability()[parsed.data.senderId]) {
         return res.status(400).json({
           message:
-            "El correo Tec aún no está configurado. Agrega SMTP_TEC_PASS (y opcional SMTP_TEC_USER) en Render.",
+            parsed.data.senderId === "tec_angel"
+              ? "El correo Tec aún no está configurado. Agrega SMTP_TEC_PASS (y opcional SMTP_TEC_USER) en Render."
+              : "Ese remitente aún no está configurado en el servidor.",
         });
       }
 
@@ -185,6 +188,12 @@ export function registerEmailAutomationRoutes(app: Express) {
         .set({
           ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
           ...(recipients !== undefined ? { recipients } : {}),
+          ...(parsed.data.ccRecipients !== undefined
+            ? { ccRecipients: parseRecipientList(parsed.data.ccRecipients) }
+            : {}),
+          ...(parsed.data.bccRecipients !== undefined
+            ? { bccRecipients: parseRecipientList(parsed.data.bccRecipients) }
+            : {}),
           ...(parsed.data.sendHour !== undefined ? { sendHour: parsed.data.sendHour } : {}),
           ...(parsed.data.senderId !== undefined ? { senderId: parsed.data.senderId } : {}),
           ...(parsed.data.activeSemester !== undefined
@@ -301,6 +310,9 @@ export function registerEmailAutomationRoutes(app: Express) {
         recipients,
         kind: "test",
         senderId: settings?.senderId || "contacto",
+        // La prueba a un correo puntual no copia a CC/CCO
+        cc: parsed.data.to ? [] : parseRecipientList(settings?.ccRecipients),
+        bcc: parsed.data.to ? [] : parseRecipientList(settings?.bccRecipients),
       });
 
       const failed = result.results.filter((r) => !r.ok);

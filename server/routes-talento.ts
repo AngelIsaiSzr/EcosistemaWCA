@@ -29,8 +29,13 @@ import {
 } from "@shared/integration-form";
 import { saveIntegrationRowToSheet, updateIntegrationCellInSheet } from "./services/google-sheets";
 import { ensureIntegrationTables } from "./db/ensure-integration-tables";
-import { sendTransactionalEmail } from "./services/email";
-import { DIRECTOR_EMAIL_CONTACT } from "@shared/director-emails";
+import {
+  getSenderAvailability,
+  isKnownSender,
+  listSenderProfiles,
+  sendTransactionalEmail,
+} from "./services/email";
+import { DIRECTOR_EMAIL_CONTACT, parseRecipientList } from "@shared/director-emails";
 import type { IntegrationForm } from "@shared/schema";
 import multer from "multer";
 import fs from "fs";
@@ -86,6 +91,10 @@ const updateFormSchema = z.object({
   accessMode: z.enum(["public", "restricted"]).optional(),
   allowedUserIds: z.array(z.number().int().positive()).optional(),
   allowMultipleSubmissions: z.boolean().optional(),
+  icon: z.string().max(40).nullable().optional(),
+  notifyEnabled: z.boolean().optional(),
+  notifySenderId: z.string().refine(isKnownSender, "Remitente no válido").optional(),
+  notifyRecipients: z.union([z.array(z.string()), z.string()]).optional(),
 });
 
 const createFormSchema = z.object({
@@ -295,6 +304,19 @@ async function applyFormPatch(formId: number, currentSlug: string, body: unknown
     }
   }
 
+  if (parsed.data.notifyRecipients !== undefined) {
+    patch.notifyRecipients = parseRecipientList(parsed.data.notifyRecipients);
+  }
+
+  if (parsed.data.notifySenderId && !getSenderAvailability()[parsed.data.notifySenderId]) {
+    return {
+      error: {
+        status: 400 as const,
+        message: "Ese remitente aún no está configurado en el servidor.",
+      },
+    };
+  }
+
   if (parsed.data.responseColumnWidths) {
     const base =
       (patch.schema as IntegrationFormDefinition | undefined) ??
@@ -497,6 +519,7 @@ export function registerTalentoRoutes(app: Express) {
         answers,
       });
 
+      const notifyTo = parseRecipientList(form.notifyRecipients);
       try {
         const fields = getAllFields(definition);
         const rows = fields
@@ -522,8 +545,9 @@ export function registerTalentoRoutes(app: Express) {
           )
           .join("");
 
-        await sendTransactionalEmail({
-          to: DIRECTOR_EMAIL_CONTACT,
+        if (form.notifyEnabled !== false) await sendTransactionalEmail({
+          to: notifyTo.length > 0 ? notifyTo : DIRECTOR_EMAIL_CONTACT,
+          senderId: form.notifySenderId || "contacto",
           replyTo: email,
           subject: `Nueva respuesta · ${form.title}`,
           text: textLines,
@@ -559,6 +583,14 @@ export function registerTalentoRoutes(app: Express) {
       console.error(error);
       res.status(500).json({ message: "No se pudo enviar la respuesta" });
     }
+  });
+
+  app.get("/api/talento/email-senders", requireTalento, (_req, res) => {
+    res.json({
+      senders: listSenderProfiles().map((s) => ({ id: s.id, label: s.label })),
+      availability: getSenderAvailability(),
+      defaultRecipient: DIRECTOR_EMAIL_CONTACT,
+    });
   });
 
   app.get("/api/talento/forms", requireTalento, async (_req, res) => {

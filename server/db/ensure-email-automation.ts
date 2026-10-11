@@ -82,6 +82,14 @@ export async function ensureEmailAutomationTables() {
     ALTER TABLE email_automation_settings
     ADD COLUMN IF NOT EXISTS calendar_version INTEGER NOT NULL DEFAULT 0
   `);
+  await db.execute(sql`
+    ALTER TABLE email_automation_settings
+    ADD COLUMN IF NOT EXISTS cc_recipients JSONB NOT NULL DEFAULT '[]'::jsonb
+  `);
+  await db.execute(sql`
+    ALTER TABLE email_automation_settings
+    ADD COLUMN IF NOT EXISTS bcc_recipients JSONB NOT NULL DEFAULT '[]'::jsonb
+  `);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS email_week_templates (

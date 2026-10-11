@@ -39,6 +39,18 @@ export async function ensureIntegrationTables() {
     ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS allow_multiple_submissions BOOLEAN NOT NULL DEFAULT false
   `);
   await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS icon TEXT
+  `);
+  await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS notify_enabled BOOLEAN NOT NULL DEFAULT true
+  `);
+  await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS notify_sender_id TEXT NOT NULL DEFAULT 'contacto'
+  `);
+  await db.execute(sql`
+    ALTER TABLE integration_forms ADD COLUMN IF NOT EXISTS notify_recipients JSONB NOT NULL DEFAULT '[]'::jsonb
+  `);
+  await db.execute(sql`
     CREATE TABLE IF NOT EXISTS integration_responses (
       id SERIAL PRIMARY KEY,
       form_id INTEGER NOT NULL REFERENCES integration_forms(id) ON DELETE CASCADE,

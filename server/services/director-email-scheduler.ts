@@ -74,6 +74,8 @@ export async function sendDirectorTemplateEmail(opts: {
   recipients: string[];
   kind: "weekly" | "test";
   senderId?: string;
+  cc?: string[];
+  bcc?: string[];
 }) {
   const recipients = parseRecipientList(opts.recipients);
   if (recipients.length === 0) {
@@ -97,6 +99,8 @@ export async function sendDirectorTemplateEmail(opts: {
       html: opts.template.bodyHtml,
       replyTo: undefined,
       senderId,
+      cc: opts.cc,
+      bcc: opts.bcc,
     });
 
     const failed = results.filter((r) => !r.ok);
@@ -206,6 +210,8 @@ export async function runDirectorWeeklyEmailJob(now = new Date()): Promise<{
       recipients,
       kind: "weekly",
       senderId: settings.senderId || "contacto",
+      cc: parseRecipientList(settings.ccRecipients),
+      bcc: parseRecipientList(settings.bccRecipients),
     });
     sentAny = true;
   }
