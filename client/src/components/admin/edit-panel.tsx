@@ -321,10 +321,12 @@ export function AdminPanelFooter({
   formId,
   onSubmit,
   extra,
+  disabled,
 }: {
   onCancel: () => void;
   submitLabel: string;
   pending?: boolean;
+  disabled?: boolean;
   /** Si se indica, el botón envía ese formulario (aunque esté fuera del <form>). */
   formId?: string;
   onSubmit?: () => void;
@@ -340,7 +342,7 @@ export function AdminPanelFooter({
         type={formId ? "submit" : "button"}
         form={formId}
         onClick={onSubmit}
-        disabled={pending}
+        disabled={pending || disabled}
         className="h-10 flex-1 rounded-xl bg-[#5b8fd4] text-white shadow-lg shadow-[#5b8fd4]/25 transition hover:bg-[#4a7fc4] active:scale-[0.98]"
       >
         {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

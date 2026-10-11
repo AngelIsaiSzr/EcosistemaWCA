@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, PresenceContext } from "framer-motion";
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -20,7 +20,9 @@ export function PageTransition({ children, id = "default" }: PageTransitionProps
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
       >
-        {children}
+        {/* Las animaciones internas de cada página no deben retener la salida de la ruta:
+            si un componente animado se monta durante la salida, la página destino nunca aparece. */}
+        <PresenceContext.Provider value={null}>{children}</PresenceContext.Provider>
       </motion.div>
     </AnimatePresence>
   );

@@ -1026,6 +1026,48 @@ export default function AdminPage({
     },
   });
 
+  const reorderTestimonialsMutation = useMutation({
+    mutationFn: async (updates: { id: number; order: number }[]) => {
+      await Promise.all(
+        updates.map((item) => apiRequest("PATCH", `/api/testimonials/${item.id}`, { order: item.order })),
+      );
+      return updates;
+    },
+    onMutate: (updates) => {
+      queryClient.setQueryData<typeof testimonials>(["/api/testimonials"], (old) =>
+        old?.map((t) => {
+          const update = updates.find((u) => u.id === t.id);
+          return update ? { ...t, order: update.order } : t;
+        }),
+      );
+      const current = editingTestimonial && updates.find((u) => u.id === editingTestimonial.id);
+      if (current) testimonialForm.setValue("order", current.order);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/testimonials"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "No se pudo reordenar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const moveTestimonial = (index: number, direction: -1 | 1) => {
+    if (!testimonials?.length) return;
+    const sorted = [...testimonials].sort((a, b) => a.order - b.order);
+    const target = index + direction;
+    if (target < 0 || target >= sorted.length) return;
+    [sorted[index], sorted[target]] = [sorted[target], sorted[index]];
+    const updates = sorted
+      .map((t, i) => ({ id: t.id, order: i + 1, prev: t.order }))
+      .filter((t) => t.order !== t.prev)
+      .map(({ id, order }) => ({ id, order }));
+    if (updates.length) reorderTestimonialsMutation.mutate(updates);
+  };
+
   const onTestimonialSubmit = (data: TestimonialFormValues) => {
     if (editingTestimonial) {
       updateTestimonialMutation.mutate(
@@ -1571,9 +1613,10 @@ export default function AdminPage({
   );
   const sortedTeam = [...(teamMembers ?? [])].sort((a, b) => a.order - b.order);
   const visibleTeam = sortedTeam.filter((m) => matchesSearch(search, m.name, m.role));
-  const visibleTestimonials = [...(testimonials ?? [])]
-    .sort((a, b) => a.order - b.order)
-    .filter((t) => matchesSearch(search, t.name, t.courseName, t.text));
+  const sortedTestimonials = [...(testimonials ?? [])].sort((a, b) => a.order - b.order);
+  const visibleTestimonials = sortedTestimonials.filter((t) =>
+    matchesSearch(search, t.name, t.courseName, t.text),
+  );
   const sidePanelOpen =
     (activeTab === "courses" && coursePanelOpen) ||
     (activeTab === "team" && teamPanelOpen) ||
@@ -2247,7 +2290,7 @@ export default function AdminPage({
           {/* Testimonios */}
           <TabsContent value="testimonials" className="mt-0">
             <p className="mb-4 text-sm text-muted-foreground">
-              {testimonials?.length ?? 0} testimonios · da clic en uno para editarlo.
+              {testimonials?.length ?? 0} testimonios · da clic en uno para editarlo. Pasa el cursor para cambiar el orden.
             </p>
             {visibleTestimonials.length > 0 ? (
               <motion.div
@@ -2258,29 +2301,65 @@ export default function AdminPage({
                 )}
               >
                 <AnimatePresence>
-                  {visibleTestimonials.map((testimonial, i) => (
-                    <AdminTile
-                      key={testimonial.id}
-                      index={i}
-                      selected={testimonialPanelOpen && editingTestimonial?.id === testimonial.id}
-                      onClick={() => openTestimonial(testimonial)}
-                      className="p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={testimonial.image}
-                          alt={testimonial.name}
-                          className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-border transition duration-300 group-hover:ring-[#5b8fd4]/60"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="truncate font-semibold">{testimonial.name}</h4>
-                          <p className="truncate text-xs text-[#5b8fd4]">{testimonial.courseName}</p>
+                  {visibleTestimonials.map((testimonial, i) => {
+                    const index = sortedTestimonials.indexOf(testimonial);
+                    return (
+                      <AdminTile
+                        key={testimonial.id}
+                        index={i}
+                        selected={testimonialPanelOpen && editingTestimonial?.id === testimonial.id}
+                        onClick={() => openTestimonial(testimonial)}
+                        className="p-4 pr-11"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative shrink-0">
+                            <img
+                              src={testimonial.image}
+                              alt={testimonial.name}
+                              className="h-11 w-11 rounded-full object-cover ring-2 ring-border transition duration-300 group-hover:ring-[#5b8fd4]/60"
+                            />
+                            <span className="absolute -left-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#5b8fd4] px-1 text-[10px] font-bold text-white shadow ring-2 ring-card">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="truncate font-semibold">{testimonial.name}</h4>
+                            <p className="truncate text-xs text-[#5b8fd4]">{testimonial.courseName}</p>
+                          </div>
+                          <RatingStars value={testimonial.rating} />
                         </div>
-                        <RatingStars value={testimonial.rating} />
-                      </div>
-                      <p className="mt-3 line-clamp-2 text-sm italic text-muted-foreground">“{testimonial.text}”</p>
-                    </AdminTile>
-                  ))}
+                        <p className="mt-3 line-clamp-2 text-sm italic text-muted-foreground">“{testimonial.text}”</p>
+                        {!search && (
+                          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                            <button
+                              type="button"
+                              aria-label="Subir"
+                              disabled={index === 0 || reorderTestimonialsMutation.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveTestimonial(index, -1);
+                              }}
+                              className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-foreground transition hover:bg-[#5b8fd4] hover:text-white disabled:opacity-30"
+                            >
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Bajar"
+                              disabled={index === sortedTestimonials.length - 1 || reorderTestimonialsMutation.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveTestimonial(index, 1);
+                              }}
+                              className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-foreground transition hover:bg-[#5b8fd4] hover:text-white disabled:opacity-30"
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </AdminTile>
+                    );
+                  })}
                 </AnimatePresence>
               </motion.div>
             ) : (
@@ -3128,29 +3207,6 @@ export default function AdminPage({
                         <div className="flex justify-end text-[11px] text-muted-foreground">
                           {(field.value ?? "").length} caracteres
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={testimonialForm.control}
-                    name="order"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Orden</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="1"
-                            {...field}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value);
-                              field.onChange(value < 1 ? 1 : value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>Determina el orden de aparición (menor número = aparece antes)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useRoute } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   Check,
@@ -11,7 +12,6 @@ import {
   Loader2,
   Plus,
   Presentation,
-  Save,
   Trash2,
 } from "lucide-react";
 import { Course, Module } from "@shared/schema";
@@ -31,6 +31,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  AdminEditPanel,
+  AdminEmptyState,
+  AdminPanelBody,
+  AdminPanelFooter,
+  AdminPanelHeader,
+  AdminPanelSection,
+  AdminSearchInput,
+  AdminTile,
+  matchesSearch,
+} from "@/components/admin/edit-panel";
 import { cn } from "@/lib/utils";
 
 type Draft = {
@@ -114,13 +125,25 @@ function materialStatus(m: Module) {
   return { hasVideo, hasSlides, hasResources, parts, count, ready: count > 0 };
 }
 
+const MATERIAL_CHIPS = [
+  { key: "hasVideo", label: "Vídeo", icon: Film },
+  { key: "hasSlides", label: "Slides", icon: Presentation },
+  { key: "hasResources", label: "Recursos", icon: FolderOpen },
+] as const;
+
+const FORM_ID = "module-content-form";
+
+type PendingAction = { type: "select"; id: number } | { type: "close" } | null;
+
 export default function AdminProgramContentPage() {
   const [, params] = useRoute("/admin/programas/:slug/contenido");
   const slug = params?.slug ?? "";
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [pendingModuleId, setPendingModuleId] = useState<number | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [search, setSearch] = useState("");
 
   const { data: courses, isLoading: loadingCourses } = useQuery<Course[]>({
     queryKey: ["/api/programs"],
@@ -142,12 +165,6 @@ export default function AdminProgramContentPage() {
   });
 
   const selected = modules.find((m) => m.id === selectedId) ?? null;
-
-  useEffect(() => {
-    if (modules.length > 0 && selectedId == null) {
-      setSelectedId(modules[0].id);
-    }
-  }, [modules, selectedId]);
 
   useEffect(() => {
     if (selected) setDraft(moduleToDraft(selected));
@@ -227,6 +244,36 @@ export default function AdminProgramContentPage() {
     });
   };
 
+  const openModule = (id: number) => {
+    if (panelOpen && id === selectedId) return;
+    if (dirty) {
+      setPendingAction({ type: "select", id });
+      return;
+    }
+    setSelectedId(id);
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    if (dirty) {
+      setPendingAction({ type: "close" });
+      return;
+    }
+    setPanelOpen(false);
+  };
+
+  const discardAndContinue = () => {
+    if (!pendingAction) return;
+    if (selected) setDraft(moduleToDraft(selected));
+    if (pendingAction.type === "select") {
+      setSelectedId(pendingAction.id);
+      setPanelOpen(true);
+    } else {
+      setPanelOpen(false);
+    }
+    setPendingAction(null);
+  };
+
   if (loadingCourses || loadingModules) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -251,355 +298,385 @@ export default function AdminProgramContentPage() {
     );
   }
 
+  const sortedModules = [...modules].sort((a, b) => a.order - b.order);
+  const visibleModules = sortedModules.filter((m) => matchesSearch(search, m.title, m.description));
   const readyCount = modules.filter((m) => materialStatus(m).ready).length;
+  const readyPercent = modules.length ? Math.round((readyCount / modules.length) * 100) : 0;
+  const learnUrl = `/programs/${course.slug}/learn`;
+  const selectedIndex = selected ? sortedModules.findIndex((m) => m.id === selected.id) : -1;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <>
       <Helmet>
         <title>Contenido · {course.title} | Admin WCA</title>
       </Helmet>
-      <Navbar />
-      <main className="container mx-auto px-4 pb-16 pt-24 flex-1 max-w-6xl">
-        <div className="mb-8 space-y-4">
-          <Link
-            href="/admin/programas"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1.5"
+
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 pb-16 pt-24">
+          <div
+            className={cn(
+              "transition-[padding] duration-300 ease-out",
+              panelOpen && "lg:pr-[min(37rem,45vw)]",
+            )}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Programas
-          </Link>
-
-          <div className="flex flex-col md:flex-row md:items-stretch gap-4">
-            <div className="flex-1 min-w-0 space-y-2">
-              <h1 className="text-2xl md:text-3xl font-heading font-bold">
-                Contenido del visor
-              </h1>
-              <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
-                Configura el vídeo de Drive, la presentación de Google Slides y los recursos de
-                cada clase. Esto alimenta{" "}
-                <a
-                  href={`/programs/${course.slug}/learn`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline-offset-2 hover:underline inline-flex items-center gap-1"
-                >
-                  /programs/{course.slug}/learn
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-                .
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-xl border bg-card p-3 md:p-4 shrink-0 self-start">
-              <div className="w-24 h-16 rounded-lg overflow-hidden border bg-muted">
-                <img
-                  src={course.image}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div>
-                <p className="font-medium text-sm">{course.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {modules.length} clases · {readyCount} con material
+            <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">
+                  <Link href="/admin" className="hover:text-foreground">
+                    Inicio
+                  </Link>
+                  {" › "}
+                  <Link href="/admin/programas" className="hover:text-foreground">
+                    Programas
+                  </Link>
+                  {" › "}
+                  Contenido
                 </p>
-                <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs">
+                <h1 className="mt-1 font-heading text-4xl font-bold">Contenido del visor</h1>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Configura el vídeo de Drive, la presentación de Google Slides y los recursos de cada clase.
+                  Esto alimenta{" "}
                   <a
-                    href={`/programs/${course.slug}/learn`}
+                    href={learnUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[#5b8fd4] underline-offset-2 hover:underline"
                   >
-                    Abrir visor
-                    <ExternalLink className="h-3 w-3 ml-1" />
+                    {learnUrl}
+                    <ExternalLink className="h-3 w-3" />
                   </a>
+                  .
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <AdminSearchInput value={search} onChange={setSearch} placeholder="Buscar clase…" />
+                <Button asChild className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]">
+                  <a href={learnUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Abrir visor
+                  </a>
+                </Button>
+                <Button variant="outline" className="h-10 rounded-xl" asChild>
+                  <Link href="/admin/programas">
+                    <ArrowLeft className="h-4 w-4" />
+                    Volver a programas
+                  </Link>
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
 
-        {modules.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-10 text-center space-y-3">
-            <Film className="h-10 w-10 mx-auto text-muted-foreground" />
-            <p className="font-medium">Este programa aún no tiene módulos</p>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Crea los módulos desde la sección “Módulos” en Programas y vuelve aquí para pegar
-              los enlaces de cada clase.
-            </p>
-            <Button asChild variant="outline">
-              <Link href="/admin/programas">Ir a programas</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start">
-            <aside className="rounded-xl border bg-card flex flex-col overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]">
-              <div className="px-4 py-3 border-b bg-muted/40 shrink-0">
-                <p className="text-sm font-medium">Clases / módulos</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {modules.length} en total
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="mb-6 flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center"
+            >
+              <div className="h-16 w-28 shrink-0 overflow-hidden rounded-xl border bg-muted">
+                <img src={course.image} alt={course.title} className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-heading text-lg font-semibold">{course.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {modules.length} clases · {readyCount} con material
                 </p>
+                <div className="mt-2 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    className="h-full rounded-full bg-[#5b8fd4]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${readyPercent}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                  />
+                </div>
               </div>
-              <div className="overflow-y-auto overscroll-contain p-2 space-y-1 max-h-[42vh] lg:max-h-none lg:flex-1">
-                {modules.map((m, i) => {
-                  const status = materialStatus(m);
-                  const isActive = m.id === selectedId;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        if (m.id === selectedId) return;
-                        if (dirty) {
-                          setPendingModuleId(m.id);
-                          return;
-                        }
-                        setSelectedId(m.id);
-                      }}
-                      className={cn(
-                        "w-full text-left rounded-lg px-3 py-2.5 transition-colors",
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium leading-snug">
-                          {i + 1}. {m.title}
-                        </span>
-                        {status.ready ? (
-                          <Check
-                            className={cn(
-                              "h-4 w-4 shrink-0 mt-0.5",
-                              isActive ? "opacity-90" : "text-green-600 dark:text-green-500",
-                            )}
-                          />
-                        ) : null}
-                      </div>
-                      <p
-                        className={cn(
-                          "text-xs mt-1",
-                          isActive ? "text-primary-foreground/75" : "text-muted-foreground",
-                        )}
-                      >
-                        {status.ready
-                          ? [
-                              status.hasVideo &&
-                                (status.parts > 1
-                                  ? `Vídeo (${status.parts})`
-                                  : "Vídeo"),
-                              status.hasSlides && "Slides",
-                              status.hasResources && "Recursos",
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")
-                          : "Sin enlaces"}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </aside>
+              <span className="self-start rounded-full bg-[#5b8fd4]/10 px-3 py-1 text-sm font-semibold text-[#5b8fd4] sm:self-center">
+                {readyPercent}% listo
+              </span>
+            </motion.div>
 
-            <section className="rounded-xl border bg-card overflow-hidden">
-              {!draft || !selected ? (
-                <p className="text-muted-foreground text-sm p-6">Selecciona una clase.</p>
-              ) : (
-                <>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 md:px-6 py-4 border-b bg-muted/20">
-                    <div className="min-w-0">
-                      <h2 className="text-lg md:text-xl font-semibold truncate">
-                        Editar clase
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        Orden {selected.order} · {selected.duration}h · {selected.difficulty}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => saveMutation.mutate()}
-                      disabled={!dirty || saveMutation.isPending}
-                      className="shrink-0"
-                    >
-                      {saveMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Guardar clase
-                    </Button>
-                  </div>
-
-                  <div className="p-5 md:p-6 space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="title">Título</Label>
-                        <Input
-                          id="title"
-                          value={draft.title}
-                          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="description">Descripción</Label>
-                        <Textarea
-                          id="description"
-                          value={draft.description}
-                          onChange={(e) =>
-                            setDraft({ ...draft, description: e.target.value })
-                          }
-                          className="min-h-[88px]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="rounded-xl border p-4 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                              <Film className="h-4 w-4 text-primary" />
-                              Grabaciones de la clase
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Si la clase se cortó en varias tomas, agrega una parte por cada
-                              enlace de Drive.
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={addVideoPart}
-                            className="shrink-0"
-                          >
-                            <Plus className="h-4 w-4 mr-1.5" />
-                            Añadir parte
-                          </Button>
-                        </div>
-
-                        <div className="space-y-3">
-                          {draft.videoParts.map((part, index) => (
-                            <div
-                              key={`video-part-${index}`}
-                              className="rounded-lg border bg-muted/20 p-3 space-y-3"
+            {modules.length === 0 ? (
+              <AdminEmptyState>
+                <Film className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="font-medium text-foreground">Este programa aún no tiene módulos</p>
+                <p className="mx-auto mt-1 max-w-md">
+                  Crea los módulos desde la pestaña “Módulos” del programa y vuelve aquí para pegar los enlaces de
+                  cada clase.
+                </p>
+                <Button asChild variant="outline" className="mt-4 rounded-xl">
+                  <Link href="/admin/programas">Ir a programas</Link>
+                </Button>
+              </AdminEmptyState>
+            ) : visibleModules.length === 0 ? (
+              <AdminEmptyState>No hay clases que coincidan con tu búsqueda.</AdminEmptyState>
+            ) : (
+              <>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Da clic en una clase para editar sus enlaces.
+                </p>
+                <motion.div
+                  layout
+                  className={cn(
+                    "grid grid-cols-1 gap-3 sm:grid-cols-2",
+                    panelOpen ? "xl:grid-cols-2 2xl:grid-cols-3" : "lg:grid-cols-3 2xl:grid-cols-4",
+                  )}
+                >
+                  <AnimatePresence>
+                    {visibleModules.map((m, i) => {
+                      const status = materialStatus(m);
+                      const number = sortedModules.indexOf(m) + 1;
+                      return (
+                        <AdminTile
+                          key={m.id}
+                          index={i}
+                          selected={panelOpen && m.id === selectedId}
+                          onClick={() => openModule(m.id)}
+                          className="flex flex-col gap-3 p-4"
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold transition-colors",
+                                status.ready
+                                  ? "bg-[#5b8fd4] text-white"
+                                  : "bg-muted text-muted-foreground",
+                              )}
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <Label className="text-xs text-muted-foreground">
-                                  Grabación {index + 1}
-                                </Label>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeVideoPart(index)}
-                                  aria-label={`Quitar parte ${index + 1}`}
-                                  disabled={
-                                    draft.videoParts.length === 1 && !part.url.trim()
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
-                                <div className="space-y-1.5">
-                                  <Label htmlFor={`video-label-${index}`}>Etiqueta</Label>
-                                  <Input
-                                    id={`video-label-${index}`}
-                                    placeholder={`Parte ${index + 1}`}
-                                    value={part.label}
-                                    onChange={(e) =>
-                                      updateVideoPart(index, { label: e.target.value })
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <Label htmlFor={`video-url-${index}`}>
-                                    Enlace (Drive o MP4)
-                                  </Label>
-                                  <Input
-                                    id={`video-url-${index}`}
-                                    placeholder="https://drive.google.com/file/d/…/view"
-                                    value={part.url}
-                                    onChange={(e) =>
-                                      updateVideoPart(index, { url: e.target.value })
-                                    }
-                                  />
-                                </div>
-                              </div>
-                              <UrlHint url={part.url} kind="video" />
+                              {number}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="line-clamp-2 font-medium leading-snug">{m.title}</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {m.duration}h · {m.difficulty}
+                              </p>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Presentation className="h-4 w-4 text-primary" />
-                          Presentación (Google Slides)
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="presentationUrl">
-                            Enlace de Google Slides
-                          </Label>
-                          <Input
-                            id="presentationUrl"
-                            placeholder="https://docs.google.com/presentation/d/…/edit"
-                            value={draft.presentationUrl}
-                            onChange={(e) =>
-                              setDraft({ ...draft, presentationUrl: e.target.value })
-                            }
-                          />
-                          <UrlHint url={draft.presentationUrl} kind="slides" />
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <FolderOpen className="h-4 w-4 text-primary" />
-                          Recursos
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="resourcesUrl">
-                            Carpeta Drive o link de descarga
-                          </Label>
-                          <Input
-                            id="resourcesUrl"
-                            placeholder="https://drive.google.com/drive/folders/…"
-                            value={draft.resourcesUrl}
-                            onChange={(e) =>
-                              setDraft({ ...draft, resourcesUrl: e.target.value })
-                            }
-                          />
-                          <UrlHint url={draft.resourcesUrl} kind="folder" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {dirty && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Hay cambios sin guardar en esta clase.
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </section>
+                            {status.ready && (
+                              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {MATERIAL_CHIPS.map(({ key, label, icon: Icon }) => {
+                              const on = status[key];
+                              return (
+                                <span
+                                  key={key}
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
+                                    on
+                                      ? "bg-[#5b8fd4]/[0.12] text-[#5b8fd4] ring-1 ring-[#5b8fd4]/25"
+                                      : "bg-muted/60 text-muted-foreground/70",
+                                  )}
+                                >
+                                  <Icon className="h-3 w-3" />
+                                  {key === "hasVideo" && on && status.parts > 1 ? `${label} (${status.parts})` : label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </AdminTile>
+                      );
+                    })}
+                  </AnimatePresence>
+                </motion.div>
+              </>
+            )}
           </div>
-        )}
-      </main>
+        </main>
+      </div>
+
+      <AdminEditPanel open={panelOpen && !!selected} onClose={closePanel} widthClass="lg:w-[min(36rem,43vw)]">
+        {selected && draft ? (
+          <>
+            <AdminPanelHeader
+              media={
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#5b8fd4] text-sm font-semibold text-white">
+                  {selectedIndex + 1}
+                </span>
+              }
+              title={selected.title || "Clase sin título"}
+              subtitle={`Orden ${selected.order} · ${selected.duration}h · ${selected.difficulty}`}
+              onClose={closePanel}
+              actions={[
+                {
+                  label: "Abrir visor",
+                  icon: ExternalLink,
+                  onClick: () => window.open(learnUrl, "_blank", "noopener,noreferrer"),
+                },
+              ]}
+            />
+            <AdminPanelBody contentKey={selected.id}>
+              <form
+                id={FORM_ID}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (dirty) saveMutation.mutate();
+                }}
+                className="space-y-5"
+              >
+                <AdminPanelSection title="Clase">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título</Label>
+                    <Input
+                      id="title"
+                      value={draft.title}
+                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <Textarea
+                      id="description"
+                      value={draft.description}
+                      onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                      className="min-h-[88px]"
+                    />
+                  </div>
+                </AdminPanelSection>
+
+                <AdminPanelSection
+                  title="Grabaciones de la clase"
+                  action={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addVideoPart}
+                      className="h-7 rounded-lg px-2.5 text-xs"
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      Añadir parte
+                    </Button>
+                  }
+                >
+                  <p className="-mt-2 text-xs text-muted-foreground">
+                    Si la clase se cortó en varias tomas, agrega una parte por cada enlace de Drive.
+                  </p>
+                  <div className="space-y-3">
+                    <AnimatePresence initial={false}>
+                      {draft.videoParts.map((part, index) => (
+                        <motion.div
+                          key={`video-part-${index}`}
+                          layout
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.22 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-3 rounded-2xl border bg-muted/20 p-3.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                <Film className="h-3.5 w-3.5 text-[#5b8fd4]" />
+                                Grabación {index + 1}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeVideoPart(index)}
+                                aria-label={`Quitar parte ${index + 1}`}
+                                disabled={draft.videoParts.length === 1 && !part.url.trim()}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`video-label-${index}`}>Etiqueta</Label>
+                                <Input
+                                  id={`video-label-${index}`}
+                                  placeholder={`Parte ${index + 1}`}
+                                  value={part.label}
+                                  onChange={(e) => updateVideoPart(index, { label: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`video-url-${index}`}>Enlace (Drive o MP4)</Label>
+                                <Input
+                                  id={`video-url-${index}`}
+                                  placeholder="https://drive.google.com/file/d/…/view"
+                                  value={part.url}
+                                  onChange={(e) => updateVideoPart(index, { url: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <UrlHint url={part.url} kind="video" />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </AdminPanelSection>
+
+                <AdminPanelSection title="Presentación (Google Slides)">
+                  <div className="space-y-2">
+                    <Label htmlFor="presentationUrl" className="inline-flex items-center gap-1.5">
+                      <Presentation className="h-3.5 w-3.5 text-[#5b8fd4]" />
+                      Enlace de Google Slides
+                    </Label>
+                    <Input
+                      id="presentationUrl"
+                      placeholder="https://docs.google.com/presentation/d/…/edit"
+                      value={draft.presentationUrl}
+                      onChange={(e) => setDraft({ ...draft, presentationUrl: e.target.value })}
+                    />
+                    <UrlHint url={draft.presentationUrl} kind="slides" />
+                  </div>
+                </AdminPanelSection>
+
+                <AdminPanelSection title="Recursos">
+                  <div className="space-y-2">
+                    <Label htmlFor="resourcesUrl" className="inline-flex items-center gap-1.5">
+                      <FolderOpen className="h-3.5 w-3.5 text-[#5b8fd4]" />
+                      Carpeta Drive o link de descarga
+                    </Label>
+                    <Input
+                      id="resourcesUrl"
+                      placeholder="https://drive.google.com/drive/folders/…"
+                      value={draft.resourcesUrl}
+                      onChange={(e) => setDraft({ ...draft, resourcesUrl: e.target.value })}
+                    />
+                    <UrlHint url={draft.resourcesUrl} kind="folder" />
+                  </div>
+                </AdminPanelSection>
+              </form>
+            </AdminPanelBody>
+            <AnimatePresence initial={false}>
+              {dirty && (
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden px-5 text-xs text-amber-600 dark:text-amber-400"
+                >
+                  <span className="block pb-2">Hay cambios sin guardar en esta clase.</span>
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <AdminPanelFooter
+              onCancel={closePanel}
+              formId={FORM_ID}
+              pending={saveMutation.isPending}
+              disabled={!dirty}
+              submitLabel="Guardar clase"
+            />
+          </>
+        ) : null}
+      </AdminEditPanel>
 
       <ConfirmDialog
-        open={pendingModuleId != null}
-        onOpenChange={(open) => !open && setPendingModuleId(null)}
+        open={pendingAction != null}
+        onOpenChange={(open) => !open && setPendingAction(null)}
         title="Cambios sin guardar"
-        description="Tienes cambios sin guardar en esta clase. Si cambias de clase ahora, se perderán."
+        description={
+          pendingAction?.type === "close"
+            ? "Tienes cambios sin guardar en esta clase. Si cierras ahora, se perderán."
+            : "Tienes cambios sin guardar en esta clase. Si cambias de clase ahora, se perderán."
+        }
         confirmLabel="Descartar cambios"
         destructive
-        onConfirm={() => {
-          if (pendingModuleId != null) setSelectedId(pendingModuleId);
-          setPendingModuleId(null);
-        }}
+        onConfirm={discardAndContinue}
       />
-    </div>
+    </>
   );
 }
