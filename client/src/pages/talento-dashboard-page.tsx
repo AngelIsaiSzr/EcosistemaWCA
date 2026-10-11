@@ -32,6 +32,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Navbar from "@/components/layout/navbar";
 import { FormIconPicker } from "@/components/talento/form-icon-picker";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DEFAULT_INTEGRATION_SLUG, DEFAULT_MIEMBROS_SLUG } from "@shared/integration-form";
 import { IntegrationForm } from "@shared/schema";
 
@@ -44,6 +45,7 @@ export default function TalentoDashboardPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [sort, setSort] = useState<SortKey>("pinned");
+  const [toDelete, setToDelete] = useState<{ slug: string; title: string } | null>(null);
 
   const { data: forms = [], isLoading: formsLoading } = useQuery<FormListItem[]>({
     queryKey: ["/api/talento/forms"],
@@ -287,15 +289,7 @@ export default function TalentoDashboardPage() {
                           form.slug !== DEFAULT_MIEMBROS_SLUG && (
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `¿Eliminar “${form.title}”? Esta acción no se puede deshacer.`,
-                                )
-                              ) {
-                                deleteMutation.mutate(form.slug);
-                              }
-                            }}
+                            onClick={() => setToDelete({ slug: form.slug, title: form.title })}
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                           </DropdownMenuItem>
@@ -309,6 +303,19 @@ export default function TalentoDashboardPage() {
           )}
         </main>
       </div>
+
+      <ConfirmDialog
+        open={toDelete != null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Eliminar formulario"
+        description={`¿Eliminar “${toDelete?.title ?? ""}”? Se borrarán también sus respuestas. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => {
+          if (toDelete) deleteMutation.mutate(toDelete.slug);
+          setToDelete(null);
+        }}
+      />
     </>
   );
 }

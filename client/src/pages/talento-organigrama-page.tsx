@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
 import { ImageUrlInput } from "@/components/media/image-url-input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ export default function TalentoOrganigramaPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [addingUnder, setAddingUnder] = useState<OrgPerson | null>(null);
+  const [toDelete, setToDelete] = useState<{ id: number; name: string } | null>(null);
   const [newMember, setNewMember] = useState({
     name: "",
     roleTitle: "",
@@ -353,11 +355,7 @@ export default function TalentoOrganigramaPage() {
                         size="icon"
                         variant="outline"
                         className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`¿Eliminar a ${selected.name}?`)) {
-                            deleteMutation.mutate(selected.id);
-                          }
-                        }}
+                        onClick={() => setToDelete({ id: selected.id, name: selected.name })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -490,6 +488,19 @@ export default function TalentoOrganigramaPage() {
           </div>
         </main>
       </div>
+
+      <ConfirmDialog
+        open={toDelete != null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Eliminar miembro"
+        description={`¿Eliminar a ${toDelete?.name ?? ""} del organigrama? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => {
+          if (toDelete) deleteMutation.mutate(toDelete.id);
+          setToDelete(null);
+        }}
+      />
     </>
   );
 }

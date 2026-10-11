@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 type Draft = {
@@ -119,6 +120,7 @@ export default function AdminProgramContentPage() {
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [pendingModuleId, setPendingModuleId] = useState<number | null>(null);
 
   const { data: courses, isLoading: loadingCourses } = useQuery<Course[]>({
     queryKey: ["/api/programs"],
@@ -346,10 +348,9 @@ export default function AdminProgramContentPage() {
                       key={m.id}
                       type="button"
                       onClick={() => {
-                        if (
-                          dirty &&
-                          !window.confirm("Hay cambios sin guardar. ¿Descartarlos?")
-                        ) {
+                        if (m.id === selectedId) return;
+                        if (dirty) {
+                          setPendingModuleId(m.id);
                           return;
                         }
                         setSelectedId(m.id);
@@ -586,6 +587,19 @@ export default function AdminProgramContentPage() {
           </div>
         )}
       </main>
+
+      <ConfirmDialog
+        open={pendingModuleId != null}
+        onOpenChange={(open) => !open && setPendingModuleId(null)}
+        title="Cambios sin guardar"
+        description="Tienes cambios sin guardar en esta clase. Si cambias de clase ahora, se perderán."
+        confirmLabel="Descartar cambios"
+        destructive
+        onConfirm={() => {
+          if (pendingModuleId != null) setSelectedId(pendingModuleId);
+          setPendingModuleId(null);
+        }}
+      />
     </div>
   );
 }

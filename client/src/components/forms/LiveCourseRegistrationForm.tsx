@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 // Define the Zod schema for the form
 const liveRegistrationFormSchema = z.object({
@@ -65,6 +66,7 @@ export function LiveCourseRegistrationForm({ course, onSuccessRegistration }: Li
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<LiveRegistrationFormValues>({
     resolver: zodResolver(liveRegistrationFormSchema),
@@ -120,7 +122,11 @@ export function LiveCourseRegistrationForm({ course, onSuccessRegistration }: Li
       queryClient.invalidateQueries({ queryKey: ['/api/live-course-registrations', user?.id, course.id] });
     },
     onError: (error) => {
-      alert(error.message);
+      toast({
+        title: 'No se pudo completar el registro',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 

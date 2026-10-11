@@ -294,8 +294,9 @@ function PersonCard({
       }}
       className={cn(
         "absolute flex select-none flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.08)]",
+        "dark:bg-slate-900 dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
         "outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
-        "hover:shadow-[0_14px_36px_rgba(15,23,42,0.11)]",
+        "hover:shadow-[0_14px_36px_rgba(15,23,42,0.11)] dark:hover:shadow-[0_14px_36px_rgba(0,0,0,0.6)]",
         "[&_*]:select-none",
         node.hasChildren ? "cursor-pointer" : "cursor-default",
       )}
@@ -316,7 +317,7 @@ function PersonCard({
       {leader ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 py-2 text-center">
           <div
-            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
+            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 dark:bg-slate-800"
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
@@ -338,15 +339,15 @@ function PersonCard({
             )}
           </div>
 
-          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500">
             {directionLabel}
           </p>
-          <p className="mt-0.5 text-[13px] font-bold leading-snug text-slate-900">{p.name}</p>
+          <p className="mt-0.5 text-[13px] font-bold leading-snug text-slate-900 dark:text-slate-50">{p.name}</p>
           <p className="mt-0.5 text-[11px] font-medium leading-snug" style={{ color }}>
             {p.roleTitle}
           </p>
 
-          <div className="mt-1 w-full space-y-0.5 text-[10px] leading-snug text-slate-500">
+          <div className="mt-1 w-full space-y-0.5 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
             {p.email && (
               <p className="flex items-start justify-center gap-1" title={p.email}>
                 <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
@@ -367,7 +368,7 @@ function PersonCard({
           style={{ borderLeftWidth: 4, borderLeftColor: color }}
         >
           <div
-            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2"
+            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 dark:bg-slate-800"
             style={{ ["--tw-ring-color" as string]: `${color}55` }}
           >
             {p.photoUrl ? (
@@ -390,24 +391,24 @@ function PersonCard({
           </div>
 
           <div className="min-w-0 flex-1 pr-5">
-            <p className="text-[13px] font-bold leading-snug text-slate-900">{p.name}</p>
+            <p className="text-[13px] font-bold leading-snug text-slate-900 dark:text-slate-50">{p.name}</p>
             <p className="mt-0.5 text-[11px] font-medium leading-snug" style={{ color }}>
               {p.roleTitle}
             </p>
             {p.email && (
-              <p className="mt-0.5 flex items-start gap-1 text-[10px] leading-snug text-slate-500" title={p.email}>
+              <p className="mt-0.5 flex items-start gap-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400" title={p.email}>
                 <Mail className="mt-0.5 h-3 w-3 shrink-0 opacity-70" />
                 <span className="break-all">{p.email}</span>
               </p>
             )}
             {p.phone && (
-              <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-500">
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                 <Phone className="h-3 w-3 shrink-0 opacity-70" />
                 <span>{p.phone}</span>
               </p>
             )}
             {p.socialLinks?.slice(0, 1).map((s) => (
-              <p key={s.id} className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-500">
+              <p key={s.id} className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                 <Link2 className="h-3 w-3 shrink-0 opacity-70" />
                 <span className="truncate">{s.label}</span>
               </p>
@@ -663,7 +664,7 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
     setScale(next);
     setPan({
       x: (el.clientWidth - contentW * next) / 2 - minX * next,
-      y: 28 - minY * next,
+      y: Math.max(28, (el.clientHeight - contentH * next) / 2) - minY * next,
     });
   }, [nodes]);
 
@@ -711,27 +712,41 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
   return (
     <div
       ref={shellRef}
-      className="relative flex h-[100dvh] select-none flex-col overflow-hidden bg-[#f4f7fb]"
+      className="relative flex h-[100dvh] select-none flex-col overflow-hidden bg-[#f4f7fb] dark:bg-[#0b1220]"
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0 opacity-70 dark:hidden"
         style={{
           backgroundImage:
             "linear-gradient(to right, rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.18) 1px, transparent 1px)",
           backgroundSize: "28px 28px",
         }}
       />
+      <div
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(148,163,184,0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.07) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
 
-      <header className="relative z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur-md md:gap-4 md:px-5 md:py-3.5">
+      <header className="relative z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80 md:gap-4 md:px-5 md:py-3.5">
         <div className="min-w-0 flex-1">
-          <h1 className="font-heading text-lg font-bold tracking-tight text-slate-900 sm:text-xl md:text-2xl lg:text-3xl">
+          <h1 className="font-heading text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl md:text-2xl lg:text-3xl">
             {title ?? "Organigrama Oficial"}
           </h1>
-          <p className="mt-0.5 hidden text-sm text-slate-500 md:block">
+          <p className="mt-0.5 hidden text-sm text-slate-500 dark:text-slate-400 md:block">
             {subtitle ?? "Estructura Organizativa Institucional del Ecosistema WCA"}
           </p>
         </div>
+        <img
+          src="/logo-wca.png"
+          alt="Ecosistema WCA"
+          className="h-8 w-8 shrink-0 object-contain md:hidden"
+          draggable={false}
+        />
         <div className="hidden shrink-0 items-center self-center md:flex">
           <img
             src="/media/logo-wca-oficial-transparent.png"
@@ -795,11 +810,11 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
 
       <div
         data-org-ui
-        className="absolute bottom-5 right-5 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur"
+        className="absolute bottom-5 right-5 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
       >
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => setScale((s) => clampScale(s - 0.1))}
           aria-label="Alejar"
         >
@@ -821,15 +836,15 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
                   setEditingZoom(false);
                 }
               }}
-              className="h-8 w-14 rounded-md border border-slate-200 bg-white px-1 text-center text-xs font-semibold text-slate-700 outline-none ring-2 ring-[#4086E7]/30"
+              className="h-8 w-14 rounded-md border border-slate-200 bg-white px-1 text-center text-xs font-semibold text-slate-700 outline-none ring-2 ring-[#4086E7]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
-            <span className="pr-1 text-xs font-semibold text-slate-500">%</span>
+            <span className="pr-1 text-xs font-semibold text-slate-500 dark:text-slate-400">%</span>
           </form>
         ) : (
           <button
             type="button"
             title="Clic para editar zoom"
-            className="min-w-[3.25rem] rounded-md px-1 py-1 text-center text-xs font-semibold text-slate-600 hover:bg-slate-100"
+            className="min-w-[3.25rem] rounded-md px-1 py-1 text-center text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={() => {
               setZoomDraft(String(Math.round(scale * 100)));
               setEditingZoom(true);
@@ -841,7 +856,7 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
 
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => setScale((s) => clampScale(s + 0.1))}
           aria-label="Acercar"
         >
@@ -849,7 +864,7 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
         </button>
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={toggleFullscreen}
           aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
@@ -858,7 +873,7 @@ export function OrgChartCanvas({ people, title, subtitle }: Props) {
         </button>
       </div>
 
-      <p className="pointer-events-none absolute bottom-5 left-5 z-20 hidden select-none text-xs text-slate-400 md:block">
+      <p className="pointer-events-none absolute bottom-5 left-5 z-20 hidden select-none text-xs text-slate-400 dark:text-slate-500 md:block">
         Arrastra para mover · scroll para zoom · clic en % para editar · clic en tarjeta para abrir equipo
       </p>
     </div>

@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import Navbar from "@/components/layout/navbar";
 
 type SortKey = "pinned" | "name" | "views" | "newest" | "direction";
@@ -46,6 +47,7 @@ export default function AdminCardsPage() {
   const { toast } = useToast();
   const [sort, setSort] = useState<SortKey>("pinned");
   const [directionFilter, setDirectionFilter] = useState<string>("all");
+  const [toDelete, setToDelete] = useState<{ id: number; name: string } | null>(null);
 
   const { data: cards = [], isLoading: cardsLoading } = useQuery<PresentationCard[]>({
     queryKey: ["/api/cards"],
@@ -328,11 +330,7 @@ export default function AdminCardsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => {
-                                  if (confirm(`¿Eliminar la tarjeta de ${card.name}?`)) {
-                                    deleteMutation.mutate(card.id);
-                                  }
-                                }}
+                                onClick={() => setToDelete({ id: card.id, name: card.name })}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar
@@ -349,6 +347,19 @@ export default function AdminCardsPage() {
           )}
         </main>
       </div>
+
+      <ConfirmDialog
+        open={toDelete != null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Eliminar tarjeta"
+        description={`¿Eliminar la tarjeta de ${toDelete?.name ?? ""}? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => {
+          if (toDelete) deleteMutation.mutate(toDelete.id);
+          setToDelete(null);
+        }}
+      />
     </>
   );
 }

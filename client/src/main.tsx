@@ -6,6 +6,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import { getStoredTheme, setStoredTheme } from "@/lib/theme-storage";
 
 // Función para aplicar el tema
 const applyTheme = (theme: string) => {
@@ -16,17 +17,17 @@ const applyTheme = (theme: string) => {
 
 // Inicializar el tema antes de renderizar la aplicación
 const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('theme');
+  const savedTheme = getStoredTheme();
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   
   if (savedTheme) {
     applyTheme(savedTheme);
   } else if (prefersDark) {
     applyTheme('dark');
-    localStorage.setItem('theme', 'dark');
+    setStoredTheme('dark');
   } else {
     applyTheme('light');
-    localStorage.setItem('theme', 'light');
+    setStoredTheme('light');
   }
 };
 

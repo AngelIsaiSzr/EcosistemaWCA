@@ -24,7 +24,7 @@ export default function OrganigramaPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb]">
+      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb] dark:bg-[#0b1220]">
         <LoadingSpinner size="lg" text="Cargando organigrama..." />
       </div>
     );
@@ -32,7 +32,7 @@ export default function OrganigramaPage() {
 
   if (isError || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb] px-6 text-center text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb] px-6 text-center text-slate-600 dark:bg-[#0b1220] dark:text-slate-300">
         No se pudo cargar el organigrama. Intenta de nuevo más tarde.
       </div>
     );
