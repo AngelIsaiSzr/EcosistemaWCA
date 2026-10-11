@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -218,6 +219,9 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
     initialOtherValues(slug, preview),
   );
 
+  const [previewValidation, setPreviewValidation] = useState(false);
+  const skipValidation = !!preview && !previewValidation;
+
   const section = sections[step];
   const { toast } = useToast();
   const [restoredDraft] = useState(() => !preview && hasSavedProgress(definition, slug));
@@ -312,7 +316,7 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
       setStep((s) => findStep(s, 1, answers));
       return;
     }
-    if (!validateSection()) return;
+    if (!skipValidation && !validateSection()) return;
     const next = findStep(step, 1, answers);
     if (next !== step) {
       setStep(next);
@@ -396,8 +400,22 @@ export function IntegrationFormFlow({ definition, slug, preview }: IntegrationFo
   return (
     <div className={cn("relative z-10 mx-auto flex w-full max-w-2xl flex-col px-5 py-8 md:px-8", preview ? "min-h-[640px]" : "min-h-[100dvh]", emojiFont)}>
       {preview && (
-        <div className="mb-4 shrink-0 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
-          Vista previa de prueba. Al enviar no se guardan datos reales.
+        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-100">
+          <span>
+            Vista previa de prueba. Al enviar no se guardan datos reales.
+            {skipValidation && " Puedes avanzar sin llenar los obligatorios."}
+          </span>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-amber-100/90">
+            <Switch
+              checked={previewValidation}
+              onCheckedChange={(checked) => {
+                setPreviewValidation(checked);
+                if (!checked) setErrors({});
+              }}
+              className="data-[state=checked]:bg-amber-400"
+            />
+            Validar obligatorios
+          </label>
         </div>
       )}
 

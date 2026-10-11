@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -523,10 +523,9 @@ export default function TalentoFormEditorPage({
                 </div>
                 <div className="min-w-0">
                   <Label htmlFor="notify-recipients">Enviar a</Label>
-                  <Textarea
+                  <AutoTextarea
                     id="notify-recipients"
-                    className="mt-1"
-                    rows={3}
+                    className="mt-1 py-[7px]"
                     value={notifyRecipientsText}
                     onChange={(e) => setNotifyRecipientsText(e.target.value)}
                     placeholder={emailSenders?.defaultRecipient ?? "contacto@ecosistemawca.com"}

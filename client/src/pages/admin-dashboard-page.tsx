@@ -134,9 +134,9 @@ export default function AdminDashboardPage() {
     },
     {
       id: "correos",
-      title: "Automatización de correos",
+      title: "Correos y automatización",
       description:
-        "Recordatorios semanales a directores, plantillas editables y correos de prueba.",
+        "Calendario de recordatorios a directores, plantillas por semestre y envíos cuando los necesites.",
       href: "/admin/correos",
       icon: Mail,
       count: emailStats?.officialSent ?? null,

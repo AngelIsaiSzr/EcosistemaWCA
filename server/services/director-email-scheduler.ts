@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
   emailAutomationLogs,
@@ -69,10 +69,22 @@ async function logSend(params: {
   });
 }
 
+/** Destinatarios efectivos de un correo: los propios si tiene, si no la lista general. */
+export function resolveTemplateRecipients(
+  template: Pick<EmailWeekTemplate, "recipientsOverride">,
+  settings: Pick<EmailAutomationSettings, "recipients"> | null | undefined,
+) {
+  const own = parseRecipientList(template.recipientsOverride ?? []);
+  return own.length > 0 ? own : parseRecipientList(settings?.recipients);
+}
+
+type SendableTemplate = Pick<EmailWeekTemplate, "subject" | "bodyText" | "bodyHtml"> &
+  Partial<Pick<EmailWeekTemplate, "id" | "weekIndex" | "sendDate">>;
+
 export async function sendDirectorTemplateEmail(opts: {
-  template: EmailWeekTemplate;
+  template: SendableTemplate;
   recipients: string[];
-  kind: "weekly" | "test";
+  kind: "weekly" | "test" | "manual";
   senderId?: string;
   cc?: string[];
   bcc?: string[];
@@ -109,9 +121,9 @@ export async function sendDirectorTemplateEmail(opts: {
 
     await logSend({
       kind: opts.kind,
-      weekIndex: opts.template.weekIndex,
-      templateId: opts.template.id,
-      sendDate: opts.template.sendDate,
+      weekIndex: opts.template.weekIndex ?? null,
+      templateId: opts.template.id ?? null,
+      sendDate: opts.template.sendDate ?? null,
       recipients: okList.length ? okList : recipients,
       subject: opts.template.subject,
       status,
@@ -130,9 +142,9 @@ export async function sendDirectorTemplateEmail(opts: {
     const message = error instanceof Error ? error.message : "Error desconocido";
     await logSend({
       kind: opts.kind,
-      weekIndex: opts.template.weekIndex,
-      templateId: opts.template.id,
-      sendDate: opts.template.sendDate,
+      weekIndex: opts.template.weekIndex ?? null,
+      templateId: opts.template.id ?? null,
+      sendDate: opts.template.sendDate ?? null,
       recipients,
       subject: opts.template.subject,
       status: "error",
@@ -152,56 +164,40 @@ export async function runDirectorWeeklyEmailJob(now = new Date()): Promise<{
     return { ran: false, reason: "disabled" };
   }
 
-  const recipients = parseRecipientList(settings.recipients);
-  if (recipients.length === 0) {
-    return { ran: false, reason: "no-recipients" };
-  }
-
   const local = getMexicoCalendarParts(now);
-  if (local.hour < settings.sendHour) {
-    return { ran: false, reason: "too-early" };
-  }
 
   const templates = await db
     .select()
     .from(emailWeekTemplates)
     .where(eq(emailWeekTemplates.enabled, true));
 
-  const due = templates.filter((t) => t.sendDate && t.sendDate === local.dateIso);
+  const due = templates.filter(
+    (t) => t.sendDate && t.sendDate === local.dateIso && local.hour >= (t.sendHour ?? settings.sendHour),
+  );
   if (due.length === 0) {
-    return { ran: false, reason: "no-template-today" };
+    return { ran: false, reason: "no-template-due" };
   }
 
   let sentAny = false;
   for (const template of due) {
+    const recipients = resolveTemplateRecipients(template, settings);
+    if (recipients.length === 0) continue;
+
+    // Ya enviado ese día (automático o con "Enviar ahora"), aunque haya sido parcial.
     const already = await db
       .select({ id: emailAutomationLogs.id })
       .from(emailAutomationLogs)
       .where(
         and(
-          eq(emailAutomationLogs.kind, "weekly"),
+          inArray(emailAutomationLogs.kind, ["weekly", "manual"]),
           eq(emailAutomationLogs.templateId, template.id),
           eq(emailAutomationLogs.sendDate, template.sendDate!),
-          eq(emailAutomationLogs.status, "sent"),
+          inArray(emailAutomationLogs.status, ["sent", "partial"]),
         ),
       )
       .limit(1);
 
-    // También bloquear si hubo envío parcial exitoso (algunos llegaron)
-    const alreadyPartial = await db
-      .select({ id: emailAutomationLogs.id })
-      .from(emailAutomationLogs)
-      .where(
-        and(
-          eq(emailAutomationLogs.kind, "weekly"),
-          eq(emailAutomationLogs.templateId, template.id),
-          eq(emailAutomationLogs.sendDate, template.sendDate!),
-          eq(emailAutomationLogs.status, "partial"),
-        ),
-      )
-      .limit(1);
-
-    if (already.length > 0 || alreadyPartial.length > 0) {
+    if (already.length > 0) {
       continue;
     }
 

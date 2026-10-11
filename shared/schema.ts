@@ -311,7 +311,27 @@ export const emailWeekTemplates = pgTable("email_week_templates", {
   bodyText: text("body_text").notNull(),
   bodyHtml: text("body_html").notNull(),
   enabled: boolean("enabled").notNull().default(true),
+  /** Grupo (semestre o evento) al que pertenece; null = sin grupo. */
+  groupId: integer("group_id"),
+  /** Plantilla precargada de origen (p2w1, tec1, cierre, custom…). */
+  presetKey: text("preset_key"),
+  /** Destinatarios propios; null/vacío = lista general de directores. */
+  recipientsOverride: jsonb("recipients_override").$type<string[] | null>(),
+  /** Hora propia (0–23); null = la hora general. */
+  sendHour: integer("send_hour"),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+/** Agrupa correos por semestre o evento. */
+export const emailGroups = pgTable("email_groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  /** semester | event */
+  kind: text("kind").notNull().default("semester"),
+  color: text("color").notNull().default("blue"),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const emailAutomationLogs = pgTable("email_automation_logs", {
@@ -536,6 +556,7 @@ export type IntegrationResponse = typeof integrationResponses.$inferSelect;
 export type EmailAutomationSettings = typeof emailAutomationSettings.$inferSelect;
 export type EmailWeekTemplate = typeof emailWeekTemplates.$inferSelect;
 export type EmailAutomationLog = typeof emailAutomationLogs.$inferSelect;
+export type EmailGroup = typeof emailGroups.$inferSelect;
 export type IneditoRetoSettings = typeof ineditoRetoSettings.$inferSelect;
 export type IneditoRetoToken = typeof ineditoRetoTokens.$inferSelect;
 export type IneditoLandingSettings = typeof ineditoLandingSettings.$inferSelect;

@@ -1,60 +1,68 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
-import { emailAutomationSettings, emailWeekTemplates } from "@shared/schema";
-import {
-  DEFAULT_ACTIVE_SEMESTER,
-  DEFAULT_DIRECTOR_CAMPAIGN_START,
-  EMAIL_CALENDAR_SEED_VERSION,
-  SEMESTER_CALENDARS,
-  type SemesterCalendarId,
-} from "@shared/director-emails";
+import { emailAutomationSettings, emailGroups, emailWeekTemplates } from "@shared/schema";
+import { DEFAULT_DIRECTOR_CAMPAIGN_START } from "@shared/director-emails";
 
 let ensured = false;
 
-async function syncTemplatesForSemester(semesterId: SemesterCalendarId) {
-  const calendar = SEMESTER_CALENDARS[semesterId];
-  const existing = await db.select().from(emailWeekTemplates);
+/** Etiquetas del calendario original → plantilla precargada equivalente. */
+const LEGACY_PRESET_BY_LABEL: Record<string, string> = {
+  "Semana Tec #1": "tec1",
+  "Semana Tec #2": "tec2",
+  "Periodo 2 · Semana 1": "p2w1",
+  "Periodo 2 · Semana 2": "p2w2",
+  "Periodo 2 · Semana 3": "p2w3",
+  "Periodo 2 · Semana 4": "p2w4",
+  "Periodo 2 · Semana 5": "p2w5",
+};
 
-  for (const seed of calendar.templates) {
-    const match = existing.find((t) => t.weekIndex === seed.weekIndex);
-    if (match) {
-      await db
-        .update(emailWeekTemplates)
-        .set({
-          label: seed.label,
-          sendDate: seed.sendDate,
-          subject: seed.subject,
-          bodyText: seed.bodyText,
-          bodyHtml: seed.bodyHtml,
-          enabled: seed.enabled !== false,
-          updatedAt: new Date(),
-        })
-        .where(eq(emailWeekTemplates.id, match.id));
-    } else {
-      await db.insert(emailWeekTemplates).values({
-        weekIndex: seed.weekIndex,
-        label: seed.label,
-        sendDate: seed.sendDate,
-        subject: seed.subject,
-        bodyText: seed.bodyText,
-        bodyHtml: seed.bodyHtml,
-        enabled: seed.enabled !== false,
-      });
-    }
-  }
+/**
+ * Los correos que existían antes de los grupos se agrupan en "AD26" (sin tocar su contenido).
+ * Solo corre si todavía no hay ningún grupo.
+ */
+async function migrateLegacyTemplates() {
+  const groups = await db.select({ id: emailGroups.id }).from(emailGroups).limit(1);
+  const ungrouped = await db.select().from(emailWeekTemplates).where(isNull(emailWeekTemplates.groupId));
+  if (groups.length > 0 || ungrouped.length === 0) return;
 
-  // Quitar plantillas sobrantes de un seed anterior (p. ej. solo 7 filas)
-  const keep = new Set(calendar.templates.map((t) => t.weekIndex));
-  for (const row of existing) {
-    if (!keep.has(row.weekIndex)) {
-      await db.delete(emailWeekTemplates).where(eq(emailWeekTemplates.id, row.id));
-    }
+  const [group] = await db
+    .insert(emailGroups)
+    .values({
+      name: "AD26",
+      kind: "semester",
+      color: "blue",
+      startDate: "2026-08-10",
+      endDate: "2026-12-11",
+    })
+    .returning();
+
+  for (const row of ungrouped) {
+    const presetKey =
+      row.presetKey ??
+      LEGACY_PRESET_BY_LABEL[row.label] ??
+      (row.label.toLowerCase().startsWith("cierre") ? "cierre" : null);
+    await db
+      .update(emailWeekTemplates)
+      .set({ groupId: group.id, presetKey })
+      .where(and(eq(emailWeekTemplates.id, row.id), isNull(emailWeekTemplates.groupId)));
   }
 }
 
-export async function ensureEmailAutomationTables() {
-  if (ensured) return;
+let ensurePromise: Promise<void> | null = null;
 
+/** Una sola inicialización en curso aunque la llamen varias peticiones a la vez. */
+export function ensureEmailAutomationTables(): Promise<void> {
+  if (ensured) return Promise.resolve();
+  if (!ensurePromise) {
+    ensurePromise = runEnsure().catch((error) => {
+      ensurePromise = null;
+      throw error;
+    });
+  }
+  return ensurePromise;
+}
+
+async function runEnsure() {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS email_automation_settings (
       id SERIAL PRIMARY KEY,
@@ -105,9 +113,22 @@ export async function ensureEmailAutomationTables() {
     )
   `);
 
+  await db.execute(sql`ALTER TABLE email_week_templates ADD COLUMN IF NOT EXISTS send_date TEXT`);
+  await db.execute(sql`ALTER TABLE email_week_templates ADD COLUMN IF NOT EXISTS group_id INTEGER`);
+  await db.execute(sql`ALTER TABLE email_week_templates ADD COLUMN IF NOT EXISTS preset_key TEXT`);
+  await db.execute(sql`ALTER TABLE email_week_templates ADD COLUMN IF NOT EXISTS recipients_override JSONB`);
+  await db.execute(sql`ALTER TABLE email_week_templates ADD COLUMN IF NOT EXISTS send_hour INTEGER`);
+
   await db.execute(sql`
-    ALTER TABLE email_week_templates
-    ADD COLUMN IF NOT EXISTS send_date TEXT
+    CREATE TABLE IF NOT EXISTS email_groups (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'semester',
+      color TEXT NOT NULL DEFAULT 'blue',
+      start_date TEXT,
+      end_date TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
   `);
 
   await db.execute(sql`
@@ -139,124 +160,10 @@ export async function ensureEmailAutomationTables() {
       sendHour: 9,
       sendWeekday: 1,
       senderId: "contacto",
-      activeSemester: DEFAULT_ACTIVE_SEMESTER,
-      calendarVersion: 0,
     });
   }
 
-  const [settings] = await db.select().from(emailAutomationSettings).limit(1);
-  const semester = (
-    settings?.activeSemester === "FJ26" ? "FJ26" : "AD26"
-  ) as SemesterCalendarId;
-
-  const existingTemplates = await db.select().from(emailWeekTemplates);
-  const needsSync =
-    existingTemplates.length === 0 ||
-    (settings?.calendarVersion ?? 0) < EMAIL_CALENDAR_SEED_VERSION;
-
-  if (needsSync) {
-    if (existingTemplates.length === 0) {
-      const seeds = SEMESTER_CALENDARS[semester].templates;
-      await db.insert(emailWeekTemplates).values(
-        seeds.map((t) => ({
-          weekIndex: t.weekIndex,
-          label: t.label,
-          sendDate: t.sendDate,
-          subject: t.subject,
-          bodyText: t.bodyText,
-          bodyHtml: t.bodyHtml,
-          enabled: t.enabled !== false,
-        })),
-      );
-    } else {
-      await syncTemplatesForSemester(semester);
-      // Rellenar cuerpos si estaban vacíos / genéricos al crear filas nuevas
-      const after = await db.select().from(emailWeekTemplates);
-      for (const seed of SEMESTER_CALENDARS[semester].templates) {
-        const row = after.find((t) => t.weekIndex === seed.weekIndex);
-        if (row && (!row.bodyText || row.bodyText.length < 20)) {
-          await db
-            .update(emailWeekTemplates)
-            .set({
-              bodyText: seed.bodyText,
-              bodyHtml: seed.bodyHtml,
-              subject: seed.subject,
-              updatedAt: new Date(),
-            })
-            .where(eq(emailWeekTemplates.id, row.id));
-        }
-      }
-    }
-
-    if (settings) {
-      await db
-        .update(emailAutomationSettings)
-        .set({
-          calendarVersion: EMAIL_CALENDAR_SEED_VERSION,
-          activeSemester: semester,
-          startDate: SEMESTER_CALENDARS[semester].classStart,
-          updatedAt: new Date(),
-        })
-        .where(eq(emailAutomationSettings.id, settings.id));
-    }
-  }
+  await migrateLegacyTemplates();
 
   ensured = true;
-}
-
-export async function applySemesterCalendar(semesterId: SemesterCalendarId) {
-  await ensureEmailAutomationTables();
-  // Forzar re-sync aunque ensured=true
-  const calendar = SEMESTER_CALENDARS[semesterId];
-  const existing = await db.select().from(emailWeekTemplates);
-
-  for (const seed of calendar.templates) {
-    const match = existing.find((t) => t.weekIndex === seed.weekIndex);
-    if (match) {
-      await db
-        .update(emailWeekTemplates)
-        .set({
-          label: seed.label,
-          sendDate: seed.sendDate,
-          subject: seed.subject,
-          bodyText: seed.bodyText,
-          bodyHtml: seed.bodyHtml,
-          enabled: seed.enabled !== false,
-          updatedAt: new Date(),
-        })
-        .where(eq(emailWeekTemplates.id, match.id));
-    } else {
-      await db.insert(emailWeekTemplates).values({
-        weekIndex: seed.weekIndex,
-        label: seed.label,
-        sendDate: seed.sendDate,
-        subject: seed.subject,
-        bodyText: seed.bodyText,
-        bodyHtml: seed.bodyHtml,
-        enabled: seed.enabled !== false,
-      });
-    }
-  }
-
-  const keep = new Set(calendar.templates.map((t) => t.weekIndex));
-  for (const row of existing) {
-    if (!keep.has(row.weekIndex)) {
-      await db.delete(emailWeekTemplates).where(eq(emailWeekTemplates.id, row.id));
-    }
-  }
-
-  const [settings] = await db.select().from(emailAutomationSettings).limit(1);
-  if (settings) {
-    await db
-      .update(emailAutomationSettings)
-      .set({
-        activeSemester: semesterId,
-        startDate: calendar.classStart,
-        calendarVersion: EMAIL_CALENDAR_SEED_VERSION,
-        updatedAt: new Date(),
-      })
-      .where(eq(emailAutomationSettings.id, settings.id));
-  }
-
-  return calendar;
 }
