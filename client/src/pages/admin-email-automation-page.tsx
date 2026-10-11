@@ -432,7 +432,14 @@ export default function AdminEmailAutomationPage() {
   const isNew = emailTarget?.kind === "new";
   const emailDirty = !!draft && JSON.stringify(draft) !== baseline;
   const settingsDirty = !!settingsDraft && JSON.stringify(settingsDraft) !== settingsBaseline;
-  const sidePanelOpen = !!emailTarget || settingsOpen;
+  // Ancho del panel + 1.5rem de separación, menos el margen que ya deja el `container` centrado
+  // (su ancho máximo cambia por breakpoint). Debe coincidir con el `widthClass` de cada panel.
+  const sidePanelMargin =
+    emailTarget && draft
+      ? "lg:mr-[calc(min(46rem,52vw)_+_1.5rem_-_(100vw_-_1024px)_/_2)] xl:mr-[calc(min(46rem,52vw)_+_1.5rem_-_(100vw_-_1280px)_/_2)] 2xl:mr-[calc(min(46rem,52vw)_+_1.5rem_-_(100vw_-_1536px)_/_2)]"
+      : settingsOpen && settingsDraft
+        ? "lg:mr-[calc(min(36rem,43vw)_+_1.5rem_-_(100vw_-_1024px)_/_2)] xl:mr-[calc(min(36rem,43vw)_+_1.5rem_-_(100vw_-_1280px)_/_2)] 2xl:mr-[calc(min(36rem,43vw)_+_1.5rem_-_(100vw_-_1536px)_/_2)]"
+        : undefined;
 
   const sentSet = useMemo(() => {
     const set = new Set<string>();
@@ -956,7 +963,7 @@ export default function AdminEmailAutomationPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className={cn("transition-[padding] duration-300 ease-out", sidePanelOpen && "lg:pr-[min(47rem,53vw)]")}>
+          <div className={cn("transition-[margin] duration-300 ease-out", sidePanelMargin)}>
             {/* Encabezado */}
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>

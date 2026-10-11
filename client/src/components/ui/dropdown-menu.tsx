@@ -54,12 +54,17 @@ const DropdownMenuSubContent = React.forwardRef<
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName
 
+/** Momento en que se abrió el menú, para ignorar selecciones accidentales justo al abrirlo. */
+const MenuOpenedAtContext = React.createContext<number | null>(null)
+const OPEN_GRACE_MS = 300
+
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
     disablePortal?: boolean;
   }
->(({ className, sideOffset = 4, disablePortal, ...props }, ref) => {
+>(({ className, sideOffset = 4, disablePortal, children, ...props }, ref) => {
+  const [openedAt] = React.useState(() => performance.now())
   const content = (
     <DropdownMenuPrimitive.Content
       ref={ref}
@@ -71,7 +76,9 @@ const DropdownMenuContent = React.forwardRef<
         className
       )}
       {...props}
-    />
+    >
+      <MenuOpenedAtContext.Provider value={openedAt}>{children}</MenuOpenedAtContext.Provider>
+    </DropdownMenuPrimitive.Content>
   );
 
   if (disablePortal) {
@@ -87,17 +94,38 @@ const DropdownMenuItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean
   }
->(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-      inset && "pl-8",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, inset, onSelect, onPointerDown, onPointerUp, ...props }, ref) => {
+  const openedAt = React.useContext(MenuOpenedAtContext)
+  const pressedHere = React.useRef(false)
+  return (
+    <DropdownMenuPrimitive.Item
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        inset && "pl-8",
+        className
+      )}
+      onPointerDown={(event) => {
+        pressedHere.current = true
+        onPointerDown?.(event)
+      }}
+      onPointerUp={(event) => {
+        // Radix activa la opción al soltar el clic aunque se haya presionado en el botón que abrió el menú.
+        if (!pressedHere.current) event.preventDefault()
+        pressedHere.current = false
+        onPointerUp?.(event)
+      }}
+      onSelect={(event) => {
+        if (openedAt != null && performance.now() - openedAt < OPEN_GRACE_MS) {
+          event.preventDefault()
+          return
+        }
+        onSelect?.(event)
+      }}
+      {...props}
+    />
+  )
+})
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
 const DropdownMenuCheckboxItem = React.forwardRef<
