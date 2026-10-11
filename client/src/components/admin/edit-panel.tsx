@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, PresenceContext } from "framer-motion";
 import { Loader2, MoreHorizontal, Search, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,6 +94,8 @@ export function AdminEditPanel({
         };
 
   return createPortal(
+    // Mientras se cierra, nada del panel puede capturar clics aunque su animación de salida tarde.
+    <div className={open ? undefined : "[&_*]:!pointer-events-none"}>
     <AnimatePresence>
       {open && (
         <>
@@ -139,12 +141,14 @@ export function AdminEditPanel({
                   <span className="h-1.5 w-10 rounded-full bg-muted-foreground/30" />
                 </div>
               )}
-              {children}
+              {/* Las animaciones internas no deben retener la salida del panel. */}
+              <PresenceContext.Provider value={null}>{children}</PresenceContext.Provider>
             </motion.aside>
           </div>
         </>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    </div>,
     document.body,
   );
 }
@@ -285,7 +289,8 @@ export function AdminPanelBody({
           transition={{ duration: 0.18, ease: "easeOut" }}
           className={cn("space-y-5 px-5 pb-6 pt-1", className)}
         >
-          {children}
+          {/* Si algo animado se monta durante la salida, la pestaña nueva nunca aparecería. */}
+          <PresenceContext.Provider value={null}>{children}</PresenceContext.Provider>
         </motion.div>
       </AnimatePresence>
     </div>

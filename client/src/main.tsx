@@ -41,6 +41,21 @@ window.addEventListener('storage', (e) => {
   }
 });
 
+// Radix puede dejar `pointer-events: none` en <body> si un diálogo se cierra mientras otro
+// (o un menú) se está cerrando; eso deja toda la página sin responder a clics.
+const OPEN_LAYER_SELECTOR =
+  "[role='dialog'][data-state='open'], [role='alertdialog'][data-state='open'], [role='menu'][data-state='open'], [role='listbox'][data-state='open']";
+let pointerUnlockTimer: number | undefined;
+new MutationObserver(() => {
+  if (document.body.style.pointerEvents !== "none") return;
+  window.clearTimeout(pointerUnlockTimer);
+  pointerUnlockTimer = window.setTimeout(() => {
+    if (document.body.style.pointerEvents === "none" && !document.querySelector(OPEN_LAYER_SELECTOR)) {
+      document.body.style.pointerEvents = "";
+    }
+  }, 400);
+}).observe(document.body, { attributes: true, attributeFilter: ["style"], childList: true });
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>

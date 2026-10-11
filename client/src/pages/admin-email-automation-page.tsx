@@ -1215,7 +1215,13 @@ export default function AdminEmailAutomationPage() {
                                       </div>
                                     </div>
                                     {group?.kind === "semester" && (
-                                      <Button size="sm" variant="outline" className="h-8 rounded-lg" onClick={() => openPlanner(group.id)}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 rounded-lg"
+                                        title="Agrega las semanas que le faltan a este semestre (sin tocar las que ya existen)"
+                                        onClick={() => openPlanner(group.id)}
+                                      >
                                         <Sparkles className="h-3.5 w-3.5" />
                                         Completar semestre
                                       </Button>
