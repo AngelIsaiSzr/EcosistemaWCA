@@ -9,6 +9,8 @@ export default {
         sans: ['Inter', 'sans-serif'],
         heading: ['Poppins', 'sans-serif'],
         code: ['Fira Code', 'monospace'],
+        brush: ['"Permanent Marker"', 'cursive'],
+        display: ['Archivo', 'sans-serif'],
       },
       borderRadius: {
         lg: "var(--radius)",

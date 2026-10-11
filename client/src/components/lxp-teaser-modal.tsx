@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { GraduationCap, Sparkles, X } from "lucide-react";
-import { WcaLogo } from "@/components/integration/wca-logo";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const BG_IMAGE = "/media/about1-cy3qzm.jpg";
+const BG_IMAGE = "/media/lxp-teaser-bg.jpg";
 
 type LxpTeaserModalProps = {
   open: boolean;
@@ -59,14 +58,10 @@ export function LxpTeaserModal({ open, onClose }: LxpTeaserModalProps) {
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url("${BG_IMAGE}")` }}
             />
-            <div className="absolute inset-0 bg-black/72" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0b1220]/85 via-[#132a4a]/55 to-[#5b8fd4]/30" />
-            <div className="pointer-events-none absolute -left-12 top-[-20%] h-40 w-40 rounded-full bg-[#5b8fd4]/25 blur-3xl" />
-            <div className="pointer-events-none absolute -right-8 bottom-[-25%] h-44 w-44 rounded-full bg-[#87b1e0]/20 blur-3xl" />
-            <WcaLogo
-              decorative
-              className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.12]"
-            />
+            <div className="absolute inset-0 bg-[#030a1c]/70" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#030a1c]/40 via-[#061637]/55 to-[#030a1c]/90" />
+            <div className="pointer-events-none absolute -left-14 top-[-18%] h-44 w-44 rounded-full bg-[#2f7bff]/30 blur-3xl" />
+            <div className="pointer-events-none absolute -right-10 bottom-[-22%] h-48 w-48 rounded-full bg-[#38bdf8]/25 blur-3xl" />
 
             <button
               type="button"
@@ -77,36 +72,29 @@ export function LxpTeaserModal({ open, onClose }: LxpTeaserModalProps) {
               <X className="h-3.5 w-3.5" />
             </button>
 
-            <div className="relative z-10 px-5 pb-7 pt-9 text-center sm:px-7">
-              <div className="mb-4 flex items-center justify-center">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-[#cfe0f7]">
-                  <Sparkles className="h-3 w-3 text-[#87b1e0]" />
-                  Nueva LXP
-                </span>
-              </div>
-
-              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35">
-                <GraduationCap className="h-5 w-5 text-[#87b1e0]" />
-              </div>
-
+            <div className="relative z-10 px-6 pb-8 pt-12 text-center sm:px-8">
               <h2
                 id="lxp-teaser-title"
-                className="font-heading text-xl font-bold leading-snug drop-shadow-sm sm:text-2xl"
+                className="font-brush text-[1.7rem] italic leading-[1.15] tracking-wide drop-shadow-[0_4px_18px_rgba(0,0,0,0.55)] sm:text-[2rem]"
               >
-                ¿Quieres vivir la experiencia completa?
+                <span className="block text-white">¿Quieres vivir</span>
+                <span className="block bg-gradient-to-r from-[#38bdf8] via-[#60a5fa] to-[#3b82f6] bg-clip-text pr-2 text-transparent">
+                  la experiencia completa?
+                </span>
               </h2>
 
-              <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-white/90 sm:text-[15px]">
-                Visita nuestra LXP y descubre nuestros últimos programas más actualizados, con una
-                experiencia de aprendizaje renovada.
+              <p className="font-display mx-auto mt-4 max-w-sm text-[15px] font-semibold leading-relaxed text-white/90 sm:text-base">
+                Visita nuestra <span className="font-extrabold text-[#7dd3fc]">LXP</span> y descubre
+                nuestros últimos programas más actualizados, con una experiencia de aprendizaje
+                renovada.
               </p>
 
               <button
                 type="button"
                 disabled
                 className={cn(
-                  "mt-6 inline-flex h-11 min-w-[11rem] cursor-not-allowed items-center justify-center rounded-full px-8 text-sm font-semibold",
-                  "bg-white/20 text-white/70 opacity-70",
+                  "font-display mt-7 inline-flex h-11 min-w-[11rem] cursor-not-allowed items-center justify-center rounded-full px-8 text-sm font-extrabold uppercase tracking-wider",
+                  "border border-[#60a5fa]/40 bg-[#1d4ed8]/30 text-[#bfdbfe] backdrop-blur-sm",
                 )}
               >
                 Muy pronto
