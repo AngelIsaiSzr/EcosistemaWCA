@@ -41,6 +41,20 @@ window.addEventListener('storage', (e) => {
   }
 });
 
+if (typeof Animation !== "undefined" && typeof Animation.prototype.commitStyles === "function") {
+  const cancelAnimation = Animation.prototype.cancel;
+  Animation.prototype.cancel = function (this: Animation) {
+    if (this.playState === "finished") {
+      try {
+        this.commitStyles();
+      } catch {
+        
+      }
+    }
+    return cancelAnimation.call(this);
+  };
+}
+
 // Radix puede dejar `pointer-events: none` en <body> si un diálogo se cierra mientras otro
 // (o un menú) se está cerrando; eso deja toda la página sin responder a clics.
 const OPEN_LAYER_SELECTOR =
