@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { ChevronDown, ChevronUp, Loader2, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, ChevronUp, ArrowLeft, Flag, Plus, Trash2 } from "lucide-react";
 import { Country, insertCountrySchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,6 +31,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  AdminEditPanel,
+  AdminEmptyState,
+  AdminPanelBody,
+  AdminPanelFooter,
+  AdminPanelHeader,
+  AdminSearchInput,
+  AdminTile,
+  matchesSearch,
+} from "@/components/admin/edit-panel";
 
 const countryFormSchema = insertCountrySchema.extend({
   name: z.string().min(1, "El nombre es requerido"),
@@ -46,12 +55,18 @@ const countryFormSchema = insertCountrySchema.extend({
 
 type CountryFormValues = z.infer<typeof countryFormSchema>;
 
+const FORM_ID = "country-form";
+
+const flagUrl = (code: string, width = 80) => `https://flagcdn.com/w${width}/${code.toLowerCase()}.png`;
+
 export default function AdminCountriesPage() {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [editing, setEditing] = useState<Country | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [toDelete, setToDelete] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: countries } = useQuery<Country[]>({
     queryKey: ["/api/countries"],
@@ -70,27 +85,35 @@ export default function AdminCountriesPage() {
     defaultValues: emptyValues,
   });
 
+  const nextOrder = countries?.length ? Math.max(...countries.map((c) => c.order)) + 1 : 1;
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "admin")) {
       navigate("/auth");
     }
   }, [user, isLoading, navigate]);
 
-  useEffect(() => {
-    if (editing) {
-      form.reset({
-        name: editing.name,
-        code: editing.code,
-        students: editing.students,
-        order: editing.order,
-      });
-    } else {
-      form.reset({
-        ...emptyValues,
-        order: countries?.length ? Math.max(...countries.map((c) => c.order)) + 1 : 1,
-      });
-    }
-  }, [editing, countries, form]);
+  const openEdit = (country: Country) => {
+    setEditing(country);
+    form.reset({
+      name: country.name,
+      code: country.code,
+      students: country.students,
+      order: country.order,
+    });
+    setPanelOpen(true);
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    form.reset({ ...emptyValues, order: nextOrder });
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setEditing(null);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: CountryFormValues) => {
@@ -102,8 +125,7 @@ export default function AdminCountriesPage() {
     },
     onSuccess: () => {
       toast({ title: "País agregado", description: "Se agregó al carrusel de banderas." });
-      form.reset(emptyValues);
-      setEditing(null);
+      closePanel();
       queryClient.invalidateQueries({ queryKey: ["/api/countries"] });
     },
     onError: (error: Error) => {
@@ -121,8 +143,7 @@ export default function AdminCountriesPage() {
     },
     onSuccess: () => {
       toast({ title: "País actualizado", description: "Los cambios se guardaron." });
-      setEditing(null);
-      form.reset(emptyValues);
+      closePanel();
       queryClient.invalidateQueries({ queryKey: ["/api/countries"] });
     },
     onError: (error: Error) => {
@@ -174,9 +195,10 @@ export default function AdminCountriesPage() {
     }
   };
 
+  const sorted = useMemo(() => [...(countries ?? [])].sort((a, b) => a.order - b.order), [countries]);
+  const visible = sorted.filter((c) => matchesSearch(search, c.name, c.code));
+
   const moveItem = (index: number, direction: -1 | 1) => {
-    if (!countries?.length) return;
-    const sorted = [...countries].sort((a, b) => a.order - b.order);
     const target = index + direction;
     if (target < 0 || target >= sorted.length) return;
     const a = sorted[index];
@@ -187,6 +209,8 @@ export default function AdminCountriesPage() {
     ]);
   };
 
+  const watchedCode = form.watch("code");
+
   if (isLoading || !user || user.role !== "admin") {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -195,7 +219,8 @@ export default function AdminCountriesPage() {
     );
   }
 
-  const watchedCode = form.watch("code");
+  const pending = createMutation.isPending || updateMutation.isPending;
+  const validCode = watchedCode && /^[a-zA-Z]{2}$/.test(watchedCode);
 
   return (
     <>
@@ -217,6 +242,7 @@ export default function AdminCountriesPage() {
                 if (toDelete) {
                   deleteMutation.mutate(toDelete);
                   setToDelete(null);
+                  closePanel();
                 }
               }}
             >
@@ -233,7 +259,7 @@ export default function AdminCountriesPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24">
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
                 <Link href="/admin" className="hover:text-foreground">
@@ -247,197 +273,199 @@ export default function AdminCountriesPage() {
                 Gestiona las banderas y el número de estudiantes del carrusel en la página principal.
               </p>
             </div>
-            <Button variant="outline" asChild>
-              <Link href="/admin">
-                <ArrowLeft className="h-4 w-4" />
-                Volver al panel
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>{editing ? "Editar país" : "Agregar país"}</CardTitle>
-                <CardDescription>
-                  {editing
-                    ? `Actualizando: ${editing.name}`
-                    : "Agrega un país con su código ISO y cantidad de estudiantes."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input placeholder="México" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Código ISO</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="mx"
-                              maxLength={2}
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value.toLowerCase())}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Código de 2 letras para la bandera (flagcdn), ej. mx, ve, ar.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="students"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estudiantes</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+80 o 8" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Texto libre: puede ser un número o algo como +80.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {watchedCode && watchedCode.length === 2 ? (
-                      <div className="flex items-center gap-3 rounded-lg border p-3">
-                        <img
-                          src={`https://flagcdn.com/w80/${watchedCode.toLowerCase()}.png`}
-                          alt="Vista previa bandera"
-                          className="h-10 w-14 object-contain shadow-sm"
-                        />
-                        <span className="text-sm text-muted-foreground">Vista previa de bandera</span>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-end gap-3 pt-2">
-                      {editing && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setEditing(null);
-                            form.reset(emptyValues);
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      )}
-                      <Button
-                        type="submit"
-                        className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        {(createMutation.isPending || updateMutation.isPending) && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        {editing ? "Actualizar" : "Agregar"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-
-            <div>
-              <div className="mb-4 flex items-end justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-medium">Países del carrusel</h3>
-                  <p className="text-sm text-muted-foreground">Usa las flechas para cambiar el orden.</p>
-                </div>
-                <span className="text-sm text-muted-foreground">{countries?.length ?? 0} países</span>
-              </div>
-
-              {countries && countries.length > 0 ? (
-                <div className="space-y-3">
-                  {[...countries]
-                    .sort((a, b) => a.order - b.order)
-                    .map((country, index, list) => (
-                      <Card key={country.id} className="overflow-hidden">
-                        <div className="flex items-stretch gap-2 p-3 sm:p-4">
-                          <div className="flex flex-col justify-center gap-1">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              disabled={index === 0 || reorderMutation.isPending}
-                              onClick={() => moveItem(index, -1)}
-                              aria-label="Subir"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              disabled={index === list.length - 1 || reorderMutation.isPending}
-                              onClick={() => moveItem(index, 1)}
-                              aria-label="Bajar"
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <img
-                            src={`https://flagcdn.com/w80/${country.code.toLowerCase()}.png`}
-                            alt={country.name}
-                            className="h-12 w-16 shrink-0 self-center object-contain shadow-sm"
-                          />
-                          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <h4 className="truncate font-medium">{country.name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {country.students}{" "}
-                                {country.students === "1" ? "estudiante" : "estudiantes"} ·{" "}
-                                <span className="uppercase">{country.code}</span>
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => setEditing(country)}>
-                                <Pencil className="mr-1 h-4 w-4" />
-                                Editar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setToDelete(country.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed py-12 text-center text-muted-foreground">
-                  Aún no hay países. Agrega el primero con el formulario.
-                </div>
-              )}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <AdminSearchInput value={search} onChange={setSearch} placeholder="Buscar país…" />
+              <Button onClick={openNew} className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]">
+                <Plus className="h-4 w-4" />
+                Nuevo país
+              </Button>
+              <Button variant="outline" className="h-10 rounded-xl" asChild>
+                <Link href="/admin">
+                  <ArrowLeft className="h-4 w-4" />
+                  Volver al panel
+                </Link>
+              </Button>
             </div>
           </div>
+
+          <p className="mb-4 text-sm text-muted-foreground">
+            {sorted.length} países · da clic en uno para editarlo. Pasa el cursor para cambiar el orden.
+          </p>
+
+          {visible.length > 0 ? (
+            <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              <AnimatePresence>
+                {visible.map((country, i) => {
+                  const index = sorted.indexOf(country);
+                  return (
+                    <AdminTile
+                      key={country.id}
+                      index={i}
+                      selected={panelOpen && editing?.id === country.id}
+                      onClick={() => openEdit(country)}
+                      className="flex items-center gap-3 p-3 pr-10"
+                    >
+                      <img
+                        src={flagUrl(country.code)}
+                        alt={country.name}
+                        className="h-8 w-11 shrink-0 rounded-md object-cover ring-1 ring-border transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{country.name}</p>
+                        <span className="mt-0.5 inline-flex rounded-full bg-[#5b8fd4]/15 px-2 py-0.5 text-[11px] font-medium text-[#5b8fd4]">
+                          {country.students} estudiantes
+                        </span>
+                      </div>
+                      {!search && (
+                        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            aria-label="Subir"
+                            disabled={index === 0 || reorderMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveItem(index, -1);
+                            }}
+                            className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-foreground transition hover:bg-[#5b8fd4] hover:text-white disabled:opacity-30"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Bajar"
+                            disabled={index === sorted.length - 1 || reorderMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveItem(index, 1);
+                            }}
+                            className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-foreground transition hover:bg-[#5b8fd4] hover:text-white disabled:opacity-30"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </AdminTile>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <AdminEmptyState>
+              {search ? "No hay países que coincidan con tu búsqueda." : "Aún no hay países. Agrega el primero con «Nuevo país»."}
+            </AdminEmptyState>
+          )}
         </main>
       </div>
+
+      <AdminEditPanel open={panelOpen} onClose={closePanel} variant="modal" widthClass="lg:w-[26rem]">
+        <AdminPanelHeader
+          media={
+            validCode ? (
+              <img src={flagUrl(watchedCode)} alt="" className="h-9 w-12 rounded-lg object-cover ring-1 ring-border" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-muted/50">
+                <Flag className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )
+          }
+          title={editing ? "Editar país" : "Nuevo país"}
+          subtitle="Contador del carrusel de banderas"
+          onClose={closePanel}
+          actions={
+            editing
+              ? [{ label: "Eliminar país", icon: Trash2, destructive: true, onClick: () => setToDelete(editing.id) }]
+              : undefined
+          }
+        />
+        <AdminPanelBody contentKey={editing?.id ?? "new"}>
+          <div className="flex h-32 items-center justify-center rounded-2xl border bg-muted/30">
+            <AnimatePresence mode="wait">
+              {validCode ? (
+                <motion.img
+                  key={watchedCode.toLowerCase()}
+                  src={flagUrl(watchedCode, 160)}
+                  alt="Vista previa bandera"
+                  initial={{ opacity: 0, scale: 0.85, rotate: -4 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 22 }}
+                  className="h-20 rounded-xl object-cover shadow-xl"
+                />
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
+                >
+                  <Flag className="h-6 w-6" />
+                  Escribe el código para ver la bandera
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <Form {...form}>
+            <form id={FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                      <Input placeholder="México" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código ISO</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="mx"
+                          maxLength={2}
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="students"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estudiantes</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+80 o 8" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Código de 2 letras para la bandera (ej. mx, ve, ar). Estudiantes acepta texto libre como +80.
+              </p>
+            </form>
+          </Form>
+        </AdminPanelBody>
+        <AdminPanelFooter
+          onCancel={closePanel}
+          formId={FORM_ID}
+          pending={pending}
+          submitLabel={editing ? "Guardar cambios" : "Agregar país"}
+        />
+      </AdminEditPanel>
     </>
   );
 }

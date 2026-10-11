@@ -519,4 +519,28 @@
     height: 0 !important;
     display: none;
   }
+
+  .wca-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .wca-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .wca-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .wca-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .wca-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.6);
+  }
 }
