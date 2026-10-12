@@ -39,6 +39,13 @@ export async function ensureIneditoRetoTables() {
     )
   `);
 
+  await db.execute(
+    sql`ALTER TABLE inedito_reto_settings ADD COLUMN IF NOT EXISTS sender_id TEXT NOT NULL DEFAULT 'contacto'`,
+  );
+  await db.execute(
+    sql`ALTER TABLE inedito_reto_settings ADD COLUMN IF NOT EXISTS from_name TEXT NOT NULL DEFAULT 'WCA | INÉDITO'`,
+  );
+
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS inedito_reto_tokens (
       id SERIAL PRIMARY KEY,

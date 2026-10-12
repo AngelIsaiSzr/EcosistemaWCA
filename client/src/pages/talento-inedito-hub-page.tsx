@@ -59,7 +59,7 @@ export default function TalentoIneditoHubPage() {
       id: "landing",
       title: "Landing",
       description:
-        "Activa o desactiva la página pública /inedito y edita su información por secciones.",
+        "Diseña la página pública /inedito: secciones, textos, imágenes, colores y botones, con vista previa en vivo.",
       href: "/talento/inedito/landing",
       icon: LayoutTemplate,
       statusLabel: landing?.isEnabled ? "Activa" : "Desactivada",

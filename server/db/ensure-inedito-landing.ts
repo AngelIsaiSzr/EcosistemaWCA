@@ -14,6 +14,7 @@ export async function ensureIneditoLandingTables() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await db.execute(sql`ALTER TABLE inedito_landing_settings ADD COLUMN IF NOT EXISTS content JSONB`);
 
   const existing = await db
     .select({ id: ineditoLandingSettings.id })

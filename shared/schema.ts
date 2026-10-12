@@ -356,6 +356,9 @@ export const ineditoRetoSettings = pgTable("inedito_reto_settings", {
   emailBodyHtml: text("email_body_html").notNull().default(""),
   /** Horas de vigencia del enlace desde su creación */
   linkTtlHours: integer("link_ttl_hours").notNull().default(72),
+  /** Remitente (id de perfil SMTP: contacto | tec_angel | extra) */
+  senderId: text("sender_id").notNull().default("contacto"),
+  fromName: text("from_name").notNull().default("WCA | INÉDITO"),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -384,6 +387,8 @@ export const ineditoLandingSettings = pgTable("inedito_landing_settings", {
   id: serial("id").primaryKey(),
   /** Si es false, solo admin y talento pueden ver /inedito */
   isEnabled: boolean("is_enabled").notNull().default(true),
+  /** Documento de secciones editable (ver shared/inedito-landing.ts). null = diseño original. */
+  content: jsonb("content"),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
