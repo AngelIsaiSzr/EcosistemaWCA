@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
 import { CARD_SOCIALS, CardPreview, type CardPreviewArea } from "@/components/cards/card-preview";
+import { CardPhoneCanvas } from "@/components/cards/card-phone-canvas";
 import {
   AppearancePanel,
   LinksPanel,
@@ -33,7 +34,6 @@ import {
   Globe,
   Link2,
   Loader2,
-  MousePointerClick,
   Palette,
   Save,
   Share2,
@@ -64,6 +64,44 @@ function cardToState(card: PresentationCard): CardEditorState {
     assignedUserId: card.assignedUserId ?? null,
     isPublished: !!card.isPublished,
   };
+}
+
+/** Ordena claves y descarta vacíos para comparar estados sin falsos positivos. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(obj)
+        .filter((k) => obj[k] !== undefined && obj[k] !== null && obj[k] !== "")
+        .sort()
+        .map((k) => [k, canonical(obj[k])]),
+    );
+  }
+  return value;
+}
+
+/** Huella del estado según cómo se ve la tarjeta (valores por defecto resueltos). */
+function editorStateKey(state: CardEditorState): string {
+  const t = state.theme;
+  const socialDefault = t.socialDisplayDefault ?? "circle";
+  const theme = {
+    ...DEFAULT_CARD_THEME,
+    ...t,
+    sedeAccent: t.sedeAccent === "purple" ? "purple" : undefined,
+    socialDisplayDefault: socialDefault,
+    socialDisplay: Object.fromEntries(
+      CARD_SOCIALS.map((s) => [s.key, t.socialDisplay?.[s.key] ?? socialDefault]),
+    ),
+  };
+  return JSON.stringify(
+    canonical({
+      ...state,
+      slug: normalizeCardSlug(state.slug) || state.slug,
+      theme,
+      links: state.links.map((l, i) => ({ ...l, order: i + 1 })),
+    }),
+  );
 }
 
 const SECTIONS: { id: CardEditorSection; label: string; icon: LucideIcon }[] = [
@@ -130,7 +168,12 @@ export function PresentationCardEditor({
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [state, setState] = useState<CardEditorState | null>(null);
-  const [dirty, setDirty] = useState(false);
+  /** Huella de lo guardado; "Sin guardar" solo si el estado actual difiere. */
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const dirty = useMemo(
+    () => state !== null && savedKey !== null && editorStateKey(state) !== savedKey,
+    [state, savedKey],
+  );
   const [section, setSection] = useState<CardEditorSection>("perfil");
   /** Solo en pantallas angostas: alterna entre panel y vista previa. */
   const [showPreview, setShowPreview] = useState(false);
@@ -157,7 +200,9 @@ export function PresentationCardEditor({
 
   useEffect(() => {
     if (cardQuery.data && !dirty) {
-      setState(cardToState(cardQuery.data));
+      const next = cardToState(cardQuery.data);
+      setState(next);
+      setSavedKey(editorStateKey(next));
     }
   }, [cardQuery.data, dirty]);
 
@@ -172,12 +217,10 @@ export function PresentationCardEditor({
   }, [dirty]);
 
   const updateField = <K extends keyof CardEditorState>(key: K, value: CardEditorState[K]) => {
-    setDirty(true);
     setState((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
   const setTheme = (patch: Partial<PresentationCardTheme>) => {
-    setDirty(true);
     setState((prev) => (prev ? { ...prev, theme: { ...prev.theme, ...patch } } : prev));
   };
 
@@ -211,8 +254,9 @@ export function PresentationCardEditor({
       return res.json() as Promise<PresentationCard>;
     },
     onSuccess: (updated) => {
-      setDirty(false);
-      setState(cardToState(updated));
+      const next = cardToState(updated);
+      setState(next);
+      setSavedKey(editorStateKey(next));
       queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cards", updated.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/cards/mine"] });
@@ -455,38 +499,17 @@ export function PresentationCardEditor({
               </div>
             </aside>
 
-            {/* Lienzo con la vista previa */}
-            <section
-              className={cn(
-                "relative min-h-0 min-w-0 flex-1 flex-col bg-muted/20",
-                showPreview ? "flex" : "hidden",
-                wide.show,
+            {/* Lienzo con paneo y zoom: teléfono a tamaño real */}
+            <CardPhoneCanvas className={cn(showPreview ? "block" : "hidden", wide.show)}>
+              {(safeArea) => (
+                <CardPreview
+                  card={previewCard}
+                  compact
+                  className={cn("min-h-full rounded-none", safeArea)}
+                  editable={{ active: previewArea, onSelect: openSection }}
+                />
               )}
-              style={{
-                backgroundImage: "radial-gradient(hsl(var(--border)) 1px, transparent 1px)",
-                backgroundSize: "18px 18px",
-              }}
-            >
-              <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-4">
-                <p className="text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
-                <p className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                  <MousePointerClick className="h-3.5 w-3.5" />
-                  Haz clic en una parte de la tarjeta para editarla
-                </p>
-              </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-6">
-                <div className="h-full max-h-[780px] w-full max-w-[380px] rounded-[2.75rem] border bg-[#05070c] p-2.5 shadow-2xl">
-                  <div className="h-full overflow-y-auto overscroll-contain rounded-[2.2rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <CardPreview
-                      card={previewCard}
-                      compact
-                      className="min-h-full rounded-none"
-                      editable={{ active: previewArea, onSelect: openSection }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
+            </CardPhoneCanvas>
           </div>
         </div>
       </div>
