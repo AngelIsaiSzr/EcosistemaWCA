@@ -53,6 +53,7 @@ import AdminProgramContentPage from "@/pages/admin-program-content-page";
 import AdminSiteContentPage from "@/pages/admin-site-content-page";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { GoogleAnalytics } from "@/components/layout/google-analytics";
+import { MetaPixel } from "@/components/layout/meta-pixel";
 import TalentoOrganigramaPage from "@/pages/talento-organigrama-page";
 import TalentoEquipoPage from "@/pages/talento-equipo-page";
 
@@ -289,6 +290,7 @@ function App() {
           <TooltipProvider>
             <PageLoader />
             <GoogleAnalytics />
+            <MetaPixel />
             <RecruitmentInviteModal />
             <Toaster />
             {!hideDonorbox && <DonorboxButton />}
