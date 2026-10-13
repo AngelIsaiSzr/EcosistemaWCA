@@ -358,7 +358,7 @@ export function CardPhoneCanvas({
         </Select>
         <p className="hidden items-center gap-1.5 rounded-full bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur xl:flex">
           <MousePointerClick className="h-3.5 w-3.5" />
-          Clic en la tarjeta para editar · arrastra el fondo para mover · rueda para zoom
+          Clic en la tarjeta para editar · arrastra el fondo para mover
         </p>
       </div>
 

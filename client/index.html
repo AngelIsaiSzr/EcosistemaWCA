@@ -102,13 +102,14 @@
 	fbq('init', '1826577928531219');
 	fbq('track', 'PageView');
 	</script>
-	<noscript><img height="1" width="1" style="display:none"
-	src="https://www.facebook.com/tr?id=1826577928531219&ev=PageView&noscript=1"
-	/></noscript>
 	<!-- End Meta Pixel Code -->
 </head>
 
 <body>
+	<!-- Meta Pixel (sin JavaScript): va en <body> porque <noscript> en <head> no admite <img> -->
+	<noscript><img height="1" width="1" style="display:none"
+	src="https://www.facebook.com/tr?id=1826577928531219&ev=PageView&noscript=1"
+	/></noscript>
 	<div id="root"></div>
 	<script type="module" src="/src/main.tsx"></script>
 </body>
