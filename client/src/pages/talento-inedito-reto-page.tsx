@@ -222,7 +222,7 @@ function Card({ title, icon: Icon, description, action, children, className }: {
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border bg-card p-5", className)}>
+    <section className={cn("flex flex-col rounded-2xl border bg-card p-5", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b1c3d] to-[#0056FF] text-white shadow-md shadow-[#0056FF]/20">
@@ -235,7 +235,7 @@ function Card({ title, icon: Icon, description, action, children, className }: {
         </div>
         {action}
       </div>
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -549,11 +549,7 @@ export default function TalentoIneditoRetoPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]" onClick={() => openSettings("email")}>
-                  <Mail className="h-4 w-4" />
-                  Editar correo
-                </Button>
-                <Button variant="ghost" className="h-10 rounded-xl" onClick={() => openSettings("video")}>
+                <Button className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]" onClick={() => openSettings()}>
                   <Settings2 className="h-4 w-4" />
                   Configuración
                 </Button>
@@ -586,8 +582,12 @@ export default function TalentoIneditoRetoPage() {
                         <span className="text-amber-600 dark:text-amber-400">{videoReady ? "Remitente sin configurar" : "Falta el vídeo"}</span>
                       )
                     }
-                    hint={`Vigencia ${settings.linkTtlHours} h por enlace`}
-                    onClick={() => openSettings(videoReady ? "email" : "video")}
+                    hint={`Vigencia ${settings.linkTtlHours} h por enlace${videoReady && savedSenderReady ? "" : " · ábrelo en Configuración"}`}
+                    onClick={
+                      videoReady && savedSenderReady
+                        ? undefined
+                        : () => openSettings(videoReady ? "email" : "video")
+                    }
                   />
                   <SummaryCard
                     index={1}
@@ -595,7 +595,6 @@ export default function TalentoIneditoRetoPage() {
                     label="Se envía desde"
                     value={settings.fromName || "WCA | INÉDITO"}
                     hint={savedSender?.fromEmail ?? settings.senderId}
-                    onClick={() => openSettings("email")}
                   />
                   <SummaryCard
                     index={2}
@@ -615,8 +614,8 @@ export default function TalentoIneditoRetoPage() {
                   />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-                  <div className="space-y-6">
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)] xl:items-stretch">
+                  <div className="flex flex-col gap-6">
                     {/* Envío */}
                     <Card
                       icon={Send}
@@ -729,31 +728,27 @@ export default function TalentoIneditoRetoPage() {
                         </div>
                       ) : null}
 
-                      <div className="mt-5 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <button
-                          type="button"
-                          onClick={() => openSettings("email")}
-                          className="min-w-0 text-left text-xs text-muted-foreground hover:text-foreground"
-                        >
+                      <div className="mt-5 flex flex-col gap-3 border-t pt-4">
+                        <p className="text-xs text-muted-foreground">
                           Desde <span className="font-medium text-foreground">{settings.fromName}</span>{" "}
-                          &lt;{savedSender?.fromEmail ?? settings.senderId}&gt; · <span className="underline underline-offset-2">cambiar</span>
-                        </button>
-                        <div className="flex gap-2">
+                          &lt;{savedSender?.fromEmail ?? settings.senderId}&gt; · se cambia en Configuración.
+                        </p>
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Button
                             variant="outline"
-                            className="h-10 rounded-xl"
+                            className="h-10 shrink-0 rounded-xl"
                             disabled={sendMutation.isPending || validCount === 0 || !videoReady}
                             onClick={() => sendMutation.mutate(true)}
                           >
                             Simular
                           </Button>
                           <Button
-                            className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]"
+                            className="h-10 shrink-0 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]"
                             disabled={sendMutation.isPending || validCount === 0 || !videoReady || !savedSenderReady}
                             onClick={() => setSendConfirmOpen(true)}
                           >
                             {sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            Enviar a {validCount || "…"}
+                            Enviar{validCount > 0 ? ` a ${validCount}` : ""}
                           </Button>
                         </div>
                       </div>
@@ -797,9 +792,7 @@ export default function TalentoIneditoRetoPage() {
                         </ul>
                       </Card>
                     ) : null}
-                  </div>
 
-                  <div className="space-y-6">
                     {/* Pruebas */}
                     <Card
                       icon={FlaskConical}
@@ -838,7 +831,7 @@ export default function TalentoIneditoRetoPage() {
                           </div>
                         </div>
                       ) : null}
-                      <div className="mt-4 flex items-center justify-between gap-3 border-t pt-4">
+                      <div className="mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-xs text-muted-foreground">¿Solo quieres probar el vídeo? Crea un enlace sin enviar correo.</p>
                         <Button
                           variant="outline"
@@ -852,9 +845,16 @@ export default function TalentoIneditoRetoPage() {
                         </Button>
                       </div>
                     </Card>
+                  </div>
 
+                  <div className="min-h-[28rem] xl:min-h-0">
                     {/* Enlaces */}
-                    <Card icon={Link2} title="Enlaces" description="Quién lo abrió, quién terminó el vídeo y cuáles siguen vigentes.">
+                    <Card
+                      icon={Link2}
+                      title="Enlaces"
+                      description="Quién lo abrió, quién terminó el vídeo y cuáles siguen vigentes."
+                      className="h-full"
+                    >
                       <div className="mb-3 flex flex-wrap gap-1.5">
                         {FILTERS.map((f) => (
                           <button
@@ -877,15 +877,15 @@ export default function TalentoIneditoRetoPage() {
                         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por correo" className="pl-9" />
                       </div>
                       {tokensQuery.isLoading ? (
-                        <div className="flex justify-center py-8">
+                        <div className="flex flex-1 items-center justify-center py-8">
                           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                         </div>
                       ) : filteredTokens.length === 0 ? (
-                        <p className="rounded-xl border border-dashed py-8 text-center text-sm text-muted-foreground">
+                        <p className="flex flex-1 items-center justify-center rounded-xl border border-dashed py-8 text-center text-sm text-muted-foreground">
                           {tokens.length ? "Nada con ese filtro." : "Aún no hay enlaces."}
                         </p>
                       ) : (
-                        <ul className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
+                        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                           {filteredTokens.map((t) => {
                             const meta = STATUS_META[t.status] ?? STATUS_META.pending!;
                             const active = t.status === "pending" || t.status === "opened";

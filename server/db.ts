@@ -14,5 +14,13 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
+  keepAlive: true,
+  idleTimeoutMillis: 30_000,
 });
+
+// Sin este listener, un cliente inactivo que la BD cierra (ECONNRESET) tumba todo el proceso.
+pool.on("error", (error) => {
+  console.error("[db] Conexión inactiva cerrada por el servidor de Postgres:", error.message);
+});
+
 export const db = drizzle(pool, { schema });
