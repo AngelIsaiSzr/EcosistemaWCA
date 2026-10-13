@@ -284,7 +284,7 @@ export function PresentationCardEditor({
   if (cardQuery.isLoading || (!state && !cardQuery.isError)) {
     return (
       <div className={cn("flex items-center justify-center", embedded ? "min-h-[320px]" : "min-h-screen")}>
-        <LoadingSpinner size="lg" text="Cargando tarjeta..." />
+        <LoadingSpinner size="lg" text="Cargando..." />
       </div>
     );
   }
@@ -332,7 +332,7 @@ export function PresentationCardEditor({
       <div className={cn(!embedded ? "flex h-[100dvh] flex-col overflow-hidden bg-background" : "space-y-4")}>
         {!embedded && <Navbar />}
         {!embedded && <div className="h-[4.5rem] shrink-0" />}
-        <div className={cn(!embedded && "flex min-h-0 flex-1 flex-col")}>
+        <div className={cn(!embedded ? "flex min-h-0 flex-1 flex-col" : "space-y-5")}>
           <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", !embedded && "shrink-0 border-b bg-card/60 px-4 py-3 backdrop-blur")}>
             <div>
               {!embedded && (

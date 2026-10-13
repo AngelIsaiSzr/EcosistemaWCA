@@ -951,7 +951,7 @@ export function PublishPanel({
       </Group>
 
       {isAdmin && (
-        <Group title="Responsable" hint="El usuario asignado podrá editar su tarjeta en /mi-tarjeta.">
+        <Group title="Responsable" hint="El usuario asignado podrá editar su tarjeta desde su perfil.">
           <div ref={pickerRef} className="relative w-full">
             <Button
               type="button"

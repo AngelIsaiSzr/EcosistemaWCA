@@ -23,7 +23,6 @@ import AdminMediaLibraryPage from "@/pages/admin-media-library-page";
 import AdminCardsPage from "@/pages/admin-cards-page";
 import AdminCardEditorPage from "@/pages/admin-card-editor-page";
 import AdminEmailAutomationPage from "@/pages/admin-email-automation-page";
-import MyCardPage from "@/pages/my-card-page";
 import CardPublicPage from "@/pages/card-public-page";
 import TalentoHubPage from "@/pages/talento-hub-page";
 import TalentoDashboardPage from "@/pages/talento-dashboard-page";
@@ -128,7 +127,7 @@ function Router() {
         <Route path="/reto/:token" component={IneditoRetoPublicPage} />
         <ProtectedRoute path="/editor" component={EditorPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/mi-tarjeta" component={MyCardPage} />
+        <Route path="/mi-tarjeta">{() => <SoftRedirect to="/profile?seccion=tarjeta" />}</Route>
         {/* Compat: Equipo y tarjetas pasaron a Talento */}
         <Route path="/admin/tarjetas/:id/editar">
           {(params) => <SoftRedirect to={`/talento/tarjetas/${params.id}/editar`} />}
@@ -273,7 +272,6 @@ function App() {
     location.startsWith("/reto/") ||
     location.startsWith("/talento") ||
     location.startsWith("/admin") ||
-    location === "/mi-tarjeta" ||
     (typeof window !== "undefined" && window.location.hostname.toLowerCase().startsWith("organigrama.")) ||
     (!!pathSlug && !pathSlug.includes("/") && !isReservedCardSlug(pathSlug) && location === `/${pathSlug}`) ||
     location.includes("registro-en-vivo") ||

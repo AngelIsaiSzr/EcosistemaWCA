@@ -214,7 +214,7 @@ export default function AdminCardsPage() {
 
           {cardsLoading ? (
             <div className="flex justify-center py-20">
-              <LoadingSpinner text="Cargando tarjetas..." />
+              <LoadingSpinner text="Cargando..." />
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed bg-card px-6 py-16 text-center text-muted-foreground">

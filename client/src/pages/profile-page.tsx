@@ -94,6 +94,15 @@ interface EnrollmentWithProgram {
 
 type SectionId = "perfil" | "tarjeta" | "programas" | "certificados" | "cuenta";
 
+const SECTION_IDS: SectionId[] = ["perfil", "tarjeta", "programas", "certificados", "cuenta"];
+
+/** Sección inicial desde ?seccion= (ej. /mi-tarjeta redirige a ?seccion=tarjeta). */
+function initialSection(): SectionId {
+  if (typeof window === "undefined") return "perfil";
+  const raw = new URLSearchParams(window.location.search).get("seccion");
+  return SECTION_IDS.includes(raw as SectionId) ? (raw as SectionId) : "perfil";
+}
+
 type CertificateRow = {
   id: number;
   code: string;
@@ -114,7 +123,7 @@ export default function ProfilePage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [, setLocation] = useLocation();
-  const [section, setSection] = useState<SectionId>("perfil");
+  const [section, setSection] = useState<SectionId>(initialSection);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
 
@@ -130,7 +139,7 @@ export default function ProfilePage() {
     enabled: Boolean(user),
   });
 
-  const { data: myCard } = useQuery<PresentationCard | null>({
+  const { data: myCard, isFetched: myCardFetched } = useQuery<PresentationCard | null>({
     queryKey: ["/api/cards/mine"],
     enabled: Boolean(user),
     retry: false,
@@ -384,10 +393,10 @@ export default function ProfilePage() {
   }, [user, imagePreview, enrollments]);
 
   useEffect(() => {
-    if (section === "tarjeta" && !myCard) {
+    if (section === "tarjeta" && myCardFetched && !myCard) {
       setSection("perfil");
     }
-  }, [section, myCard]);
+  }, [section, myCard, myCardFetched]);
 
   if (isLoading) {
     return (
