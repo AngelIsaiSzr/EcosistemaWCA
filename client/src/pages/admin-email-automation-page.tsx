@@ -966,19 +966,19 @@ export default function AdminEmailAutomationPage() {
           <div className={cn("transition-[margin] duration-300 ease-out", sidePanelMargin)}>
             {/* Encabezado */}
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  <Link href="/admin" className="hover:text-foreground">
-                    Inicio
-                  </Link>
-                  {" › "}
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <Link href="/admin" className="hover:text-foreground">
+                  Inicio
+                </Link>
+                {" › "}
                   Correos y automatización
-                </p>
+              </p>
                 <h1 className="mt-1 font-heading text-4xl font-bold">Correos y automatización</h1>
-                <p className="mt-2 max-w-2xl text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-muted-foreground">
                   Programa los recordatorios a directores en el calendario, agrúpalos por semestre o evento y envía correos cuando lo necesites.
-                </p>
-              </div>
+              </p>
+            </div>
               <div className="flex flex-wrap gap-2">
                 <Button className="h-10 rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]" onClick={() => openNewEmail()}>
                   <Plus className="h-4 w-4" />
@@ -993,19 +993,19 @@ export default function AdminEmailAutomationPage() {
                   Configuración
                 </Button>
                 <Button variant="outline" className="h-10 rounded-xl" asChild>
-                  <Link href="/admin">
-                    <ArrowLeft className="h-4 w-4" />
-                    Volver al panel
-                  </Link>
-                </Button>
+              <Link href="/admin">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al panel
+              </Link>
+            </Button>
               </div>
-            </div>
+          </div>
 
             {loadingData || !data ? (
               <div className="flex justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
               <>
                 {/* Resumen */}
                 <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1051,7 +1051,7 @@ export default function AdminEmailAutomationPage() {
                     hint="Ver historial completo"
                     onClick={() => setView("history")}
                   />
-                </div>
+                  </div>
 
                 {/* Grupos + vista */}
                 <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -1091,7 +1091,7 @@ export default function AdminEmailAutomationPage() {
                           </button>
                           {chip.group && (
                             <button
-                              type="button"
+                          type="button"
                               aria-label={`Editar ${chip.name}`}
                               onClick={() => {
                                 const g = chip.group!;
@@ -1129,8 +1129,8 @@ export default function AdminEmailAutomationPage() {
                     >
                       <FolderPlus className="h-4 w-4" />
                       Grupo
-                    </Button>
-                  </div>
+                        </Button>
+                      </div>
                   <div className="w-full sm:w-auto sm:min-w-[22rem]">
                     <Segmented
                       value={view}
@@ -1143,7 +1143,7 @@ export default function AdminEmailAutomationPage() {
                       ]}
                     />
                   </div>
-                </div>
+                    </div>
 
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
@@ -1203,7 +1203,7 @@ export default function AdminEmailAutomationPage() {
                                       )}
                                     </p>
                                     {group && <p className="text-xs text-muted-foreground">{formatRange(group.startDate, group.endDate)}</p>}
-                                  </div>
+                    </div>
                                   <div className="ml-auto flex items-center gap-3">
                                     <div className="hidden w-36 sm:block">
                                       <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
@@ -1218,11 +1218,11 @@ export default function AdminEmailAutomationPage() {
                                           initial={{ width: 0 }}
                                           animate={{ width: `${pct}%` }}
                                           transition={{ duration: 0.6, ease: "easeOut" }}
-                                        />
-                                      </div>
-                                    </div>
+                      />
+                    </div>
+                    </div>
                                     {group?.kind === "semester" && (
-                                      <Button
+                    <Button
                                         size="sm"
                                         variant="outline"
                                         className="h-8 rounded-lg"
@@ -1241,9 +1241,9 @@ export default function AdminEmailAutomationPage() {
                                     >
                                       <Plus className="h-3.5 w-3.5" />
                                       Correo
-                                    </Button>
-                                  </div>
-                                </div>
+                    </Button>
+                  </div>
+                </div>
                                 {items.length === 0 ? (
                                   <p className="px-4 py-6 text-center text-sm text-muted-foreground">Este grupo aún no tiene correos.</p>
                                 ) : (
@@ -1259,7 +1259,7 @@ export default function AdminEmailAutomationPage() {
                                           animate={{ opacity: 1, x: 0 }}
                                           transition={{ delay: Math.min(i, 12) * 0.03 }}
                                           onClick={() => openEmail(t.id)}
-                                          className={cn(
+                        className={cn(
                                             "flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-[#5b8fd4]/[0.05]",
                                             selected && "bg-[#5b8fd4]/[0.08]",
                                             !t.enabled && "opacity-60",
@@ -1278,8 +1278,8 @@ export default function AdminEmailAutomationPage() {
                                               </>
                                             ) : (
                                               <p className="text-[11px] text-muted-foreground">Sin fecha</p>
-                                            )}
-                                          </div>
+                            )}
+                          </div>
                                           <span className={cn("h-9 w-1 shrink-0 rounded-full", cls.bar)} />
                                           <div className="min-w-0 flex-1">
                                             <p className="truncate font-medium">
@@ -1287,7 +1287,7 @@ export default function AdminEmailAutomationPage() {
                                               {t.label}
                                             </p>
                                             <p className="truncate text-xs text-muted-foreground">{t.subject}</p>
-                                          </div>
+                        </div>
                                           <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
                                             <StatusPill status={statusOf(t)} />
                                             <span className="text-[11px] text-muted-foreground">
@@ -1351,7 +1351,7 @@ export default function AdminEmailAutomationPage() {
                                   {log.errorMessage && <p className="mt-1 text-xs text-destructive">{log.errorMessage}</p>}
                                 </div>
                                 {log.kind === "test" && (
-                                  <Button
+                        <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
@@ -1361,11 +1361,11 @@ export default function AdminEmailAutomationPage() {
                                     aria-label="Eliminar prueba"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                        </Button>
                                 )}
                               </motion.div>
                             ))}
-                          </div>
+                      </div>
                         )}
                       </div>
                     )}
@@ -1461,9 +1461,9 @@ export default function AdminEmailAutomationPage() {
                             >
                               Periodo {n}
                             </button>
-                          ))}
-                        </div>
-                      </div>
+                    ))}
+                  </div>
+                </div>
                       <div className="grid grid-cols-5 gap-1.5">
                         {[1, 2, 3, 4, 5].map((w) => {
                           const key = `p${periodPick}w${w}` as EmailPresetKey;
@@ -1512,7 +1512,7 @@ export default function AdminEmailAutomationPage() {
                           </motion.button>
                         );
                       })}
-                    </div>
+                  </div>
                     <FieldHint>
                       Al elegir una plantilla se llenan el nombre, el asunto y el contenido. Después puedes editar todo en “Contenido”.
                     </FieldHint>
@@ -1555,7 +1555,7 @@ export default function AdminEmailAutomationPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email-group">Grupo</Label>
-                        <select
+                      <select
                           id="email-group"
                           className={SELECT_CLASS}
                           value={draft.groupId ?? ""}
@@ -1565,10 +1565,10 @@ export default function AdminEmailAutomationPage() {
                           {groups.map((g) => (
                             <option key={g.id} value={g.id}>
                               {g.name} · {g.kind === "event" ? "Evento" : "Semestre"}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     </div>
                     <FieldHint>
                       {draft.sendDate
@@ -1666,7 +1666,7 @@ export default function AdminEmailAutomationPage() {
               {emailTab === "content" && (
                 <>
                   <AdminPanelSection title="Asunto">
-                    <Input
+                      <Input
                       value={draft.subject}
                       onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
                       placeholder="🚀 Recordatorio directores · Periodo 3 · Semana 1 | Ecosistema WCA"
@@ -1712,17 +1712,17 @@ export default function AdminEmailAutomationPage() {
                         placeholder="correo@tec.mx"
                         className="h-10 rounded-xl"
                       />
-                      <Button
+                    <Button
                         type="button"
                         variant="outline"
                         className="h-10 shrink-0 rounded-xl"
                         disabled={testMutation.isPending || !testEmail.trim()}
-                        onClick={() => testMutation.mutate()}
-                      >
+                      onClick={() => testMutation.mutate()}
+                    >
                         {testMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                         Enviar prueba
-                      </Button>
-                    </div>
+                    </Button>
+                  </div>
                   </AdminPanelSection>
 
                   <AdminPanelSection title="Enviar ahora">
@@ -1734,21 +1734,21 @@ export default function AdminEmailAutomationPage() {
                       <p className="mt-1 text-xs text-muted-foreground">
                         Si lo envías el mismo día que tiene programado, el envío automático ya no se repite.
                       </p>
-                      <Button
-                        type="button"
+                                <Button
+                                  type="button"
                         className="mt-3 h-10 w-full rounded-xl bg-[#5b8fd4] text-white hover:bg-[#4a7fc4]"
                         disabled={!editing || emailDirty || sendNowMutation.isPending || draftRecipients.length === 0}
                         onClick={() => setConfirmSendNow(true)}
                       >
                         {sendNowMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         Enviar ahora
-                      </Button>
+                                </Button>
                       {(!editing || emailDirty) && (
                         <p className="mt-2 text-center text-xs text-amber-600 dark:text-amber-400">
                           Guarda el correo primero para poder enviarlo.
                         </p>
-                      )}
-                    </div>
+                              )}
+                            </div>
                   </AdminPanelSection>
 
                   {editing && (
@@ -1766,7 +1766,7 @@ export default function AdminEmailAutomationPage() {
                                 {log.createdAt ? new Date(log.createdAt).toLocaleString("es-MX") : ""} ·{" "}
                                 {log.status === "sent" ? "Enviado" : log.status === "partial" ? "Parcial" : "Error"}
                               </span>
-                            </div>
+                          </div>
                           ))}
                         </div>
                       )}
@@ -1830,9 +1830,9 @@ export default function AdminEmailAutomationPage() {
                       <p className="text-xs text-muted-foreground">
                         {settingsDraft.enabled ? "Los correos programados salen solos." : "Ningún correo programado se enviará."}
                       </p>
-                    </div>
-                    <Switch checked={settingsDraft.enabled} onCheckedChange={(v) => setSettingsDraft({ ...settingsDraft, enabled: v })} />
                   </div>
+                    <Switch checked={settingsDraft.enabled} onCheckedChange={(v) => setSettingsDraft({ ...settingsDraft, enabled: v })} />
+                </div>
                   <div className="space-y-2">
                     <Label htmlFor="sender">Enviar desde</Label>
                     <select
@@ -1852,7 +1852,7 @@ export default function AdminEmailAutomationPage() {
                       })}
                     </select>
                     <FieldHint>{data.senders.find((s) => s.id === settingsDraft.senderId)?.description}</FieldHint>
-                  </div>
+            </div>
                   <div className="space-y-2">
                     <Label htmlFor="sendHour">Hora general de envío</Label>
                     <select
@@ -1868,7 +1868,7 @@ export default function AdminEmailAutomationPage() {
                       ))}
                     </select>
                     <FieldHint>Cada correo puede tener su propia hora; si no, usa esta.</FieldHint>
-                  </div>
+      </div>
                 </AdminPanelSection>
               ) : (
                 <AdminPanelSection title="Destinatarios">
@@ -1968,8 +1968,8 @@ export default function AdminEmailAutomationPage() {
                     className="h-10 rounded-xl"
                   />
                   {groupDraft.kind === "semester" && <FieldHint>Usa el código del Tec (AD26, FJ27…); aparece en el correo de cierre.</FieldHint>}
-                </div>
-                <div className="space-y-2">
+            </div>
+            <div className="space-y-2">
                   <Label>Color</Label>
                   <div className="flex flex-wrap gap-2">
                     {EMAIL_GROUP_COLORS.map((c) => (
@@ -1992,24 +1992,24 @@ export default function AdminEmailAutomationPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="group-start">Inicio</Label>
-                    <Input
+              <Input
                       id="group-start"
                       type="date"
                       value={groupDraft.startDate}
                       onChange={(e) => setGroupDraft({ ...groupDraft, startDate: e.target.value })}
                       className="h-10 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
+              />
+            </div>
+            <div className="space-y-2">
                     <Label htmlFor="group-end">Fin</Label>
-                    <Input
+              <Input
                       id="group-end"
-                      type="date"
+                type="date"
                       value={groupDraft.endDate}
                       onChange={(e) => setGroupDraft({ ...groupDraft, endDate: e.target.value })}
                       className="h-10 rounded-xl"
-                    />
-                  </div>
+              />
+            </div>
                 </div>
                 <FieldHint>Con fechas, el calendario sombrea el periodo del grupo con su color.</FieldHint>
               </AdminPanelSection>
@@ -2047,7 +2047,7 @@ export default function AdminEmailAutomationPage() {
             <AdminPanelBody>
               <AdminPanelSection title="Semestre">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
+            <div className="space-y-2">
                     <Label htmlFor="planner-group">Grupo</Label>
                     <select
                       id="planner-group"
@@ -2081,7 +2081,7 @@ export default function AdminEmailAutomationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="planner-start">Inicio de clases</Label>
-                    <Input
+              <Input
                       id="planner-start"
                       type="date"
                       value={plannerStart}
@@ -2092,8 +2092,8 @@ export default function AdminEmailAutomationPage() {
                         }
                       }}
                       className="h-10 rounded-xl"
-                    />
-                  </div>
+              />
+            </div>
                 </div>
                 <AnimatePresence initial={false}>
                   {plannerGroupId === "new" && (
@@ -2103,7 +2103,7 @@ export default function AdminEmailAutomationPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="grid gap-3 overflow-hidden sm:grid-cols-2"
                     >
-                      <div className="space-y-2">
+            <div className="space-y-2">
                         <Label htmlFor="planner-name">Código del semestre</Label>
                         <Input
                           id="planner-name"
@@ -2114,9 +2114,9 @@ export default function AdminEmailAutomationPage() {
                           }}
                           placeholder="FJ27"
                           className="h-10 rounded-xl"
-                        />
-                      </div>
-                      <div className="space-y-2">
+              />
+            </div>
+            <div className="space-y-2">
                         <Label>Color</Label>
                         <div className="flex h-10 items-center gap-2">
                           {EMAIL_GROUP_COLORS.map((c) => (
@@ -2132,8 +2132,8 @@ export default function AdminEmailAutomationPage() {
                               )}
                             />
                           ))}
-                        </div>
-                      </div>
+            </div>
+          </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -728,12 +728,12 @@ export default function TalentoIneditoRetoPage() {
                         </div>
                       ) : null}
 
-                      <div className="mt-5 flex flex-col gap-3 border-t pt-4">
-                        <p className="text-xs text-muted-foreground">
+                      <div className="mt-5 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="min-w-0 text-xs text-muted-foreground">
                           Desde <span className="font-medium text-foreground">{settings.fromName}</span>{" "}
                           &lt;{savedSender?.fromEmail ?? settings.senderId}&gt; · se cambia en Configuración.
                         </p>
-                        <div className="flex flex-wrap justify-end gap-2">
+                        <div className="flex shrink-0 gap-2">
                           <Button
                             variant="outline"
                             className="h-10 shrink-0 rounded-xl"

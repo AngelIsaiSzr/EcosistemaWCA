@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { PresentationCard } from "@shared/schema";
 import {
@@ -23,7 +23,6 @@ import { ImageUrlInput } from "@/components/media/image-url-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -36,17 +35,54 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
   ExternalLink,
+  Globe,
+  Link2,
   Loader2,
+  Palette,
   Plus,
   RotateCcw,
+  Save,
   Search,
+  Share2,
   Trash2,
+  UserRound,
+  type LucideIcon,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
+
+function EditorSection({
+  title,
+  icon: Icon,
+  action,
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 overflow-visible rounded-2xl border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b1c3d] to-[#0056FF] text-white shadow-md shadow-[#0056FF]/20">
+            <Icon className="h-4 w-4" />
+          </span>
+          <h2 className="font-heading text-lg font-semibold leading-tight">{title}</h2>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 type UserBasic = { id: number; name: string; email: string };
 
@@ -111,6 +147,8 @@ export function PresentationCardEditor({
   const [dirty, setDirty] = useState(false);
   const [userPickerOpen, setUserPickerOpen] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const userPickerRef = useRef<HTMLDivElement>(null);
 
   const cardQuery = useQuery<PresentationCard>({
@@ -212,6 +250,15 @@ export function PresentationCardEditor({
     },
   });
 
+  const requestLeave = (href: string) => {
+    if (!dirty) {
+      navigate(href);
+      return;
+    }
+    setPendingHref(href);
+    setLeaveOpen(true);
+  };
+
   const addLink = () => {
     if (!state) return;
     const link: PresentationCardLink = {
@@ -296,13 +343,13 @@ export function PresentationCardEditor({
                 <p className="text-sm text-muted-foreground">
                   {mode === "admin" ? (
                     <>
-                      <Link href="/talento" className="hover:text-foreground">
+                      <button type="button" className="hover:text-foreground" onClick={() => requestLeave("/talento")}>
                         Inicio
-                      </Link>
+                      </button>
                       {" › "}
-                      <Link href="/talento/tarjetas" className="hover:text-foreground">
+                      <button type="button" className="hover:text-foreground" onClick={() => requestLeave("/talento/tarjetas")}>
                         Tarjetas
-                      </Link>
+                      </button>
                       {" › "}
                       Editar
                     </>
@@ -313,49 +360,59 @@ export function PresentationCardEditor({
               )}
               <h1
                 className={cn(
-                  "font-heading font-bold",
+                  "flex flex-wrap items-center gap-2 font-heading font-bold",
                   embedded ? "text-xl md:text-2xl" : "mt-1 text-3xl md:text-4xl",
                 )}
               >
                 {mode === "admin" ? "Editar tarjeta" : "Mi tarjeta"}
-                {dirty ? <span className="text-amber-500"> *</span> : null}
+                {dirty ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Sin guardar
+                  </span>
+                ) : null}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 URL pública:{" "}
                 <span className="font-medium text-foreground">
                   ecosistemawca.com/{normalizeCardSlug(state.slug) || state.slug}
                 </span>
-                {dirty ? (
-                  <span className="ml-2 text-amber-600 dark:text-amber-400">
-                    · Cambios sin guardar
-                  </span>
-                ) : null}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {state.isPublished && (
-                <Button variant="outline" asChild>
+              {state.isPublished ? (
+                <Button variant="outline" className="h-10 rounded-xl" asChild>
                   <a href={`/${state.slug}`} target="_blank" rel="noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="h-4 w-4" />
                     Ver pública
                   </a>
                 </Button>
-              )}
+              ) : null}
+              {mode === "admin" && !embedded ? (
+                <Button variant="outline" className="h-10 rounded-xl" onClick={() => requestLeave("/talento/tarjetas")}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Volver
+                </Button>
+              ) : null}
               <Button
-                className="bg-[#5b8fd4] hover:bg-[#4a7fc4]"
+                className={cn(
+                  "h-10 rounded-xl",
+                  dirty
+                    ? "bg-[#5b8fd4] text-white shadow-lg shadow-[#5b8fd4]/25 hover:bg-[#4a7fc4]"
+                    : "bg-muted text-muted-foreground hover:bg-muted",
+                )}
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !dirty}
               >
-                {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {dirty ? "Guardar cambios *" : "Guardar cambios"}
+                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saveMutation.isPending ? "Guardando…" : "Guardar"}
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
             <div className="space-y-6 overflow-visible">
-              <section className="rounded-2xl border bg-card p-5 space-y-4">
-                <h2 className="font-heading text-lg font-semibold">Perfil</h2>
+              <EditorSection title="Perfil" icon={UserRound}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Nombre</Label>
@@ -371,10 +428,11 @@ export function PresentationCardEditor({
                 </div>
                 <div className="space-y-2">
                   <Label>Biografía</Label>
-                  <Textarea
-                    rows={4}
+                  <AutoTextarea
                     value={state.bio}
                     onChange={(e) => updateField("bio", e.target.value)}
+                    maxHeight={220}
+                    placeholder="Una o dos frases sobre ti."
                   />
                 </div>
                 <div className="space-y-2">
@@ -398,10 +456,9 @@ export function PresentationCardEditor({
                     </div>
                   </div>
                 )}
-              </section>
+              </EditorSection>
 
-              <section className="rounded-2xl border bg-card p-5 space-y-4">
-                <h2 className="font-heading text-lg font-semibold">Dirección y tema</h2>
+              <EditorSection title="Dirección y tema" icon={Palette}>
                 <div className="space-y-2">
                   <Label>Dirección</Label>
                   <Select
@@ -694,10 +751,9 @@ export function PresentationCardEditor({
                     }
                   />
                 </div>
-              </section>
+              </EditorSection>
 
-              <section className="rounded-2xl border bg-card p-5 space-y-4">
-                <h2 className="font-heading text-lg font-semibold">Redes fijas</h2>
+              <EditorSection title="Redes fijas" icon={Share2}>
                 <div className="space-y-2">
                   <Label>Mostrar por defecto como</Label>
                   <Select
@@ -769,16 +825,18 @@ export function PresentationCardEditor({
                     );
                   })}
                 </div>
-              </section>
+              </EditorSection>
 
-              <section className="rounded-2xl border bg-card p-5 space-y-4 overflow-visible">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-heading text-lg font-semibold">Botones Linktree</h2>
-                  <Button type="button" variant="outline" size="sm" onClick={addLink}>
+              <EditorSection
+                title="Botones Linktree"
+                icon={Link2}
+                action={
+                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" onClick={addLink}>
                     <Plus className="mr-1 h-4 w-4" />
                     Añadir
                   </Button>
-                </div>
+                }
+              >
                 {state.links.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Aún no hay botones. Añade enlaces personalizados (portfolio, agenda, etc.).
@@ -885,10 +943,9 @@ export function PresentationCardEditor({
                     ))}
                   </div>
                 )}
-              </section>
+              </EditorSection>
 
-              <section className="rounded-2xl border bg-card p-5 space-y-4">
-                <h2 className="font-heading text-lg font-semibold">Publicación</h2>
+              <EditorSection title="Publicación" icon={Globe}>
                 <div className="flex items-center justify-between rounded-xl border px-3 py-2">
                   <div>
                     <Label htmlFor="published">Publicada</Label>
@@ -1007,22 +1064,35 @@ export function PresentationCardEditor({
                     </p>
                   </div>
                 )}
-              </section>
+              </EditorSection>
             </div>
 
             <aside className="xl:sticky xl:top-24 xl:self-start">
-              <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
-              <div
-                className={cn(
-                  "overflow-hidden rounded-[2rem] border shadow-2xl ring-1 ring-white/10",
-                )}
-              >
-                <CardPreview card={previewCard} compact />
+              <div className="overflow-hidden rounded-2xl border bg-card p-4 shadow-sm">
+                <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
+                <div className="overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
+                  <CardPreview card={previewCard} compact />
+                </div>
               </div>
             </aside>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title="Tienes cambios sin guardar"
+        description="Si sales ahora se perderán. ¿Quieres salir de todos modos?"
+        confirmLabel="Salir sin guardar"
+        destructive
+        onConfirm={() => {
+          const href = pendingHref;
+          setLeaveOpen(false);
+          setPendingHref(null);
+          if (href) navigate(href);
+        }}
+      />
     </>
   );
 }
