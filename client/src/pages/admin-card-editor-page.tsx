@@ -1,114 +1,48 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { PresentationCard } from "@shared/schema";
 import {
-  CARD_BACKGROUND_OPTIONS,
-  CARD_DIRECTIONS,
   DEFAULT_CARD_THEME,
-  cssColorToHexInput,
   normalizeCardSlug,
   resolveCardDirectionColor,
-  type CardSocialKey,
-  type PresentationCardLink,
   type PresentationCardTheme,
 } from "@shared/card-directions";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
-import { CardPreview } from "@/components/cards/card-preview";
-import { FaIconPicker } from "@/components/cards/fa-icon-picker";
-import { ImageUrlInput } from "@/components/media/image-url-input";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+import { CARD_SOCIALS, CardPreview, type CardPreviewArea } from "@/components/cards/card-preview";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  AppearancePanel,
+  LinksPanel,
+  ProfilePanel,
+  PublishPanel,
+  SocialsPanel,
+  type CardEditorSection,
+  type CardEditorState,
+  type UserBasic,
+} from "@/components/cards/card-editor-panels";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
   ExternalLink,
+  Eye,
   Globe,
   Link2,
   Loader2,
+  MousePointerClick,
   Palette,
-  Plus,
-  RotateCcw,
   Save,
-  Search,
   Share2,
-  Trash2,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { AutoTextarea } from "@/components/ui/auto-textarea";
 
-function EditorSection({
-  title,
-  icon: Icon,
-  action,
-  children,
-}: {
-  title: string;
-  icon: LucideIcon;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-4 overflow-visible rounded-2xl border bg-card p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b1c3d] to-[#0056FF] text-white shadow-md shadow-[#0056FF]/20">
-            <Icon className="h-4 w-4" />
-          </span>
-          <h2 className="font-heading text-lg font-semibold leading-tight">{title}</h2>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-type UserBasic = { id: number; name: string; email: string };
-
-type EditorState = {
-  name: string;
-  roleTitle: string;
-  bio: string;
-  image: string;
-  slug: string;
-  direction: string;
-  theme: PresentationCardTheme;
-  linkedIn: string;
-  instagram: string;
-  twitter: string;
-  github: string;
-  youtube: string;
-  tiktok: string;
-  whatsapp: string;
-  email: string;
-  website: string;
-  links: PresentationCardLink[];
-  assignedUserId: number | null;
-  isPublished: boolean;
-};
-
-function cardToState(card: PresentationCard): EditorState {
+function cardToState(card: PresentationCard): CardEditorState {
   return {
     name: card.name ?? "",
     roleTitle: card.roleTitle ?? "",
@@ -132,6 +66,58 @@ function cardToState(card: PresentationCard): EditorState {
   };
 }
 
+const SECTIONS: { id: CardEditorSection; label: string; icon: LucideIcon }[] = [
+  { id: "perfil", label: "Perfil", icon: UserRound },
+  { id: "apariencia", label: "Diseño", icon: Palette },
+  { id: "redes", label: "Redes", icon: Share2 },
+  { id: "enlaces", label: "Enlaces", icon: Link2 },
+  { id: "publicacion", label: "Publicar", icon: Globe },
+];
+
+function RailTab({
+  active,
+  icon: Icon,
+  label,
+  badge,
+  onClick,
+  horizontal,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  badge?: number;
+  onClick: () => void;
+  horizontal?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex shrink-0 items-center rounded-xl font-medium transition",
+        horizontal ? "gap-1.5 px-3 py-2 text-xs" : "w-[60px] flex-col gap-1 px-1 py-2 text-[10px]",
+        active
+          ? "bg-[#5b8fd4]/20 text-[#5b8fd4]"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      <Icon className={horizontal ? "h-4 w-4" : "h-5 w-5"} />
+      <span>{label}</span>
+      {badge != null && badge > 0 && (
+        <span
+          className={cn(
+            "flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5b8fd4] px-1 text-[9px] text-white",
+            !horizontal && "absolute right-1 top-1",
+          )}
+        >
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export function PresentationCardEditor({
   cardId,
   mode,
@@ -143,13 +129,13 @@ export function PresentationCardEditor({
 }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [state, setState] = useState<EditorState | null>(null);
+  const [state, setState] = useState<CardEditorState | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [userPickerOpen, setUserPickerOpen] = useState(false);
-  const [userSearch, setUserSearch] = useState("");
+  const [section, setSection] = useState<CardEditorSection>("perfil");
+  /** Solo en pantallas angostas: alterna entre panel y vista previa. */
+  const [showPreview, setShowPreview] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const userPickerRef = useRef<HTMLDivElement>(null);
 
   const cardQuery = useQuery<PresentationCard>({
     queryKey: cardId ? ["/api/cards", cardId] : ["/api/cards/mine"],
@@ -185,27 +171,14 @@ export function PresentationCardEditor({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [dirty]);
 
-  useEffect(() => {
-    if (!userPickerOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!userPickerRef.current?.contains(event.target as Node)) {
-        setUserPickerOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setUserPickerOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [userPickerOpen]);
-
-  const updateField = <K extends keyof EditorState>(key: K, value: EditorState[K]) => {
+  const updateField = <K extends keyof CardEditorState>(key: K, value: CardEditorState[K]) => {
     setDirty(true);
     setState((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const setTheme = (patch: Partial<PresentationCardTheme>) => {
+    setDirty(true);
+    setState((prev) => (prev ? { ...prev, theme: { ...prev.theme, ...patch } } : prev));
   };
 
   const saveMutation = useMutation({
@@ -259,47 +232,27 @@ export function PresentationCardEditor({
     setLeaveOpen(true);
   };
 
-  const addLink = () => {
-    if (!state) return;
-    const link: PresentationCardLink = {
-      id: `link-${Date.now()}`,
-      title: "Nuevo enlace",
-      url: "https://",
-      style: "solid",
-      order: state.links.length + 1,
-      enabled: true,
-    };
-    updateField("links", [...state.links, link]);
+  const openSection = (next: CardEditorSection) => {
+    setSection(next);
+    setShowPreview(false);
   };
 
-  const moveLink = (index: number, dir: -1 | 1) => {
-    if (!state) return;
-    const next = [...state.links];
-    const target = index + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    updateField(
-      "links",
-      next.map((l, i) => ({ ...l, order: i + 1 })),
-    );
-  };
-
-  if (cardQuery.isLoading || !state) {
+  if (cardQuery.isLoading || (!state && !cardQuery.isError)) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className={cn("flex items-center justify-center", embedded ? "min-h-[320px]" : "min-h-screen")}>
         <LoadingSpinner size="lg" text="Cargando tarjeta..." />
       </div>
     );
   }
 
-  if (cardQuery.isError) {
+  if (cardQuery.isError || !state) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 pb-16 pt-24 text-center">
           <h1 className="font-heading text-2xl font-bold">No disponible</h1>
           <p className="mt-2 text-muted-foreground">
-            {(cardQuery.error as Error).message || "No se encontró la tarjeta."}
+            {(cardQuery.error as Error | null)?.message || "No se encontró la tarjeta."}
           </p>
           <Button className="mt-6" variant="outline" onClick={() => navigate(mode === "admin" ? "/talento/tarjetas" : "/")}>
             Volver
@@ -309,28 +262,26 @@ export function PresentationCardEditor({
     );
   }
 
-  const previewCard = {
-    ...state,
-    theme: state.theme,
-    links: state.links,
+  const isAdmin = mode === "admin";
+  const accent = state.theme.accentColor || resolveCardDirectionColor(state.direction, state.theme);
+  const previewCard = { ...state, theme: state.theme, links: state.links };
+  const badges: Partial<Record<CardEditorSection, number>> = {
+    redes: CARD_SOCIALS.filter((s) => state[s.key].trim()).length,
+    enlaces: state.links.length,
   };
-  const usersList = usersQuery.data ?? [];
-  const assignedUser = usersList.find((u) => u.id === state.assignedUserId);
-  const userQuery = userSearch.trim().toLowerCase();
-  const filteredUsers = !userQuery
-    ? usersList
-    : usersList.filter(
-        (u) =>
-          u.name.toLowerCase().includes(userQuery) ||
-          u.email.toLowerCase().includes(userQuery),
-      );
+  const previewArea: CardPreviewArea | null = section === "publicacion" ? null : section;
+
+  /* En modo embebido el contenedor es más angosto: se pasa a 3 columnas hasta 2xl. */
+  const wide = embedded
+    ? { show: "2xl:flex", hide: "2xl:hidden", row: "2xl:flex-row", panelWidth: "flex-1 2xl:w-[380px] 2xl:flex-none 2xl:border-r" }
+    : { show: "lg:flex", hide: "lg:hidden", row: "lg:flex-row", panelWidth: "flex-1 lg:w-[400px] lg:flex-none lg:border-r xl:w-[440px]" };
 
   return (
     <>
       {!embedded && (
         <Helmet>
           <title>
-            {mode === "admin" ? `Editar · ${state.name}` : "Mi tarjeta"} | Ecosistema WCA
+            {isAdmin ? `Editar · ${state.name}` : "Mi tarjeta"} | Ecosistema WCA
           </title>
         </Helmet>
       )}
@@ -338,11 +289,11 @@ export function PresentationCardEditor({
         {!embedded && <Navbar />}
         {!embedded && <div className="h-[4.5rem] shrink-0" />}
         <div className={cn(!embedded && "flex min-h-0 flex-1 flex-col")}>
-          <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", !embedded && "shrink-0 border-b bg-card/60 px-4 py-3 backdrop-blur", embedded && "mb-4")}>
+          <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", !embedded && "shrink-0 border-b bg-card/60 px-4 py-3 backdrop-blur")}>
             <div>
               {!embedded && (
                 <p className="text-sm text-muted-foreground">
-                  {mode === "admin" ? (
+                  {isAdmin ? (
                     <>
                       <button type="button" className="hover:text-foreground" onClick={() => requestLeave("/talento")}>
                         Inicio
@@ -365,7 +316,7 @@ export function PresentationCardEditor({
                   embedded ? "text-xl md:text-2xl" : "mt-1 text-3xl md:text-4xl",
                 )}
               >
-                {mode === "admin" ? "Editar tarjeta" : "Mi tarjeta"}
+                {isAdmin ? "Editar tarjeta" : "Mi tarjeta"}
                 {dirty ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
@@ -380,7 +331,23 @@ export function PresentationCardEditor({
                 </span>
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openSection("publicacion")}
+                title="Estado de publicación"
+                className={cn(
+                  "inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition hover:bg-muted",
+                  state.isPublished
+                    ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                    : "text-muted-foreground",
+                )}
+              >
+                <span
+                  className={cn("h-2 w-2 rounded-full", state.isPublished ? "bg-emerald-500" : "bg-muted-foreground/50")}
+                />
+                {state.isPublished ? "Publicada" : "Borrador"}
+              </button>
               {state.isPublished ? (
                 <Button variant="outline" className="h-10 rounded-xl" asChild>
                   <a href={`/${state.slug}`} target="_blank" rel="noreferrer">
@@ -389,7 +356,7 @@ export function PresentationCardEditor({
                   </a>
                 </Button>
               ) : null}
-              {mode === "admin" && !embedded ? (
+              {isAdmin && !embedded ? (
                 <Button variant="outline" className="h-10 rounded-xl" onClick={() => requestLeave("/talento/tarjetas")}>
                   <ArrowLeft className="h-4 w-4" />
                   Volver
@@ -411,677 +378,115 @@ export function PresentationCardEditor({
             </div>
           </div>
 
-          <div className={cn("min-h-0 flex-1 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]", embedded && "grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]")}>
-            <div className={cn("space-y-6", !embedded ? "min-h-0 overflow-y-auto px-4 py-6 xl:px-6" : "overflow-visible")}>
-              <div className="xl:hidden">
-                <div className="overflow-hidden rounded-2xl border bg-card p-4">
-                  <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
-                  <div className="overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
-                    <CardPreview card={previewCard} compact />
-                  </div>
-                </div>
-              </div>
-              <EditorSection title="Perfil" icon={UserRound}>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Nombre</Label>
-                    <Input value={state.name} onChange={(e) => updateField("name", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cargo / puesto</Label>
-                    <Input
-                      value={state.roleTitle}
-                      onChange={(e) => updateField("roleTitle", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Biografía</Label>
-                  <AutoTextarea
-                    value={state.bio}
-                    onChange={(e) => updateField("bio", e.target.value)}
-                    maxHeight={220}
-                    placeholder="Una o dos frases sobre ti."
+          {/* Estudio: rail · panel · lienzo (mismo patrón que el editor de formularios) */}
+          <div
+            className={cn(
+              "flex min-h-0 flex-col overflow-hidden bg-card",
+              embedded ? "h-[min(82vh,880px)] min-h-[600px] rounded-2xl border" : "flex-1",
+              wide.row,
+            )}
+          >
+            {/* Pestañas horizontales en pantallas angostas */}
+            <nav className={cn("flex shrink-0 gap-1 overflow-x-auto border-b bg-muted/30 p-2", wide.hide)}>
+              {SECTIONS.map((s) => (
+                <RailTab
+                  key={s.id}
+                  horizontal
+                  active={!showPreview && section === s.id}
+                  icon={s.icon}
+                  label={s.label}
+                  badge={badges[s.id]}
+                  onClick={() => openSection(s.id)}
+                />
+              ))}
+              <RailTab
+                horizontal
+                active={showPreview}
+                icon={Eye}
+                label="Vista previa"
+                onClick={() => setShowPreview(true)}
+              />
+            </nav>
+
+            {/* Rail vertical */}
+            <nav className={cn("hidden w-[72px] shrink-0 flex-col items-center gap-1 border-r bg-muted/30 py-3", wide.show)}>
+              {SECTIONS.map((s) => (
+                <RailTab
+                  key={s.id}
+                  active={section === s.id}
+                  icon={s.icon}
+                  label={s.label}
+                  badge={badges[s.id]}
+                  onClick={() => openSection(s.id)}
+                />
+              ))}
+            </nav>
+
+            {/* Panel de la sección */}
+            <aside
+              className={cn(
+                "min-h-0 w-full shrink-0 flex-col overflow-y-auto",
+                wide.panelWidth,
+                showPreview ? "hidden" : "flex",
+                wide.show,
+              )}
+            >
+              <div className="p-4 sm:p-5">
+                {section === "perfil" && <ProfilePanel state={state} update={updateField} accent={accent} />}
+                {section === "apariencia" && (
+                  <AppearancePanel
+                    state={state}
+                    update={updateField}
+                    setTheme={setTheme}
+                    accent={accent}
+                    canChangeDirection={isAdmin}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>URL de foto</Label>
-                  <ImageUrlInput
-                    value={state.image}
-                    onChange={(v) => updateField("image", v)}
-                    placeholder="https://..."
+                )}
+                {section === "redes" && <SocialsPanel state={state} update={updateField} setTheme={setTheme} />}
+                {section === "enlaces" && <LinksPanel state={state} update={updateField} />}
+                {section === "publicacion" && (
+                  <PublishPanel
+                    state={state}
+                    update={updateField}
+                    isAdmin={isAdmin}
+                    users={usersQuery.data ?? []}
                   />
-                </div>
-                {mode === "admin" && (
-                  <div className="space-y-2">
-                    <Label>Slug (URL)</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">/</span>
-                      <Input
-                        value={state.slug}
-                        onChange={(e) => updateField("slug", e.target.value)}
-                        onBlur={() => updateField("slug", normalizeCardSlug(state.slug))}
-                      />
-                    </div>
-                  </div>
                 )}
-              </EditorSection>
-
-              <EditorSection title="Dirección y tema" icon={Palette}>
-                <div className="space-y-2">
-                  <Label>Dirección</Label>
-                  <Select
-                    value={state.direction}
-                    onValueChange={(v) => updateField("direction", v)}
-                    disabled={mode === "owner"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CARD_DIRECTIONS.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {state.direction === "direccion-sede" && (
-                  <div className="space-y-2">
-                    <Label>Acento de sede</Label>
-                    <Select
-                      value={state.theme.sedeAccent || "blue-strong"}
-                      onValueChange={(v) =>
-                        updateField("theme", {
-                          ...state.theme,
-                          sedeAccent: v as "blue-strong" | "purple",
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="blue-strong">Azul fuerte (Director)</SelectItem>
-                        <SelectItem value="purple">Morado (Subdirección)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Fondo</Label>
-                    <Select
-                      value={state.theme.backgroundStyle || "gradient"}
-                      onValueChange={(v) =>
-                        updateField("theme", {
-                          ...state.theme,
-                          backgroundStyle: v as PresentationCardTheme["backgroundStyle"],
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CARD_BACKGROUND_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {
-                        CARD_BACKGROUND_OPTIONS.find(
-                          (o) => o.id === (state.theme.backgroundStyle || "gradient"),
-                        )?.hint
-                      }
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estilo de botones</Label>
-                    <Select
-                      value={state.theme.buttonStyle || "rounded"}
-                      onValueChange={(v) =>
-                        updateField("theme", {
-                          ...state.theme,
-                          buttonStyle: v as PresentationCardTheme["buttonStyle"],
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rounded">Redondeado</SelectItem>
-                        <SelectItem value="pill">Píldora</SelectItem>
-                        <SelectItem value="square">Cuadrado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {(state.theme.backgroundStyle === "solid" ||
-                  state.theme.backgroundStyle === "carbon") && (
-                  <div className="space-y-2">
-                    <Label>
-                      {state.theme.backgroundStyle === "carbon"
-                        ? "Color base (carbono)"
-                        : "Color sólido del fondo"}
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        aria-label="Color de fondo"
-                        className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
-                        value={cssColorToHexInput(
-                          state.theme.backgroundColor,
-                          "#0b1220",
-                        )}
-                        onChange={(e) =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundColor: e.target.value,
-                          })
-                        }
-                      />
-                      <Input
-                        className="min-w-0 flex-1"
-                        value={state.theme.backgroundColor || "#0b1220"}
-                        onChange={(e) =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundColor: e.target.value || undefined,
-                          })
-                        }
-                        placeholder="#0b1220, hsl(...), rgb(...)"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        title="Restaurar color de fondo"
-                        onClick={() =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundColor: "#0b1220",
-                          })
-                        }
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {state.theme.backgroundStyle === "image" && (
-                  <div className="space-y-3 rounded-xl border p-3">
-                    <div className="space-y-2">
-                      <Label>URL de imagen de fondo</Label>
-                      <ImageUrlInput
-                        value={state.theme.backgroundImage || ""}
-                        onChange={(v) =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundImage: v || undefined,
-                          })
-                        }
-                        placeholder="https://... o /media/..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>O subir imagen</Label>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.size > 2.5 * 1024 * 1024) {
-                            toast({
-                              title: "Imagen muy pesada",
-                              description: "Máximo aprox. 2.5 MB para guardarla en la tarjeta.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            updateField("theme", {
-                              ...state.theme,
-                              backgroundImage: String(reader.result || ""),
-                            });
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Oscurecimiento ({state.theme.backgroundOverlay ?? 55}%)
-                      </Label>
-                      <Slider
-                        min={0}
-                        max={90}
-                        step={1}
-                        value={[state.theme.backgroundOverlay ?? 55]}
-                        onValueChange={([value]) =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundOverlay: value ?? 55,
-                          })
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Más oscuro = mejor contraste del texto sobre la foto.
-                      </p>
-                    </div>
-                    {state.theme.backgroundImage ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground"
-                        onClick={() =>
-                          updateField("theme", {
-                            ...state.theme,
-                            backgroundImage: undefined,
-                          })
-                        }
-                      >
-                        Quitar imagen de fondo
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label>Color de acento personalizado</Label>
-                    {state.theme.accentColor ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 text-muted-foreground"
-                        onClick={() => {
-                          const next = { ...state.theme };
-                          delete next.accentColor;
-                          updateField("theme", next);
-                        }}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Restaurar
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      aria-label="Color de acento"
-                      className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
-                      value={cssColorToHexInput(
-                        state.theme.accentColor ||
-                          resolveCardDirectionColor(state.direction, state.theme),
-                        "#5b8fd4",
-                      )}
-                      onChange={(e) =>
-                        updateField("theme", {
-                          ...state.theme,
-                          accentColor: e.target.value,
-                        })
-                      }
-                    />
-                    <Input
-                      className="min-w-0 flex-1"
-                      value={state.theme.accentColor || ""}
-                      onChange={(e) =>
-                        updateField("theme", {
-                          ...state.theme,
-                          accentColor: e.target.value.trim() || undefined,
-                        })
-                      }
-                      placeholder="Vacío = color de la dirección (#hex, hsl, rgb…)"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Afecta borde de la foto, cargo y botones. Sin personalizar, usa el color de la dirección.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border px-3 py-2">
-                  <Label htmlFor="showBrand">Mostrar marca Ecosistema WCA</Label>
-                  <Switch
-                    id="showBrand"
-                    checked={state.theme.showBrand !== false}
-                    onCheckedChange={(checked) =>
-                      updateField("theme", { ...state.theme, showBrand: checked })
-                    }
-                  />
-                </div>
-              </EditorSection>
-
-              <EditorSection title="Redes fijas" icon={Share2}>
-                <div className="space-y-2">
-                  <Label>Mostrar por defecto como</Label>
-                  <Select
-                    value={state.theme.socialDisplayDefault || "circle"}
-                    onValueChange={(v) =>
-                      updateField("theme", {
-                        ...state.theme,
-                        socialDisplayDefault: v as "circle" | "button",
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="circle">Círculos (iconos)</SelectItem>
-                      <SelectItem value="button">Botones Linktree</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(
-                    [
-                      ["linkedIn", "LinkedIn"],
-                      ["instagram", "Instagram"],
-                      ["twitter", "X (antes Twitter)"],
-                      ["github", "GitHub"],
-                      ["youtube", "YouTube"],
-                      ["tiktok", "TikTok"],
-                      ["whatsapp", "WhatsApp (número o URL)"],
-                      ["email", "Email"],
-                      ["website", "Sitio web"],
-                    ] as const
-                  ).map(([key, label]) => {
-                    const socialKey = key as CardSocialKey;
-                    const mode =
-                      state.theme.socialDisplay?.[socialKey] ??
-                      state.theme.socialDisplayDefault ??
-                      "circle";
-                    return (
-                      <div key={key} className="space-y-1.5 rounded-xl border p-3">
-                        <Label>{label}</Label>
-                        <Input
-                          value={state[key]}
-                          onChange={(e) => updateField(key, e.target.value)}
-                          placeholder="https://..."
-                        />
-                        <Select
-                          value={mode}
-                          onValueChange={(v) =>
-                            updateField("theme", {
-                              ...state.theme,
-                              socialDisplay: {
-                                ...(state.theme.socialDisplay ?? {}),
-                                [socialKey]: v as "circle" | "button",
-                              },
-                            })
-                          }
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="circle">Círculo</SelectItem>
-                            <SelectItem value="button">Botón Linktree</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </div>
-              </EditorSection>
-
-              <EditorSection
-                title="Botones Linktree"
-                icon={Link2}
-                action={
-                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" onClick={addLink}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Añadir
-                  </Button>
-                }
-              >
-                {state.links.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Aún no hay botones. Añade enlaces personalizados (portfolio, agenda, etc.).
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {state.links.map((link, index) => (
-                      <div key={link.id} className="relative z-0 space-y-2 overflow-visible rounded-xl border p-3 focus-within:z-30">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            disabled={index === 0}
-                            onClick={() => moveLink(index, -1)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            disabled={index === state.links.length - 1}
-                            onClick={() => moveLink(index, 1)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <div className="ml-auto flex items-center gap-2">
-                            <Switch
-                              checked={link.enabled}
-                              onCheckedChange={(checked) => {
-                                const next = [...state.links];
-                                next[index] = { ...link, enabled: checked };
-                                updateField("links", next);
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() =>
-                                updateField(
-                                  "links",
-                                  state.links.filter((l) => l.id !== link.id),
-                                )
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <Input
-                          value={link.title}
-                          onChange={(e) => {
-                            const next = [...state.links];
-                            next[index] = { ...link, title: e.target.value };
-                            updateField("links", next);
-                          }}
-                          placeholder="Título del botón"
-                        />
-                        <Input
-                          value={link.url}
-                          onChange={(e) => {
-                            const next = [...state.links];
-                            next[index] = { ...link, url: e.target.value };
-                            updateField("links", next);
-                          }}
-                          placeholder="https://..."
-                        />
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          <FaIconPicker
-                            value={link.icon}
-                            onChange={(icon) => {
-                              const next = [...state.links];
-                              next[index] = { ...link, icon };
-                              updateField("links", next);
-                            }}
-                          />
-                          <Select
-                            value={link.style || "solid"}
-                            onValueChange={(v) => {
-                              const next = [...state.links];
-                              next[index] = {
-                                ...link,
-                                style: v as PresentationCardLink["style"],
-                              };
-                              updateField("links", next);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="solid">Sólido</SelectItem>
-                              <SelectItem value="soft">Suave</SelectItem>
-                              <SelectItem value="outline">Contorno</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </EditorSection>
-
-              <EditorSection title="Publicación" icon={Globe}>
-                <div className="flex items-center justify-between rounded-xl border px-3 py-2">
-                  <div>
-                    <Label htmlFor="published">Publicada</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Visible en ecosistemawca.com/{state.slug}
-                    </p>
-                  </div>
-                  <Switch
-                    id="published"
-                    checked={state.isPublished}
-                    onCheckedChange={(checked) => updateField("isPublished", checked)}
-                  />
-                </div>
-                {mode === "admin" && (
-                  <div className="space-y-2">
-                    <Label>Asignar a usuario</Label>
-                    <div ref={userPickerRef} className="relative w-full">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={userPickerOpen}
-                        className="h-10 w-full justify-between font-normal"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setUserPickerOpen((prev) => {
-                            const next = !prev;
-                            if (next) setUserSearch("");
-                            return next;
-                          });
-                        }}
-                      >
-                        <span className="truncate">
-                          {assignedUser
-                            ? `${assignedUser.name} · ${assignedUser.email}`
-                            : "Sin asignar"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-
-                      {userPickerOpen ? (
-                        <div
-                          className="absolute bottom-[calc(100%+0.5rem)] left-0 z-[200] w-full rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg"
-                          onClick={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => e.stopPropagation()}
-                        >
-                          <div className="relative mb-2">
-                            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              value={userSearch}
-                              onChange={(e) => setUserSearch(e.target.value)}
-                              placeholder="Buscar por nombre o email..."
-                              className="h-9 pl-8"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-56 overflow-y-auto">
-                            <button
-                              type="button"
-                              className={cn(
-                                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent",
-                                state.assignedUserId == null && "bg-accent/60",
-                              )}
-                              onClick={() => {
-                                updateField("assignedUserId", null);
-                                setUserPickerOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "h-4 w-4 shrink-0",
-                                  state.assignedUserId == null ? "opacity-100" : "opacity-0",
-                                )}
-                              />
-                              Sin asignar
-                            </button>
-                            {filteredUsers.length === 0 ? (
-                              <p className="px-2 py-3 text-sm text-muted-foreground">
-                                No se encontró ningún usuario.
-                              </p>
-                            ) : (
-                              filteredUsers.map((u) => (
-                                <button
-                                  key={u.id}
-                                  type="button"
-                                  className={cn(
-                                    "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent",
-                                    state.assignedUserId === u.id && "bg-accent/60",
-                                  )}
-                                  onClick={() => {
-                                    updateField("assignedUserId", u.id);
-                                    setUserPickerOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4 shrink-0",
-                                      state.assignedUserId === u.id
-                                        ? "opacity-100"
-                                        : "opacity-0",
-                                    )}
-                                  />
-                                  <span className="truncate">
-                                    {u.name} · {u.email}
-                                  </span>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      El usuario asignado podrá editar su tarjeta en /mi-tarjeta.
-                    </p>
-                  </div>
-                )}
-              </EditorSection>
-            </div>
-
-            <aside className="hidden min-h-0 flex-col overflow-y-auto border-l bg-muted/20 p-5 xl:flex">
-              <p className="mb-3 shrink-0 text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
-              <div className="mx-auto w-full max-w-[22rem] overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
-                <CardPreview card={previewCard} compact />
               </div>
             </aside>
+
+            {/* Lienzo con la vista previa */}
+            <section
+              className={cn(
+                "relative min-h-0 min-w-0 flex-1 flex-col bg-muted/20",
+                showPreview ? "flex" : "hidden",
+                wide.show,
+              )}
+              style={{
+                backgroundImage: "radial-gradient(hsl(var(--border)) 1px, transparent 1px)",
+                backgroundSize: "18px 18px",
+              }}
+            >
+              <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-4">
+                <p className="text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
+                <p className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+                  <MousePointerClick className="h-3.5 w-3.5" />
+                  Haz clic en una parte de la tarjeta para editarla
+                </p>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-6">
+                <div className="h-full max-h-[780px] w-full max-w-[380px] rounded-[2.75rem] border bg-[#05070c] p-2.5 shadow-2xl">
+                  <div className="h-full overflow-y-auto overscroll-contain rounded-[2.2rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <CardPreview
+                      card={previewCard}
+                      compact
+                      className="min-h-full rounded-none"
+                      editable={{ active: previewArea, onSelect: openSection }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

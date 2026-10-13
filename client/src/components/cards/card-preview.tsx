@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { PresentationCard } from "@shared/schema";
 import { resolveMediaUrl } from "@shared/media-url";
@@ -38,7 +38,7 @@ function resolveAccent(card: CardPreviewData): string {
   return resolveCardDirectionColor(card.direction, theme);
 }
 
-const SOCIALS: Array<{
+export const CARD_SOCIALS: Array<{
   key: CardSocialKey;
   label: string;
   href: (v: string) => string;
@@ -102,7 +102,7 @@ function buttonStyles(
   };
 }
 
-function resolveCardBackground(
+export function resolveCardBackground(
   theme: PresentationCardTheme,
   accent: string,
 ): CSSProperties {
@@ -191,14 +191,88 @@ function resolveCardBackground(
   }
 }
 
+export type CardPreviewArea = "perfil" | "apariencia" | "redes" | "enlaces";
+
+const AREA_LABEL: Record<CardPreviewArea, string> = {
+  perfil: "Perfil",
+  apariencia: "Diseño",
+  redes: "Redes",
+  enlaces: "Enlaces",
+};
+
+type CardPreviewEditable = {
+  active?: CardPreviewArea | null;
+  onSelect: (area: CardPreviewArea) => void;
+};
+
+/** Bloque de la tarjeta; en el editor se vuelve clicable y abre su sección. */
+function PreviewZone({
+  area,
+  editable,
+  className,
+  children,
+}: {
+  area: CardPreviewArea;
+  editable?: CardPreviewEditable;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (!editable) return <div className={className}>{children}</div>;
+  const active = editable.active === area;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Editar ${AREA_LABEL[area]}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        editable.onSelect(area);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          editable.onSelect(area);
+        }
+      }}
+      className={cn(
+        "group/zone relative cursor-pointer rounded-2xl outline-dashed outline-[1.5px] outline-offset-[6px] transition-[outline-color]",
+        active ? "outline-white/60" : "outline-transparent hover:outline-white/35",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "pointer-events-none absolute -top-[18px] left-1 z-10 rounded-md bg-[#5b8fd4] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white transition-opacity",
+          active ? "opacity-100" : "opacity-0 group-hover/zone:opacity-100",
+        )}
+      >
+        {AREA_LABEL[area]}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function EmptyZoneHint({ label }: { label: string }) {
+  return (
+    <div className="flex w-full items-center justify-center rounded-xl border border-dashed border-white/25 px-4 py-3 text-xs font-medium text-white/55">
+      + {label}
+    </div>
+  );
+}
+
 export function CardPreview({
   card,
   className,
   compact,
+  editable,
 }: {
   card: CardPreviewData;
   className?: string;
   compact?: boolean;
+  /** Solo en el editor: bloques clicables y enlaces que no navegan. */
+  editable?: CardPreviewEditable;
 }) {
   const accent = resolveAccent(card);
   const direction = getCardDirectionMeta(card.direction);
@@ -209,7 +283,7 @@ export function CardPreview({
     .filter((l) => l.enabled !== false)
     .sort((a, b) => a.order - b.order);
 
-  const activeSocials = SOCIALS.filter((s) => {
+  const activeSocials = CARD_SOCIALS.filter((s) => {
     const val = card[s.key];
     return typeof val === "string" && val.trim().length > 0;
   });
@@ -218,6 +292,15 @@ export function CardPreview({
 
   const bg = resolveCardBackground(theme, accent);
 
+  const editorHandlers = editable
+    ? {
+        onClickCapture: (e: MouseEvent) => {
+          if ((e.target as HTMLElement).closest("a")) e.preventDefault();
+        },
+        onClick: () => editable.onSelect("apariencia"),
+      }
+    : {};
+
   return (
     <div
       className={cn(
@@ -225,9 +308,11 @@ export function CardPreview({
         compact
           ? "flex min-h-[560px] items-center justify-center overflow-hidden rounded-[2rem]"
           : "fixed inset-0 flex flex-col overflow-y-auto overscroll-y-contain",
+        editable && "cursor-pointer",
         className,
       )}
       style={bg}
+      {...editorHandlers}
     >
       <div
         className={cn(
@@ -236,63 +321,71 @@ export function CardPreview({
         )}
       >
         {theme.showBrand !== false && (
-          <div className="mb-6 flex items-center gap-2 opacity-80">
-            <img
-              src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png"
-              alt="Ecosistema WCA"
-              className="h-6 w-6"
-            />
-            <span className="text-xs font-medium tracking-wide text-white/70">Ecosistema WCA</span>
-          </div>
+          <PreviewZone area="apariencia" editable={editable} className="mb-6">
+            <div className="flex items-center gap-2 opacity-80">
+              <img
+                src="https://raw.githubusercontent.com/AngelIsaiSzr/Resources/refs/heads/main/images/icon-wca.png"
+                alt="Ecosistema WCA"
+                className="h-6 w-6"
+              />
+              <span className="text-xs font-medium tracking-wide text-white/70">Ecosistema WCA</span>
+            </div>
+          </PreviewZone>
         )}
 
-        <div
-          className="mb-4 h-28 w-28 overflow-hidden rounded-full"
-          style={{ boxShadow: `0 0 0 3px ${accent}` }}
-        >
-          {card.image ? (
-            <img
-              src={resolveMediaUrl(card.image)}
-              alt={card.name}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center text-3xl font-bold"
-              style={{ background: accent, color: "#0b1220" }}
-            >
-              {(card.name || "?").slice(0, 1).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <PreviewZone area="perfil" editable={editable} className="flex w-full flex-col items-center">
+          <div
+            className="mb-4 h-28 w-28 overflow-hidden rounded-full"
+            style={{ boxShadow: `0 0 0 3px ${accent}` }}
+          >
+            {card.image ? (
+              <img
+                src={resolveMediaUrl(card.image)}
+                alt={card.name}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-3xl font-bold"
+                style={{ background: accent, color: "#0b1220" }}
+              >
+                {(card.name || "?").slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
 
-        <h1 className="text-center font-heading text-2xl font-bold leading-tight">
-          {card.name || "Nombre"}
-        </h1>
-        <p
-          className="mt-1.5 text-center text-[15px] font-semibold tracking-tight"
-          style={{ color: accent }}
-        >
-          {card.roleTitle || "Cargo"}
-        </p>
+          <h1 className="text-center font-heading text-2xl font-bold leading-tight">
+            {card.name || "Nombre"}
+          </h1>
+          <p
+            className="mt-1.5 text-center text-[15px] font-semibold tracking-tight"
+            style={{ color: accent }}
+          >
+            {card.roleTitle || "Cargo"}
+          </p>
 
-        <div className="mt-3.5 flex max-w-[92%] items-center gap-2.5">
-          <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
-          <span className="inline-flex items-center gap-1.5 text-center text-[10px] font-medium uppercase leading-snug tracking-[0.14em] text-white/55">
-            <i className="fas fa-sitemap text-[9px] text-white/40" aria-hidden />
-            {direction.label}
-          </span>
-          <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
-        </div>
+          <div className="mt-3.5 flex max-w-[92%] items-center gap-2.5">
+            <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
+            <span className="inline-flex items-center gap-1.5 text-center text-[10px] font-medium uppercase leading-snug tracking-[0.14em] text-white/55">
+              <i className="fas fa-sitemap text-[9px] text-white/40" aria-hidden />
+              {direction.label}
+            </span>
+            <span className="h-px min-w-[1.25rem] flex-1 bg-white/20" aria-hidden />
+          </div>
 
-        {card.bio ? (
-          <p className="mt-4 text-center text-sm leading-relaxed text-white/75">{card.bio}</p>
-        ) : null}
+          {card.bio ? (
+            <p className="mt-4 text-center text-sm leading-relaxed text-white/75">{card.bio}</p>
+          ) : null}
+        </PreviewZone>
 
-        {circleSocials.length > 0 && (
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+        {circleSocials.length > 0 ? (
+          <PreviewZone
+            area="redes"
+            editable={editable}
+            className="mt-5 flex flex-wrap items-center justify-center gap-2.5"
+          >
             {circleSocials.map((s) => {
               const value = String(card[s.key]);
               return (
@@ -309,40 +402,56 @@ export function CardPreview({
                 </a>
               );
             })}
-          </div>
-        )}
+          </PreviewZone>
+        ) : editable && activeSocials.length === 0 ? (
+          <PreviewZone area="redes" editable={editable} className="mt-5 w-full">
+            <EmptyZoneHint label="Añadir redes sociales" />
+          </PreviewZone>
+        ) : null}
 
         <div className="mt-6 flex w-full flex-col gap-3">
-          {buttonSocials.map((s) => {
-            const value = String(card[s.key]);
-            return (
-              <a
-                key={s.key}
-                href={s.href(value)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
-                style={buttonStyles(accent, buttonRadius, "solid")}
-              >
-                <i className={s.icon} style={{ color: s.key === "github" ? "#0b1220" : undefined }} />
-                {s.label}
-              </a>
-            );
-          })}
+          {buttonSocials.length > 0 && (
+            <PreviewZone area="redes" editable={editable} className="flex w-full flex-col gap-3">
+              {buttonSocials.map((s) => {
+                const value = String(card[s.key]);
+                return (
+                  <a
+                    key={s.key}
+                    href={s.href(value)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
+                    style={buttonStyles(accent, buttonRadius, "solid")}
+                  >
+                    <i className={s.icon} style={{ color: s.key === "github" ? "#0b1220" : undefined }} />
+                    {s.label}
+                  </a>
+                );
+              })}
+            </PreviewZone>
+          )}
 
-          {links.map((link) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
-              style={buttonStyles(accent, buttonRadius, link.style)}
-            >
-              {link.icon ? <i className={link.icon} /> : null}
-              {link.title}
-            </a>
-          ))}
+          {links.length > 0 ? (
+            <PreviewZone area="enlaces" editable={editable} className="flex w-full flex-col gap-3">
+              {links.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-3.5 text-center text-sm font-semibold transition hover:opacity-90"
+                  style={buttonStyles(accent, buttonRadius, link.style)}
+                >
+                  {link.icon ? <i className={link.icon} /> : null}
+                  {link.title}
+                </a>
+              ))}
+            </PreviewZone>
+          ) : editable ? (
+            <PreviewZone area="enlaces" editable={editable} className="w-full">
+              <EmptyZoneHint label="Añadir enlace" />
+            </PreviewZone>
+          ) : null}
         </div>
       </div>
     </div>
