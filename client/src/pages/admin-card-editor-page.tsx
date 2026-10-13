@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/navbar";
-import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
+import { CardPreview } from "@/components/cards/card-preview";
 import { FaIconPicker } from "@/components/cards/fa-icon-picker";
 import { ImageUrlInput } from "@/components/media/image-url-input";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ function EditorSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 overflow-visible rounded-2xl border bg-card p-4 sm:p-5">
+    <section className="space-y-4 overflow-visible rounded-2xl border bg-card p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b1c3d] to-[#0056FF] text-white shadow-md shadow-[#0056FF]/20">
@@ -81,19 +81,6 @@ function EditorSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function LivePreview({ card }: { card: CardPreviewData }) {
-  return (
-    <div className="rounded-2xl border bg-card p-4 sm:p-5">
-      <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
-      <div className="mx-auto w-full max-w-[19rem] overflow-hidden rounded-[1.6rem] border shadow-lg">
-        <div className="max-h-[36rem] overflow-y-auto overscroll-contain">
-          <CardPreview card={card} compact className="min-h-0" />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -347,10 +334,11 @@ export function PresentationCardEditor({
           </title>
         </Helmet>
       )}
-      <div className={cn(!embedded && "min-h-screen bg-background", embedded && "space-y-4")}>
+      <div className={cn(!embedded ? "flex h-[100dvh] flex-col overflow-hidden bg-background" : "space-y-4")}>
         {!embedded && <Navbar />}
-        <main className={cn(!embedded && "container mx-auto px-4 pb-16 pt-24", embedded && "space-y-4")}>
-          <div className={cn("mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between", embedded && "mb-4")}>
+        {!embedded && <div className="h-[4.5rem] shrink-0" />}
+        <div className={cn(!embedded && "flex min-h-0 flex-1 flex-col")}>
+          <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", !embedded && "shrink-0 border-b bg-card/60 px-4 py-3 backdrop-blur", embedded && "mb-4")}>
             <div>
               {!embedded && (
                 <p className="text-sm text-muted-foreground">
@@ -385,7 +373,7 @@ export function PresentationCardEditor({
                   </span>
                 ) : null}
               </h1>
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 URL pública:{" "}
                 <span className="font-medium text-foreground">
                   ecosistemawca.com/{normalizeCardSlug(state.slug) || state.slug}
@@ -394,7 +382,7 @@ export function PresentationCardEditor({
             </div>
             <div className="flex flex-wrap gap-2">
               {state.isPublished ? (
-                <Button variant="outline" asChild>
+                <Button variant="outline" className="h-10 rounded-xl" asChild>
                   <a href={`/${state.slug}`} target="_blank" rel="noreferrer">
                     <ExternalLink className="h-4 w-4" />
                     Ver pública
@@ -402,17 +390,18 @@ export function PresentationCardEditor({
                 </Button>
               ) : null}
               {mode === "admin" && !embedded ? (
-                <Button variant="outline" onClick={() => requestLeave("/talento/tarjetas")}>
+                <Button variant="outline" className="h-10 rounded-xl" onClick={() => requestLeave("/talento/tarjetas")}>
                   <ArrowLeft className="h-4 w-4" />
                   Volver
                 </Button>
               ) : null}
               <Button
-                className={
+                className={cn(
+                  "h-10 rounded-xl",
                   dirty
-                    ? "bg-[#5b8fd4] hover:bg-[#4a7fc4]"
-                    : "bg-muted text-muted-foreground hover:bg-muted"
-                }
+                    ? "bg-[#5b8fd4] text-white shadow-lg shadow-[#5b8fd4]/25 hover:bg-[#4a7fc4]"
+                    : "bg-muted text-muted-foreground hover:bg-muted",
+                )}
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !dirty}
               >
@@ -422,10 +411,15 @@ export function PresentationCardEditor({
             </div>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20.5rem]">
-            <div className="space-y-6">
+          <div className={cn("min-h-0 flex-1 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]", embedded && "grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]")}>
+            <div className={cn("space-y-6", !embedded ? "min-h-0 overflow-y-auto px-4 py-6 xl:px-6" : "overflow-visible")}>
               <div className="xl:hidden">
-                <LivePreview card={previewCard} />
+                <div className="overflow-hidden rounded-2xl border bg-card p-4">
+                  <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
+                  <div className="overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
+                    <CardPreview card={previewCard} compact />
+                  </div>
+                </div>
               </div>
               <EditorSection title="Perfil" icon={UserRound}>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1082,13 +1076,14 @@ export function PresentationCardEditor({
               </EditorSection>
             </div>
 
-            <div className="hidden xl:block">
-              <div className="sticky top-24">
-                <LivePreview card={previewCard} />
+            <aside className="hidden min-h-0 flex-col overflow-y-auto border-l bg-muted/20 p-5 xl:flex">
+              <p className="mb-3 shrink-0 text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
+              <div className="mx-auto w-full max-w-[22rem] overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
+                <CardPreview card={previewCard} compact />
               </div>
-            </div>
+            </aside>
           </div>
-        </main>
+        </div>
       </div>
 
       <ConfirmDialog
