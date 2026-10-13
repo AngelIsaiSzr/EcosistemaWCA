@@ -334,10 +334,11 @@ export function PresentationCardEditor({
           </title>
         </Helmet>
       )}
-      <div className={cn(!embedded && "min-h-screen bg-background")}>
+      <div className={cn(!embedded ? "flex h-[100dvh] flex-col overflow-hidden bg-background" : "space-y-4")}>
         {!embedded && <Navbar />}
-        <div className={cn(!embedded ? "container mx-auto px-4 pb-16 pt-24" : "space-y-4")}>
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {!embedded && <div className="h-[4.5rem] shrink-0" />}
+        <div className={cn(!embedded && "flex min-h-0 flex-1 flex-col")}>
+          <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", !embedded && "shrink-0 border-b bg-card/60 px-4 py-3 backdrop-blur", embedded && "mb-4")}>
             <div>
               {!embedded && (
                 <p className="text-sm text-muted-foreground">
@@ -410,8 +411,16 @@ export function PresentationCardEditor({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="space-y-6 overflow-visible">
+          <div className={cn("min-h-0 flex-1 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]", embedded && "grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]")}>
+            <div className={cn("space-y-6", !embedded ? "min-h-0 overflow-y-auto px-4 py-6 xl:px-6" : "overflow-visible")}>
+              <div className="xl:hidden">
+                <div className="overflow-hidden rounded-2xl border bg-card p-4">
+                  <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
+                  <div className="overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
+                    <CardPreview card={previewCard} compact />
+                  </div>
+                </div>
+              </div>
               <EditorSection title="Perfil" icon={UserRound}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -1067,12 +1076,10 @@ export function PresentationCardEditor({
               </EditorSection>
             </div>
 
-            <aside className="xl:sticky xl:top-24 xl:self-start">
-              <div className="overflow-hidden rounded-2xl border bg-card p-4 shadow-sm">
-                <p className="mb-3 text-sm font-medium text-muted-foreground">Vista previa</p>
-                <div className="overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
-                  <CardPreview card={previewCard} compact />
-                </div>
+            <aside className="hidden min-h-0 flex-col overflow-y-auto border-l bg-muted/20 p-5 xl:flex">
+              <p className="mb-3 shrink-0 text-sm font-medium text-muted-foreground">Vista previa en vivo</p>
+              <div className="mx-auto w-full max-w-[22rem] overflow-hidden rounded-[1.75rem] border shadow-2xl ring-1 ring-white/10">
+                <CardPreview card={previewCard} compact />
               </div>
             </aside>
           </div>

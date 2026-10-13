@@ -426,13 +426,13 @@ export default function AdminPage({
     }
     if (isTalentoPortal) {
       if (user.role !== "talento") {
-        navigate("/");
-        toast({
-          title: "Acceso denegado",
+      navigate("/");
+      toast({
+        title: "Acceso denegado",
           description: "Esta sección pertenece al panel de Talento.",
-          variant: "destructive",
-        });
-      }
+        variant: "destructive",
+      });
+    }
       return;
     }
     if (user.role !== "admin") {
@@ -906,8 +906,8 @@ export default function AdminPage({
     if (editingTeam) {
       updateTeamMemberMutation.mutate(
         {
-          id: editingTeam.id,
-          data: { ...data, roleColor, order: editingTeam.order },
+        id: editingTeam.id,
+        data: { ...data, roleColor, order: editingTeam.order },
         },
         { onSuccess: () => closeTeamPanel() },
       );
@@ -2115,10 +2115,10 @@ export default function AdminPage({
               </Button>
               <Button variant="outline" className="h-10 rounded-xl" asChild>
                 <Link href={isTalentoPortal ? "/talento" : "/admin"}>
-                  <ArrowLeft className="h-4 w-4" />
-                  Volver al panel
-                </Link>
-              </Button>
+                <ArrowLeft className="h-4 w-4" />
+                Volver al panel
+              </Link>
+            </Button>
             </div>
           </div>
 
@@ -2455,7 +2455,7 @@ export default function AdminPage({
             {courseTab === "modulos" ? (
               modulesContent
             ) : (
-              <Form {...courseForm}>
+                    <Form {...courseForm}>
                 <form
                   id="course-form"
                   onSubmit={courseForm.handleSubmit(onCourseSubmit, onCourseInvalid)}
@@ -2488,11 +2488,11 @@ export default function AdminPage({
                                   <span className="flex items-center border-r border-input bg-muted/50 px-3 text-sm text-muted-foreground">
                                     /programs/
                                   </span>
-                                  <Input
-                                    placeholder="Ej: desarrollo-web"
-                                    {...field}
+                                <Input
+                                  placeholder="Ej: desarrollo-web"
+                                  {...field}
                                     className="rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                                  />
+                                />
                                 </div>
                               </FormControl>
                               <FormDescription>Identificador único para la URL del programa</FormDescription>
@@ -2669,23 +2669,23 @@ export default function AdminPage({
                           )}
                         </AnimatePresence>
                       </div>
-                      <FormField
-                        control={courseForm.control}
-                        name="image"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL de la imagen</FormLabel>
-                            <FormControl>
+                        <FormField
+                          control={courseForm.control}
+                          name="image"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>URL de la imagen</FormLabel>
+                              <FormControl>
                               <ImageUrlInput
                                 value={field.value || ""}
                                 onChange={field.onChange}
-                                placeholder="https://example.com/image.jpg"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                                  placeholder="https://example.com/image.jpg"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                     </AdminPanelSection>
                   )}
 
@@ -2703,7 +2703,7 @@ export default function AdminPage({
                           "Página informativa con CTA «Descubre Más» hacia la LXP.",
                           handleTechHumanChange,
                         )}
-                      </div>
+                                </div>
                       <AnimatePresence initial={false}>
                         {watchedCourse.techHumanSpecialization && (
                           <motion.div
@@ -2713,22 +2713,22 @@ export default function AdminPage({
                             transition={{ duration: 0.25 }}
                             className="overflow-hidden"
                           >
-                            <FormField
-                              control={courseForm.control}
-                              name="lxpEnrollmentUrl"
-                              render={({ field }) => (
+                          <FormField
+                            control={courseForm.control}
+                            name="lxpEnrollmentUrl"
+                            render={({ field }) => (
                                 <FormItem className="pt-1">
-                                  <FormLabel>Enlace de la LXP (CTA «Descubre Más»)</FormLabel>
-                                  <FormControl>
+                                <FormLabel>Enlace de la LXP (CTA «Descubre Más»)</FormLabel>
+                                <FormControl>
                                     <Input placeholder={DEFAULT_LXP_ENROLLMENT_URL} {...field} value={field.value ?? ""} />
-                                  </FormControl>
-                                  <FormDescription>
+                                </FormControl>
+                                <FormDescription>
                                     Personalizable por programa. Si lo dejas vacío se usa {DEFAULT_LXP_ENROLLMENT_URL}.
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -2749,117 +2749,117 @@ export default function AdminPage({
                           </button>
                         }
                       >
-                        <FormField
-                          control={courseForm.control}
-                          name="liveDetails.liveDuration"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Duración del programa en vivo (Ej: 23 de Junio - 16 de Julio)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: Desde el 23 de Junio del 2025 hasta el 16 de Julio del 2025" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={courseForm.control}
-                          name="liveDetails.schedule"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Horario (Ej: Lunes, Miércoles y Viernes de 3PM a 5:30PM)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: Lunes, Miércoles y Viernes de 3PM a 5:30PM" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={courseForm.control}
-                          name="liveDetails.modality"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Modalidad</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona una modalidad" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Presencial">Presencial</SelectItem>
-                                  <SelectItem value="Virtual">Virtual</SelectItem>
-                                  <SelectItem value="Mixta">Mixta</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={courseForm.control}
-                          name="liveDetails.address"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Dirección (Solo para modalidad Presencial o Mixta)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: CECyTEV, 02 Papantla" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={courseForm.control}
-                          name="liveDetails.contact"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Información de Contacto (Ej: +52 784 110 0108)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: +52 784 110 0108" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                              <FormField
+                                control={courseForm.control}
+                                name="liveDetails.liveDuration"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Duración del programa en vivo (Ej: 23 de Junio - 16 de Julio)</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Ej: Desde el 23 de Junio del 2025 hasta el 16 de Julio del 2025" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={courseForm.control}
+                                name="liveDetails.schedule"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Horario (Ej: Lunes, Miércoles y Viernes de 3PM a 5:30PM)</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Ej: Lunes, Miércoles y Viernes de 3PM a 5:30PM" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={courseForm.control}
+                                name="liveDetails.modality"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Modalidad</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Selecciona una modalidad" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="Presencial">Presencial</SelectItem>
+                                        <SelectItem value="Virtual">Virtual</SelectItem>
+                                        <SelectItem value="Mixta">Mixta</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={courseForm.control}
+                                name="liveDetails.address"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Dirección (Solo para modalidad Presencial o Mixta)</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Ej: CECyTEV, 02 Papantla" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={courseForm.control}
+                                name="liveDetails.contact"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Información de Contacto (Ej: +52 784 110 0108)</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Ej: +52 784 110 0108" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
                       </AdminPanelSection>
                     ) : (
                       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#5b8fd4]/15 text-[#5b8fd4]">
                           <Radio className="h-5 w-5" />
                         </div>
-                        <div>
+                            <div>
                           <p className="font-medium">Este programa no es en vivo</p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             Actívalo para configurar fechas, horario, modalidad, dirección y contacto.
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
+                                  </p>
+                                </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
                           className="rounded-xl"
                           disabled={!!watchedCourse.techHumanSpecialization}
                           onClick={() => handleIsLiveChange(true)}
-                        >
+                                  >
                           Activar programa en vivo
-                        </Button>
+                                  </Button>
                         {watchedCourse.techHumanSpecialization ? (
                           <p className="text-xs text-muted-foreground">No disponible para programas TechHuman.</p>
-                        ) : null}
-                      </div>
+                                  ) : null}
+                              </div>
                     ))}
-                </form>
-              </Form>
+                            </form>
+                          </Form>
             )}
           </AdminPanelBody>
           {courseTab === "modulos" ? (
             <div className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-4 dark:border-white/10">
               <p className="text-xs text-muted-foreground">Cada módulo y sección se guarda por separado.</p>
               <Button variant="outline" className="h-10 rounded-xl" onClick={closeCoursePanel}>
-                Cerrar
-              </Button>
-            </div>
+                                      Cerrar
+                                    </Button>
+                                  </div>
           ) : (
             <AdminPanelFooter
               onCancel={closeCoursePanel}
@@ -2890,7 +2890,7 @@ export default function AdminPage({
                 }}
               />
             </AnimatePresence>
-          </div>
+                                            </div>
           <div className="relative px-5">
             <motion.div
               key={watchedTeamImage || "no-image"}
@@ -2899,13 +2899,13 @@ export default function AdminPage({
               transition={{ type: "spring", stiffness: 300, damping: 22 }}
               className="-mt-10 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-muted text-xs text-muted-foreground ring-4 ring-background"
             >
-              {watchedTeamImage ? (
-                <img src={watchedTeamImage} alt="Vista previa" className="h-full w-full object-cover" />
-              ) : (
-                "Foto"
-              )}
+                              {watchedTeamImage ? (
+                                <img src={watchedTeamImage} alt="Vista previa" className="h-full w-full object-cover" />
+                              ) : (
+                                "Foto"
+                              )}
             </motion.div>
-          </div>
+                            </div>
           <AdminPanelHeader
             className="pt-2"
             title={teamForm.watch("name") || (editingTeam ? editingTeam.name : "Nuevo integrante")}
@@ -2933,100 +2933,100 @@ export default function AdminPage({
               <form id="team-form" onSubmit={teamForm.handleSubmit(onTeamSubmit)} className="space-y-5">
                 <AdminPanelSection title="Perfil">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FormField
-                      control={teamForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nombre completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={teamForm.control}
-                      name="role"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cargo</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ej: CEO & Fundador" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={teamForm.control}
-                    name="roleColor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Color del cargo</FormLabel>
+                            <FormField
+                              control={teamForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Nombre</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Nombre completo" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={teamForm.control}
+                              name="role"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Cargo</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Ej: CEO & Fundador" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        <FormField
+                          control={teamForm.control}
+                          name="roleColor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Color del cargo</FormLabel>
                         <div className="flex flex-wrap gap-2.5 rounded-2xl border bg-muted/20 p-3">
-                          {TEAM_ROLE_COLORS.map((color) => {
-                            const selected = (field.value || DEFAULT_TEAM_ROLE_COLOR) === color.id;
-                            return (
+                                {TEAM_ROLE_COLORS.map((color) => {
+                                  const selected = (field.value || DEFAULT_TEAM_ROLE_COLOR) === color.id;
+                                  return (
                               <motion.button
-                                key={color.id}
-                                type="button"
+                                      key={color.id}
+                                      type="button"
                                 title={`${color.label} · ${color.hint}`}
                                 aria-label={color.label}
-                                onClick={() => field.onChange(color.id)}
+                                      onClick={() => field.onChange(color.id)}
                                 whileHover={{ scale: 1.12 }}
                                 whileTap={{ scale: 0.9 }}
                                 className={cn(
                                   "h-8 w-8 rounded-full transition-shadow",
                                   selected && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
                                 )}
-                                style={{ backgroundColor: `hsl(${color.hsl})` }}
-                              />
-                            );
-                          })}
-                        </div>
+                                        style={{ backgroundColor: `hsl(${color.hsl})` }}
+                                      />
+                                  );
+                                })}
+                              </div>
                         <FormDescription>
                           {teamColorMeta.label} · Vista previa:{" "}
                           <span className="font-medium" style={{ color: getTeamRoleCssColor(field.value || watchedRoleColor) }}>
                             {teamForm.watch("role") || "Cargo de ejemplo"}
                           </span>
                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={teamForm.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Biografía</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Breve biografía" {...field} rows={3} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={teamForm.control}
-                    name="image"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL de la imagen</FormLabel>
-                        <FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={teamForm.control}
+                          name="bio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Biografía</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Breve biografía" {...field} rows={3} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={teamForm.control}
+                          name="image"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>URL de la imagen</FormLabel>
+                              <FormControl>
                           <ImageUrlInput
                             value={field.value || ""}
                             onChange={field.onChange}
                             placeholder="https://example.com/image.jpg"
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                 </AdminPanelSection>
 
                 <AdminPanelSection
@@ -3081,8 +3081,8 @@ export default function AdminPage({
                     )}
                   </AnimatePresence>
                 </AdminPanelSection>
-              </form>
-            </Form>
+                      </form>
+                    </Form>
           </AdminPanelBody>
           <AdminPanelFooter
             onCancel={closeTeamPanel}
@@ -3102,7 +3102,7 @@ export default function AdminPage({
             media={
               <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-muted/50">
                 <MessageSquareQuote className="h-4 w-4 text-muted-foreground" />
-              </div>
+                              </div>
             }
             title={editingTestimonial ? "Editar testimonio" : "Nuevo testimonio"}
             subtitle="Se muestra en la sección de inicio"
@@ -3139,85 +3139,85 @@ export default function AdminPage({
                       )}
                     </motion.div>
                     <div className="min-w-0 flex-1">
-                      <FormField
-                        control={testimonialForm.control}
+                        <FormField
+                          control={testimonialForm.control}
                         name="image"
-                        render={({ field }) => (
-                          <FormItem>
+                          render={({ field }) => (
+                            <FormItem>
                             <FormLabel>URL de la imagen</FormLabel>
-                            <FormControl>
+                              <FormControl>
                               <ImageUrlInput
                                 value={field.value || ""}
                                 onChange={field.onChange}
                                 placeholder="https://example.com/image.jpg"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FormField
-                      control={testimonialForm.control}
+                        <FormField
+                          control={testimonialForm.control}
                       name="name"
-                      render={({ field }) => (
-                        <FormItem>
+                          render={({ field }) => (
+                            <FormItem>
                           <FormLabel>Nombre del estudiante</FormLabel>
-                          <FormControl>
+                              <FormControl>
                             <Input placeholder="Nombre completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={testimonialForm.control}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={testimonialForm.control}
                       name="courseName"
-                      render={({ field }) => (
-                        <FormItem>
+                          render={({ field }) => (
+                            <FormItem>
                           <FormLabel>Nombre del programa</FormLabel>
-                          <FormControl>
+                              <FormControl>
                             <Input placeholder="Ej: Desarrollo Web" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                   </div>
                 </AdminPanelSection>
 
                 <AdminPanelSection title="Testimonio">
-                  <FormField
-                    control={testimonialForm.control}
-                    name="rating"
-                    render={({ field }) => (
-                      <FormItem>
+                        <FormField
+                          control={testimonialForm.control}
+                          name="rating"
+                          render={({ field }) => (
+                            <FormItem>
                         <FormLabel>Calificación</FormLabel>
-                        <FormControl>
+                              <FormControl>
                           <RatingStars value={field.value ?? 5} onChange={field.onChange} size="lg" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={testimonialForm.control}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={testimonialForm.control}
                     name="text"
-                    render={({ field }) => (
-                      <FormItem>
+                          render={({ field }) => (
+                            <FormItem>
                         <FormLabel>Testimonio</FormLabel>
-                        <FormControl>
+                              <FormControl>
                           <Textarea placeholder="Texto del testimonio" {...field} rows={4} />
-                        </FormControl>
+                              </FormControl>
                         <div className="flex justify-end text-[11px] text-muted-foreground">
                           {(field.value ?? "").length} caracteres
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                 </AdminPanelSection>
 
                 <AdminPanelSection title="Vista previa">
@@ -3233,7 +3233,7 @@ export default function AdminPage({
                         <p className="truncate text-xs text-muted-foreground">
                           Estudiante de {watchedTestimonial.courseName || "programa"}
                         </p>
-                      </div>
+                        </div>
                       <RatingStars value={watchedTestimonial.rating ?? 5} />
                     </div>
                     <p className="mt-3 line-clamp-3 text-xs italic text-muted-foreground">
@@ -3241,8 +3241,8 @@ export default function AdminPage({
                     </p>
                   </div>
                 </AdminPanelSection>
-              </form>
-            </Form>
+                      </form>
+                    </Form>
           </AdminPanelBody>
           <AdminPanelFooter
             onCancel={closeTestimonialPanel}
