@@ -120,6 +120,14 @@
     scrollbar-color: hsl(var(--muted)) transparent;
   }
   
+  /* Radix (Select, Dialog, Dropdown) bloquea el scroll en <body> y le suma
+     margin-right del ancho de la scrollbar. Aquí la scrollbar vive en <html>
+     (por overflow-x: hidden), así que nunca desaparece y ese margen quedaba
+     como hueco extra. Más específico que el estilo que inyecta Radix. */
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+
   /* Prevenir la adición de padding en elementos con dropdown */
   [data-radix-popper-content-wrapper] {
     position: absolute !important;
